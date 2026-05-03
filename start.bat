@@ -60,7 +60,7 @@ exit /b
 
 :install_backend
     echo [后端] 正在安装 Maven 依赖...
-    cd /d "%~dp0OnlineLearnApi - idea"
+    cd /d "%~dp0backend"
     call mvn clean install -DskipTests
     if %errorlevel% neq 0 (
         echo [后端] Maven 依赖安装失败！
@@ -73,7 +73,7 @@ exit /b
 
 :install_frontend
     echo [前端] 正在安装 npm 依赖...
-    cd /d "%~dp0OnlineLearnVue"
+    cd /d "%~dp0frontend"
     call npm install --legacy-peer-deps
     if %errorlevel% neq 0 (
         echo [前端] npm 依赖安装失败！
@@ -85,24 +85,24 @@ exit /b
     exit /b
 
 :start_backend
-    if not exist "%~dp0OnlineLearnApi - idea" (
-        echo [后端] 错误: 未找到后端目录 'OnlineLearnApi - idea'
+    if not exist "%~dp0backend" (
+        echo [后端] 错误: 未找到后端目录 'backend'
         pause
         exit /b
     )
     echo [后端] 正在启动后端服务...(端口 9251)
-    start "OnlineLearn-Backend" cmd /c "cd /d "%~dp0OnlineLearnApi - idea" && mvn spring-boot:run"
+    start "OnlineLearn-Backend" cmd /c "cd /d "%~dp0backend" && mvn spring-boot:run"
     exit /b
 
 :start_frontend
-    if not exist "%~dp0OnlineLearnVue" (
-        echo [前端] 错误: 未找到前端目录 'OnlineLearnVue'
+    if not exist "%~dp0frontend" (
+        echo [前端] 错误: 未找到前端目录 'frontend'
         pause
         exit /b
     )
-    if not exist "%~dp0OnlineLearnVue\node_modules" (
+    if not exist "%~dp0frontend\node_modules" (
         echo [前端] 提示: node_modules 不存在，将先安装依赖
-        cd /d "%~dp0OnlineLearnVue"
+        cd /d "%~dp0frontend"
         call npm install --legacy-peer-deps
         if %errorlevel% neq 0 (
             echo [前端] npm 依赖安装失败！
@@ -117,9 +117,9 @@ exit /b
     rem 检测 Node.js 版本
     for /f "tokens=1 delims=v." %%a in ('node --version') do set node_ver=%%a
     if %node_ver% geq 17 (
-        start "OnlineLearn-Frontend" cmd /c "cd /d "%~dp0OnlineLearnVue" && set NODE_OPTIONS=--openssl-legacy-provider && npm run serve"
+        start "OnlineLearn-Frontend" cmd /c "cd /d "%~dp0frontend" && set NODE_OPTIONS=--openssl-legacy-provider && npm run serve"
     ) else (
-        start "OnlineLearn-Frontend" cmd /c "cd /d "%~dp0OnlineLearnVue" && npm run serve"
+        start "OnlineLearn-Frontend" cmd /c "cd /d "%~dp0frontend" && npm run serve"
     )
     exit /b
 

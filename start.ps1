@@ -26,8 +26,8 @@ param(
 )
 
 $RootDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$BackendDir = Join-Path $RootDir "OnlineLearnApi - idea"
-$FrontendDir = Join-Path $RootDir "OnlineLearnVue"
+$BackendDir = Join-Path $RootDir "backend"
+$FrontendDir = Join-Path $RootDir "frontend"
 
 # Maven 路径（已安装但需显式设置供新窗口使用）
 $MAVEN_HOME = "D:\Environment\maven\apache-maven-3.9.14"
