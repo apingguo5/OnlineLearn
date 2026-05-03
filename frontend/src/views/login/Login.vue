@@ -41,11 +41,11 @@
                     <el-input v-model="form.phone" autocomplete="off"></el-input>
                 </el-form-item>
 
-                <el-form-item :show-password="true" label="密码" :label-width="formLabelWidth" prop="password">
-                    <el-input :placeholder="form.password" v-model="form.password" type="password"></el-input>
+                <el-form-item label="密码" :label-width="formLabelWidth" prop="password">
+                    <el-input v-model="form.password" type="password" placeholder="请输入密码"></el-input>
                 </el-form-item>
-                <el-form-item :show-password="true" label="确认密码" :label-width="formLabelWidth" prop="confirmPassword">
-                    <el-input :placeholder="form.confirmPassword" type="password"
+                <el-form-item label="确认密码" :label-width="formLabelWidth" prop="confirmPassword">
+                    <el-input type="password" placeholder="请再次输入密码"
                         v-model="form.confirmPassword"></el-input>
                 </el-form-item>
                 <el-form-item label="性别" :label-width="formLabelWidth">
@@ -84,8 +84,6 @@ export default {
             tabUser: {
                 account: '',
                 password: '',
-                // VerificationCode: '',
-                // checkbox: false,
             },
             form: {
                 userName: '',
@@ -93,15 +91,13 @@ export default {
                 sex: '',
                 phone: '',
                 password: '',
-                confirmPassword: [],
+                confirmPassword: '',
                 desc: ''
             },
             formLabelWidth: '80px',
             timer: null,
             dialog: false,
             loading: false,
-
-
 
             rules: {
                 password: [
@@ -135,7 +131,7 @@ export default {
                 });
                 return
             }
-            if (this.form.sex.trim() == '') {
+            if (this.form.sex === '' || this.form.sex == null) {
                 this.$message({
                     message: '请选择性别',
                     type: 'error'
@@ -163,16 +159,36 @@ export default {
                 });
                 return
             }
-            register(form).then(resp => {
+            // 构造注册参数，不包含 confirmPassword
+            const registerData = {
+                userName: this.form.userName,
+                account: this.form.account,
+                sex: parseInt(this.form.sex),
+                phone: this.form.phone,
+                password: this.form.password
+            };
+            register(registerData).then(resp => {
                 if (resp.data.code == 200) {
                     this.dialog = false;
                     this.$message({
                         message: '注册成功',
                         type: 'success'
                     });
+                    // 清空注册表单
+                    this.form = {
+                        userName: '',
+                        account: '',
+                        sex: '',
+                        phone: '',
+                        password: '',
+                        confirmPassword: '',
+                        desc: ''
+                    };
                 } else {
-                    this.$message.error('注册失败，账号已存在');
+                    this.$message.error(resp.data.resultData || '注册失败，账号已存在');
                 }
+            }).catch(error => {
+                this.$message.error('注册失败：' + error.message);
             })
         },
         cancelForm() {
@@ -186,42 +202,52 @@ export default {
 
         },
         login(tabUser) {
-            console.log('login method called with:', tabUser)
-            
-            // 直接使用 fetch API 发送登录请求
-            fetch('http://localhost:9251/study/user/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(tabUser)
-            })
-            .then(resp => resp.json())
-            .then(data => {
-                console.log('Login response:', data)
+            // 前端验证
+            if (!tabUser.account || tabUser.account.trim() === '') {
+                this.$message({
+                    message: '请输入账号',
+                    type: 'error'
+                });
+                return;
+            }
+            if (!tabUser.password || tabUser.password.trim() === '') {
+                this.$message({
+                    message: '请输入密码',
+                    type: 'error'
+                });
+                return;
+            }
+
+            loginRequest(tabUser).then(resp => {
+                const data = resp.data;
                 if (data.code == 200) {
-                    Cookies.set('roleId', data.resultData.roleId)
-                    Cookies.set('userId', data.resultData.userId)
-                    Cookies.set('classId', data.resultData.classId)
-                    
-                    if (data.resultData.roleId == 1) {
-                        this.$router.push("/adminHome")
-                    }
-                    if (data.resultData.roleId == 2) {
-                        this.$router.push("/teacherHome")
-                    }
-                    if (data.resultData.roleId == 3) {
-                        this.$router.push("/studentweb")
-                    }
+                    const result = data.resultData;
+                    const roleId = result.roleId;
+                    Cookies.set('roleId', roleId)
+                    Cookies.set('userId', result.userId)
+                    Cookies.set('classId', result.classId)
+
                     this.$message({
                         message: '登录成功',
                         type: 'success'
                     });
+
+                    if (roleId == 1) {
+                        this.$router.push("/adminHome")
+                    } else if (roleId == 2) {
+                        this.$router.push("/teacherHome")
+                    } else if (roleId == 3) {
+                        this.$router.push("/studentweb")
+                    } else {
+                        this.$message({
+                            message: '未配置角色权限（roleId=' + roleId + '），请联系管理员',
+                            type: 'warning'
+                        });
+                    }
                 } else {
-                    this.$message.error('账号或者密码错误');
+                    this.$message.error(data.resultData || '账号或者密码错误');
                 }
-            })
-            .catch(error => {
+            }).catch(error => {
                 console.error('Login error:', error);
                 this.$message({
                     showClose: true,
@@ -294,7 +320,6 @@ export default {
 .container {
   height: 100vh;
   overflow: hidden;
-  //background-color: #077f0d;
   background-image: url("../../assets/jia.png");
   background-size: 100%;
   display: flex;

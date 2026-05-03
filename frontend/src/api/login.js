@@ -4,11 +4,7 @@
 import {post,get} from "./request";
 
 export function loginRequest(data) {
-    alert('loginRequest called with: ' + JSON.stringify(data))
-    console.log('loginRequest called with:', data)
-    const result = post('/study/user/login', data)
-    console.log('loginRequest result:', result)
-    return result
+    return post('/study/user/login', data)
 }
 
 export function outLoginRequest() {

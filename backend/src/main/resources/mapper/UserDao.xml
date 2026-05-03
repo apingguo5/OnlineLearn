@@ -70,6 +70,7 @@
         SELECT
         u.id AS userId,
         u.user_name AS userName,
+        u.password AS password,
         uc.class_id AS classId,
         ur.role_id AS roleId
         FROM
@@ -79,9 +80,6 @@
         <where>
             <if test="account != null">
                 AND u.account = #{account}
-            </if>
-            <if test="password != null">
-                AND u.password = #{password}
             </if>
         </where>
     </select>

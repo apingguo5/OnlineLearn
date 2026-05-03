@@ -14,6 +14,7 @@ import com.rabbiter.ol.service.UserClassService;
 import com.rabbiter.ol.service.UserRoleService;
 import com.rabbiter.ol.service.UserService;
 import com.rabbiter.ol.service.UserSubjectService;
+import com.rabbiter.ol.tool.MD5Util;
 import com.rabbiter.ol.vo.LoginVo;
 import com.rabbiter.ol.vo.UserVo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -108,6 +109,10 @@ public class UserController {
             return Result.failureCode();
         }
 
+        // 密码加密存储
+        if (user.getUserEntity().getPassword() != null && !user.getUserEntity().getPassword().isEmpty()) {
+            user.getUserEntity().setPassword(MD5Util.encrypt(user.getUserEntity().getPassword()));
+        }
         user.getUserEntity().setCreateTime(new Date(System.currentTimeMillis()));
         boolean save = userService.save(user.getUserEntity());
 
@@ -143,10 +148,24 @@ public class UserController {
      */
     @RequestMapping("/registry")
     public Result registry(@RequestBody UserEntity user) {
-        if(userService.getBaseMapper().selectCount(new QueryWrapper<UserEntity>().eq("account", user.getAccount())) != 0) {
-            // 账号重复
-            return Result.failureCode();
+        // 参数校验
+        if (user.getAccount() == null || user.getAccount().trim().isEmpty()) {
+            return Result.failure("账号不能为空");
         }
+        if (user.getPassword() == null || user.getPassword().trim().isEmpty()) {
+            return Result.failure("密码不能为空");
+        }
+        if (user.getUserName() == null || user.getUserName().trim().isEmpty()) {
+            return Result.failure("姓名不能为空");
+        }
+
+        // 检查账号重复
+        if(userService.getBaseMapper().selectCount(new QueryWrapper<UserEntity>().eq("account", user.getAccount())) != 0) {
+            return Result.failure("注册失败，账号已存在");
+        }
+
+        // 密码加密后存储
+        user.setPassword(MD5Util.encrypt(user.getPassword()));
         user.setCreateTime(new Date(System.currentTimeMillis()));
         boolean save = userService.save(user);
         if (save) {
@@ -156,7 +175,7 @@ public class UserController {
             userRoleService.save(userRoleEntity);
             return Result.successCode();
         }
-        return Result.failureCode();
+        return Result.failure("注册失败");
     }
 
     /**
@@ -241,31 +260,43 @@ public class UserController {
      */
     @RequestMapping("/login")
     public Result login(@RequestBody LoginVo loginVo) {
+        // 参数校验
+        if (loginVo.getAccount() == null || loginVo.getAccount().trim().isEmpty()) {
+            return Result.failure("账号不能为空");
+        }
+        if (loginVo.getPassword() == null || loginVo.getPassword().trim().isEmpty()) {
+            return Result.failure("密码不能为空");
+        }
+
         List<HashMap> users = userService.login(loginVo);
         if (users.size() < 1) {
-            return Result.failure("登录失败");
+            return Result.failure("账号或密码错误");
         }
 
         return Result.success(users.get(0));
     }
 
     /**
-     * 修改
+     * 修改密码
      */
     @RequestMapping("/updatePassword")
     public Result updatePassword(@RequestBody UserVo userVo) {
         UserEntity byId = userService.getById(userVo.getId());
-        if (userVo.getPassword().equals(byId.getPassword())){
+        if (byId == null) {
+            return Result.failure("用户不存在");
+        }
+        // 验证旧密码（明文转MD5后与数据库中加密密码比较）
+        if (MD5Util.verify(userVo.getPassword(), byId.getPassword())){
             UserEntity userEntity = new UserEntity();
             userEntity.setId(userVo.getId());
-            userEntity.setPassword(userVo.getNewPassword());
+            userEntity.setPassword(MD5Util.encrypt(userVo.getNewPassword()));
             boolean updateById = userService.updateById(userEntity);
             if (updateById){
                 return Result.successCode();
             }
-            return Result.failureCode();
+            return Result.failure("密码修改失败");
         }
-        return Result.failureCode();
+        return Result.failure("原密码错误");
     }
 
 }
