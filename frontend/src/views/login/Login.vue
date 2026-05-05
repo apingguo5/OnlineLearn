@@ -54,6 +54,16 @@
                         <el-option label="女" value="1"></el-option>
                     </el-select>
                 </el-form-item>
+                <el-form-item label="角色" :label-width="formLabelWidth">
+                    <el-select v-model="form.roleId" placeholder="请选择角色" @change="onRoleChange">
+                        <el-option v-for="item in roleList" :key="item.value" :label="item.label" :value="item.value"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="班级" :label-width="formLabelWidth" v-if="form.roleId === 3">
+                    <el-select v-model="form.classId" placeholder="请选择班级" filterable>
+                        <el-option v-for="item in classList" :key="item.id" :label="item.className" :value="item.id"></el-option>
+                    </el-select>
+                </el-form-item>
             </el-form>
             <div style="width: 100%; text-align: center">
                 <el-button type="success" @click="confirm(form)"> 注册新账号</el-button>
@@ -67,6 +77,7 @@
 <script>
 
 import { loginRequest, register } from "../../api/login";
+import { listAllClass } from "../../api/class";
 import Cookies from 'js-cookie'
 export default {
     name: "Login",
@@ -92,12 +103,19 @@ export default {
                 phone: '',
                 password: '',
                 confirmPassword: '',
-                desc: ''
+                desc: '',
+                roleId: 3,
+                classId: ''
             },
             formLabelWidth: '80px',
             timer: null,
             dialog: false,
             loading: false,
+            classList: [],
+            roleList: [
+                { value: 3, label: '学生' },
+                { value: 2, label: '教师' }
+            ],
 
             rules: {
                 password: [
@@ -111,9 +129,26 @@ export default {
 
     },
     created() {
-
+        this.loadClassList();
     },
     methods: {
+
+        onRoleChange(value) {
+            if (value === 2) {
+                // 教师不需要选班级
+                this.form.classId = '';
+            }
+        },
+
+        loadClassList() {
+            listAllClass({}).then(resp => {
+                if (resp.data && resp.data.code === 200) {
+                    this.classList = resp.data.resultData || [];
+                }
+            }).catch(() => {
+                // 班级列表加载失败不影响注册功能
+            });
+        },
 
         confirm(form) {
 
@@ -159,14 +194,19 @@ export default {
                 });
                 return
             }
-            // 构造注册参数，不包含 confirmPassword
+            // 构造注册参数，包含角色和班级
             const registerData = {
                 userName: this.form.userName,
                 account: this.form.account,
                 sex: parseInt(this.form.sex),
                 phone: this.form.phone,
-                password: this.form.password
+                password: this.form.password,
+                roleId: parseInt(this.form.roleId)
             };
+            // 学生需传班级ID
+            if (this.form.roleId === 3 && this.form.classId) {
+                registerData.classId = parseInt(this.form.classId);
+            }
             register(registerData).then(resp => {
                 if (resp.data.code == 200) {
                     this.dialog = false;
@@ -182,7 +222,9 @@ export default {
                         phone: '',
                         password: '',
                         confirmPassword: '',
-                        desc: ''
+                        desc: '',
+                        roleId: 3,
+                        classId: ''
                     };
                 } else {
                     this.$message.error(resp.data.resultData || '注册失败，账号已存在');

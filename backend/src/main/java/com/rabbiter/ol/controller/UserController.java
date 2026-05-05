@@ -16,6 +16,7 @@ import com.rabbiter.ol.service.UserService;
 import com.rabbiter.ol.service.UserSubjectService;
 import com.rabbiter.ol.tool.MD5Util;
 import com.rabbiter.ol.vo.LoginVo;
+import com.rabbiter.ol.vo.RegistryVo;
 import com.rabbiter.ol.vo.UserVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -144,38 +145,58 @@ public class UserController {
     }
 
     /**
-     * 用户注册
+     * 用户注册 - 支持选择角色和班级
      */
     @RequestMapping("/registry")
-    public Result registry(@RequestBody UserEntity user) {
+    public Result registry(@RequestBody RegistryVo registryVo) {
         // 参数校验
-        if (user.getAccount() == null || user.getAccount().trim().isEmpty()) {
+        if (registryVo.getAccount() == null || registryVo.getAccount().trim().isEmpty()) {
             return Result.failure("账号不能为空");
         }
-        if (user.getPassword() == null || user.getPassword().trim().isEmpty()) {
+        if (registryVo.getPassword() == null || registryVo.getPassword().trim().isEmpty()) {
             return Result.failure("密码不能为空");
         }
-        if (user.getUserName() == null || user.getUserName().trim().isEmpty()) {
+        if (registryVo.getUserName() == null || registryVo.getUserName().trim().isEmpty()) {
             return Result.failure("姓名不能为空");
         }
 
         // 检查账号重复
-        if(userService.getBaseMapper().selectCount(new QueryWrapper<UserEntity>().eq("account", user.getAccount())) != 0) {
+        if(userService.getBaseMapper().selectCount(new QueryWrapper<UserEntity>().eq("account", registryVo.getAccount())) != 0) {
             return Result.failure("注册失败，账号已存在");
         }
 
         // 密码加密后存储
-        user.setPassword(MD5Util.encrypt(user.getPassword()));
+        UserEntity user = new UserEntity();
+        user.setAccount(registryVo.getAccount());
+        user.setPassword(MD5Util.encrypt(registryVo.getPassword()));
+        user.setUserName(registryVo.getUserName());
+        user.setPhone(registryVo.getPhone());
+        user.setSex(registryVo.getSex());
         user.setCreateTime(new Date(System.currentTimeMillis()));
         boolean save = userService.save(user);
-        if (save) {
-            UserRoleEntity userRoleEntity = new UserRoleEntity();
-            userRoleEntity.setUserId(user.getId());
-            userRoleEntity.setRoleId(3);
-            userRoleService.save(userRoleEntity);
-            return Result.successCode();
+        if (!save) {
+            return Result.failure("注册失败");
         }
-        return Result.failure("注册失败");
+
+        // 写入角色关联（默认学生3，若前端传了roleId则使用自定义角色）
+        Integer roleId = registryVo.getRoleId();
+        if (roleId == null) {
+            roleId = 3; // 默认学生
+        }
+        UserRoleEntity userRoleEntity = new UserRoleEntity();
+        userRoleEntity.setUserId(user.getId());
+        userRoleEntity.setRoleId(roleId);
+        userRoleService.save(userRoleEntity);
+
+        // 写入班级关联（学生选班或教师归属班级）
+        if (registryVo.getClassId() != null) {
+            UserClassEntity userClassEntity = new UserClassEntity();
+            userClassEntity.setClassId(registryVo.getClassId());
+            userClassEntity.setUserId(user.getId());
+            userClassService.save(userClassEntity);
+        }
+
+        return Result.successCode();
     }
 
     /**
