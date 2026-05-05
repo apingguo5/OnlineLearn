@@ -46,6 +46,16 @@ public class UserDoHomeworkEntity implements Serializable {
 //	@TableField(exist = false)//忽略实体映射
 	private String mode;
 
+	/**
+	 * 得分
+	 */
+	private Double score;
+
+	/**
+	 * 评语
+	 */
+	private String remark;
+
 	public Integer getId() {
 		return id;
 	}
@@ -92,5 +102,21 @@ public class UserDoHomeworkEntity implements Serializable {
 
 	public void setMode(String mode) {
 		this.mode = mode;
+	}
+
+	public Double getScore() {
+		return score;
+	}
+
+	public void setScore(Double score) {
+		this.score = score;
+	}
+
+	public String getRemark() {
+		return remark;
+	}
+
+	public void setRemark(String remark) {
+		this.remark = remark;
 	}
 }

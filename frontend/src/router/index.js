@@ -53,6 +53,7 @@ import Subject from '../views/admin/subject/Subject.vue'
 import Point from '../views/studentweb/point/Point.vue'
 import WatchTime from '../views/studentweb/watchtime/WatchTime.vue'
 import TeacherAskAndAnswer from '../views/container/askandanswer/TeacherAskAndAnswer.vue'
+import TeacherDashboard from '../views/teacher/TeacherDashboard.vue'
 import TestComponent from '../views/test/TestComponent.vue'
 import SimpleTest from '../views/test/SimpleTest.vue'
 Vue.use(VueRouter)
@@ -516,6 +517,14 @@ const routes = [
                 component: TeacherAskAndAnswer,
                 meta: {
                     requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                },
+            },
+            {
+                path: '/teacherdashboard',
+                name: 'TeacherDashboard',
+                component: TeacherDashboard,
+                meta: {
+                    requireAuth: true,
                 },
             },
         ]

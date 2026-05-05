@@ -32,11 +32,10 @@ export default {
         })
     },
     updated() {
-        // 暂时注释掉角色检查，以便直接访问问答页面
-        // var roleId = Cookies.get("roleId")
-        // if(roleId != 3) {
-        //     this.$router.push("/login")
-        // }
+        var roleId = Cookies.get("roleId")
+        if(roleId != 3) {
+            this.$router.push("/login")
+        }
     }
 
 }

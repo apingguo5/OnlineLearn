@@ -1,7 +1,10 @@
 package com.rabbiter.ol.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.rabbiter.ol.dao.UserDao;
 import com.rabbiter.ol.entity.UserEntity;
+import com.rabbiter.ol.entity.UserRoleEntity;
+import com.rabbiter.ol.service.UserRoleService;
 import com.rabbiter.ol.service.UserService;
 import com.rabbiter.ol.tool.MD5Util;
 import com.rabbiter.ol.vo.LoginVo;
@@ -22,6 +25,9 @@ public class UserServiceImpl extends ServiceImpl<UserDao, UserEntity> implements
 
     @Autowired
     private UserDao userDao;
+
+    @Autowired
+    private UserRoleService userRoleService;
 
     @Override
     public Map<String, Object> queryPage(UserVo userVo) {
@@ -57,6 +63,18 @@ public class UserServiceImpl extends ServiceImpl<UserDao, UserEntity> implements
             if (passwordMatched) {
                 // 密码正确，移除密码字段再返回
                 user.remove("password");
+
+                // 根据用户ID查询 user_role 表获取角色
+                // MyBatis对INT UNSIGNED可能返回Long，使用Number安全转换
+                Number userIdNum = (Number) user.get("userId");
+                Integer userId = userIdNum.intValue();
+                List<UserRoleEntity> roleList = userRoleService.list(
+                    new QueryWrapper<UserRoleEntity>().eq("user_id", userId)
+                );
+                if (roleList != null && !roleList.isEmpty()) {
+                    // 只取第一个角色
+                    user.put("roleId", roleList.get(0).getRoleId());
+                }
                 return users;
             }
         }

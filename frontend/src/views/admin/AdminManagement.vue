@@ -6,7 +6,7 @@
             </el-header>
             <el-container>
                 <el-aside width="200px">
-                    <Aside></Aside>
+                    <AdminAside></AdminAside>
                 </el-aside>
                 <el-main>
                     <div style="font-size: 30px;font-weight: bold">
@@ -22,11 +22,11 @@
 
 <script>
 import Header from "./header/Header.vue"
-import Aside from "./aside/Aside";
+import AdminAside from "./aside/AdminAside";
 import Cookies from 'js-cookie'
 export default {
     name: "AdminManagement",
-    components: { Aside, Header },
+    components: { AdminAside, Header },
     updated() {
         var roleId = Cookies.get("roleId")
         if(roleId != 1) {
