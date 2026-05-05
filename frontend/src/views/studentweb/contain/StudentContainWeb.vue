@@ -2,20 +2,27 @@
     <div>
         <el-container>
             <el-header>
-                <Header style="height: 80px"></Header>
+                <Header></Header>
             </el-header>
-            <el-main>
-<!--                <div class=""><b> 欢迎访问学生端，{{ Info.userName }} 同学</b></div>-->
-                <router-view></router-view>
-            </el-main>
+            <el-container>
+                <el-aside width="200px">
+                    <StudentAside></StudentAside>
+                </el-aside>
+                <el-main>
+                    <div style="font-size: 30px;font-weight: bold">
+                        欢迎访问学生端，{{ Info.userName }} 同学
+                    </div>
+                    <hr>
+                    <router-view></router-view>
+                </el-main>
+            </el-container>
         </el-container>
-
     </div>
 </template>
 
 <script>
 import Header from "./header/Header";
-
+import StudentAside from "../aside/StudentAside";
 import {personal} from '../../../api/personal.js'
 import Cookies from 'js-cookie'
 export default {
@@ -25,7 +32,7 @@ export default {
             Info: {}
         }
     },
-    components: { Header },
+    components: { Header, StudentAside },
     mounted() {
         personal({'id' : Cookies.get("userId")}).then(resp => {
             this.Info = resp.data.resultData
@@ -37,48 +44,54 @@ export default {
             this.$router.push("/login")
         }
     }
-
 }
 </script>
 
 <style scoped>
+.el-container.is-vertical {
+    flex-direction: column;
+    height: 100%;
+}
+
+.el-header {
+    margin-left: -20px;
+    margin-right: -20px;
+    background-color: #0b5013;
+    color: #333;
+    text-align: center;
+    line-height: 60px;
+    border-bottom: 1px solid #0b5013;
+}
+
+.el-aside {
+    background-color: #085e03;
+    color: #333;
+    text-align: center;
+    line-height: 200px;
+}
+
 .el-main {
-    height: 90vh !important;
-    overflow-y: auto !important;
-    padding: 0 50px 120px 50px;
-    margin-top: 70px;
+    background-color: rgba(233, 238, 243, 0.1);
+    color: #333;
+    overflow-y: auto;
+    height: 90vh;
 }
 
 .welcome {
     font-size: 26px;
     margin: 20px 0 35px 0;
 }
-.el-carousel__item h3 {
-    color: #475669;
-    font-size: 14px;
-    opacity: 0.75;
-    line-height: 400px;
-    margin: 0;
+
+body>.el-container {
+    margin-bottom: 40px;
 }
 
-.el-header {
-    /* padding: 0 20px; */
-    /* box-sizing: border-box; */
-    /* flex-shrink: 0; */
-    background-color: #ffffff;
-    height: 80px !important;
-    z-index: 99 !important;
+.el-container:nth-child(5) .el-aside,
+.el-container:nth-child(6) .el-aside {
+    line-height: 260px;
 }
 
-.el-carousel__item:nth-child(2n) {
-    background-color: #99a9bf;
-}
-
-.el-carousel__item:nth-child(2n+1) {
-    background-color: #d3dce6;
-}
-
-.el-submenu__title {
-    font-size: 20px;
+.el-container:nth-child(7) .el-aside {
+    line-height: 320px;
 }
 </style>
