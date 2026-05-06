@@ -8,7 +8,7 @@
             <div class="logo-icon">
               <i class="el-icon-reading"></i>
             </div>
-            <h1 class="system-title">《智能终端应用开发》<br/>线上课程管理系统</h1>
+            <h1 class="system-title">Online Learn</h1>
           </div>
           <div class="system-desc">
             <p>统一登录入口</p>

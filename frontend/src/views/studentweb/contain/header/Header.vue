@@ -13,7 +13,7 @@
                 " />
             </el-col>
             <el-col :span="14" style="font-size: 32px;font-weight: 600;text-align: left;margin: 15px 0 0 0;">
-                《智能终端应用开发》线上课程系统
+                Online Learn
             </el-col>
         </el-row>
 

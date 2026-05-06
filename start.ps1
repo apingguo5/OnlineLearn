@@ -1,16 +1,16 @@
 <#
 .SYNOPSIS
-    OnlineLearn startup script (PowerShell).
+    OnlineLearn 启动脚本 (PowerShell)
 .DESCRIPTION
-    Start frontend (Vue), backend (Spring Boot), or both.
+    统一启动脚本，加载 env/ 环境配置后启动后端/前端服务
 .PARAMETER All
-    Start both frontend and backend (default).
+    同时启动后端和前端 (默认)
 .PARAMETER Backend
-    Start backend only.
+    仅启动后端
 .PARAMETER Frontend
-    Start frontend only.
+    仅启动前端
 .PARAMETER Install
-    Install/update dependencies before starting.
+    先安装/更新依赖再启动
 .EXAMPLE
     .\start.ps1 -All
     .\start.ps1 -Backend
@@ -28,26 +28,48 @@ param(
 $RootDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $BackendDir = Join-Path $RootDir "backend"
 $FrontendDir = Join-Path $RootDir "frontend"
+$EnvDir = Join-Path $RootDir "env"
 
-# Maven 路径（已安装但需显式设置供新窗口使用）
-$MAVEN_HOME = "D:\Environment\maven\apache-maven-3.9.14"
-$MAVEN_BIN = "$MAVEN_HOME\bin"
-$env:PATH = "$MAVEN_BIN;$env:PATH"
+# ----- 加载环境配置（从 .env / .env.local 读取） -----
+$configLoader = Join-Path $EnvDir "env-config.ps1"
 
-# default: start both
+if (Test-Path $configLoader) {
+    Write-Host "[INFO] Loading config from .env / .env.local" -ForegroundColor Gray
+    . $configLoader
+} else {
+    Write-Host "[WARN] No config file found, using system PATH" -ForegroundColor Yellow
+    Write-Host "[WARN] Please run env\init-env.ps1 first" -ForegroundColor Yellow
+}
+
+# ----- 从当前作用域读取配置变量（由 dot-source 加载）-----
+$script:JAVA_HOME   = if (Test-Path variable:JAVA_HOME)   { $JAVA_HOME }   else { $null }
+$script:MAVEN_HOME  = if (Test-Path variable:MAVEN_HOME)  { $MAVEN_HOME }  else { $null }
+$script:NODE_HOME   = if (Test-Path variable:NODE_HOME)   { $NODE_HOME }   else { $null }
+
+# 如果没有通过 env-config 定义，尝试读取系统环境变量
+if (-not $script:JAVA_HOME -and (Test-Path env:JAVA_HOME))  { $script:JAVA_HOME  = $env:JAVA_HOME }
+if (-not $script:MAVEN_HOME -and (Test-Path env:MAVEN_HOME)){ $script:MAVEN_HOME = $env:MAVEN_HOME }
+if (-not $script:NODE_HOME -and (Test-Path env:NODE_HOME))  { $script:NODE_HOME  = $env:NODE_HOME }
+
+$script:BACKEND_PORT      = if (Test-Path variable:BACKEND_PORT)      { $BACKEND_PORT }      else { "9251" }
+$script:FRONTEND_PORT     = if (Test-Path variable:FRONTEND_PORT)     { $FRONTEND_PORT }     else { "9252" }
+$script:SKIP_TESTS        = if (Test-Path variable:SKIP_TESTS)        { $SKIP_TESTS }        else { $true }
+$script:NPM_INSTALL_ARGS  = if (Test-Path variable:NPM_INSTALL_ARGS)  { $NPM_INSTALL_ARGS }  else { "--legacy-peer-deps" }
+
+# ----- 默认行为: 同时启动两者 -----
 if (-not ($All -or $Backend -or $Frontend)) {
     $All = $true
 }
 
 Write-Host ""
 Write-Host "==============================================" -ForegroundColor Cyan
-Write-Host "       OnlineLearn Platform - Startup Script    " -ForegroundColor Cyan
+Write-Host "       OnlineLearn Platform - Startup Script" -ForegroundColor Cyan
 Write-Host "==============================================" -ForegroundColor Cyan
 Write-Host ""
 
 function Start-Backend {
     Write-Host "[Backend] Starting backend service..." -ForegroundColor Green
-    Write-Host "[Backend] Port: 9251, Dir: $BackendDir" -ForegroundColor Gray
+    Write-Host "[Backend] Port: $($script:BACKEND_PORT), Dir: $BackendDir" -ForegroundColor Gray
 
     if (-not (Test-Path $BackendDir)) {
         Write-Host "[Backend] ERROR: backend directory not found!" -ForegroundColor Red
@@ -57,7 +79,11 @@ function Start-Backend {
     if ($Install) {
         Write-Host "[Backend] Installing Maven dependencies..." -ForegroundColor Yellow
         Push-Location $BackendDir
-        mvn clean install -DskipTests
+        if ($script:SKIP_TESTS) {
+            & mvn clean install -DskipTests
+        } else {
+            & mvn clean install
+        }
         if ($LASTEXITCODE -ne 0) {
             Write-Host "[Backend] Maven install failed!" -ForegroundColor Red
             Pop-Location
@@ -66,16 +92,27 @@ function Start-Backend {
         Pop-Location
     }
 
-    # open new cmd window to run backend
-    $cmdArg = 'cd /d "' + $BackendDir + '" && mvn spring-boot:run'
-    Start-Process cmd -ArgumentList @('/K', $cmdArg) -WindowStyle Normal
-    Write-Host "[Backend] Service starting at http://localhost:9251" -ForegroundColor Green
+    # 构建 cmd 命令：在新窗口中设置环境变量后运行 mvn
+    $cmdPrologue = ""
+    if ($script:JAVA_HOME) {
+        $cmdPrologue += "set JAVA_HOME=$($script:JAVA_HOME) && "
+        $cmdPrologue += "set PATH=$($script:JAVA_HOME)\bin;%PATH% && "
+    }
+    if ($script:MAVEN_HOME) {
+        $cmdPrologue += "set MAVEN_HOME=$($script:MAVEN_HOME) && "
+        $cmdPrologue += "set PATH=$($script:MAVEN_HOME)\bin;%PATH% && "
+    }
+
+    $cmdArgs = "/K $cmdPrologue cd /d `"$BackendDir`" && mvn spring-boot:run"
+    Start-Process cmd -ArgumentList $cmdArgs
+
+    Write-Host "[Backend] Service starting at http://localhost:$($script:BACKEND_PORT)" -ForegroundColor Green
     Write-Host ""
 }
 
 function Start-Frontend {
     Write-Host "[Frontend] Starting frontend service..." -ForegroundColor Green
-    Write-Host "[Frontend] Port: 9252, Dir: $FrontendDir" -ForegroundColor Gray
+    Write-Host "[Frontend] Port: $($script:FRONTEND_PORT), Dir: $FrontendDir" -ForegroundColor Gray
 
     if (-not (Test-Path $FrontendDir)) {
         Write-Host "[Frontend] ERROR: frontend directory not found!" -ForegroundColor Red
@@ -87,7 +124,7 @@ function Start-Frontend {
     if (-not (Test-Path $nodeModules)) {
         Write-Host "[Frontend] node_modules not found, installing..." -ForegroundColor Yellow
         Push-Location $FrontendDir
-        npm install --legacy-peer-deps
+        & npm install $script:NPM_INSTALL_ARGS
         if ($LASTEXITCODE -ne 0) {
             Write-Host "[Frontend] npm install failed!" -ForegroundColor Red
             Pop-Location
@@ -97,7 +134,7 @@ function Start-Frontend {
     } elseif ($Install) {
         Write-Host "[Frontend] Updating npm dependencies..." -ForegroundColor Yellow
         Push-Location $FrontendDir
-        npm install --legacy-peer-deps
+        & npm install $script:NPM_INSTALL_ARGS
         if ($LASTEXITCODE -ne 0) {
             Write-Host "[Frontend] npm update failed!" -ForegroundColor Red
             Pop-Location
@@ -106,24 +143,29 @@ function Start-Frontend {
         Pop-Location
     }
 
-    # detect node version
-    $nodeVersion = [int]((node --version) -replace 'v', '' -split '\.')[0]
-    $useOpenSSL = $nodeVersion -ge 17
-
-    # open new cmd window to run frontend
-    $dirQuoted = '"' + $FrontendDir + '"'
-    if ($useOpenSSL) {
-        $cmdArg = "cd /d $dirQuoted && set NODE_OPTIONS=--openssl-legacy-provider && npm run serve"
-    } else {
-        $cmdArg = "cd /d $dirQuoted && npm run serve"
+    # 构建 cmd 命令：在新窗口中设置环境变量后运行 npm
+    $cmdPrologue = ""
+    if ($script:NODE_HOME) {
+        $cmdPrologue += "set PATH=$($script:NODE_HOME);%PATH% && "
     }
-    Start-Process cmd -ArgumentList @('/K', $cmdArg) -WindowStyle Normal
 
-    Write-Host "[Frontend] Service starting at http://localhost:9252" -ForegroundColor Green
+    # detect node version for OpenSSL compat
+    $nodeVer = & node --version
+    $nodeMajor = [int]($nodeVer -replace 'v', '' -split '\.')[0]
+    $useOpenSSL = $nodeMajor -ge 17
+
+    if ($useOpenSSL) {
+        $cmdArgs = "/K $cmdPrologue cd /d `"$FrontendDir`" && set NODE_OPTIONS=--openssl-legacy-provider && npm run serve"
+    } else {
+        $cmdArgs = "/K $cmdPrologue cd /d `"$FrontendDir`" && npm run serve"
+    }
+    Start-Process cmd -ArgumentList $cmdArgs
+
+    Write-Host "[Frontend] Service starting at http://localhost:$($script:FRONTEND_PORT)" -ForegroundColor Green
     Write-Host ""
 }
 
-# main execution
+# ----- 主执行逻辑 -----
 if ($Backend) {
     Start-Backend
 } elseif ($Frontend) {
@@ -136,11 +178,11 @@ if ($Backend) {
     Start-Sleep -Seconds 5
     Start-Frontend
     Write-Host "==============================================" -ForegroundColor Cyan
-    Write-Host " Backend: http://localhost:9251" -ForegroundColor Cyan
-    Write-Host " Frontend: http://localhost:9252" -ForegroundColor Cyan
-    Write-Host " Both services are running in separate windows." -ForegroundColor Cyan
+    Write-Host " Backend: http://localhost:$($script:BACKEND_PORT)" -ForegroundColor Cyan
+    Write-Host " Frontend: http://localhost:$($script:FRONTEND_PORT)" -ForegroundColor Cyan
+    Write-Host " Services are running in separate windows." -ForegroundColor Cyan
     Write-Host "==============================================" -ForegroundColor Cyan
 }
 
 Write-Host ""
-Write-Host "Hint: Services are running in separate windows." -ForegroundColor Gray
+Write-Host "Hint: Services are running in cmd windows." -ForegroundColor Gray

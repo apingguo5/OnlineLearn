@@ -11,6 +11,11 @@ target/
 .idea/
 *.log
 
+# ===== 环境配置（本地个性化配置，不上传） =====
+# .env 是默认模板，本地覆盖请使用 .env.local
+env/.env.local
+frontend/.npmrc
+
 # ===== 运行时上传文件（图片/视频） =====
 **/file/imageFile/
 **/file/videoFile/
