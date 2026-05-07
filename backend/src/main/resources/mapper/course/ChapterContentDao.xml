@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.rabbiter.ol.dao.course.ChapterContentDao">
+
+    <resultMap type="com.rabbiter.ol.entity.course.ChapterContentEntity" id="contentMap">
+        <result property="id" column="id"/>
+        <result property="chapterId" column="chapter_id"/>
+        <result property="contentType" column="content_type"/>
+        <result property="contentTitle" column="content_title"/>
+        <result property="refId" column="ref_id"/>
+        <result property="sortOrder" column="sort_order"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <select id="queryListWithDetails" resultType="java.util.HashMap">
+        SELECT
+            c.id,
+            c.chapter_id AS chapterId,
+            c.content_type AS contentType,
+            c.content_title AS contentTitle,
+            c.ref_id AS refId,
+            c.sort_order AS sortOrder,
+            c.create_time AS createTime,
+            CASE
+                WHEN c.content_type = 1 THEN v.topic
+                WHEN c.content_type = 2 THEN kp.title
+                ELSE ''
+            END AS refTitle
+        FROM chapter_content c
+        LEFT JOIN videos v ON c.content_type = 1 AND c.ref_id = v.id
+        LEFT JOIN knowledge_point kp ON c.content_type = 2 AND c.ref_id = kp.id
+        WHERE c.chapter_id = #{chapterId}
+        ORDER BY c.sort_order ASC, c.id ASC
+    </select>
+
+</mapper>

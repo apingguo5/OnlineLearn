@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.rabbiter.ol.dao.ChapterResourceRefDao">
+    <resultMap id="baseMap" type="com.rabbiter.ol.entity.ChapterResourceRefEntity">
+        <id column="id" property="id" />
+        <result column="chapter_id" property="chapterId" />
+        <result column="resource_id" property="resourceId" />
+        <result column="sort_order" property="sortOrder" />
+        <result column="create_time" property="createTime" />
+    </resultMap>
+
+    <sql id="baseColumns">
+        id, chapter_id, resource_id, sort_order, create_time
+    </sql>
+
+</mapper>

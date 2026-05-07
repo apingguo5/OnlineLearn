@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.rabbiter.ol.dao.CourseResourceDao">
+    <resultMap id="baseMap" type="com.rabbiter.ol.entity.CourseResourceEntity">
+        <id column="id" property="id" />
+        <result column="subject_id" property="subjectId" />
+        <result column="resource_name" property="resourceName" />
+        <result column="resource_type" property="resourceType" />
+        <result column="file_url" property="fileUrl" />
+        <result column="file_size" property="fileSize" />
+        <result column="description" property="description" />
+        <result column="creator" property="creator" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+    </resultMap>
+
+    <sql id="baseColumns">
+        id, subject_id, resource_name, resource_type, file_url, file_size, description, creator, create_time, update_time
+    </sql>
+
+</mapper>

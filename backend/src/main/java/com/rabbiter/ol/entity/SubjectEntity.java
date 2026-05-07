@@ -28,6 +28,11 @@ public class SubjectEntity implements Serializable {
 	 */
 	private String subjectName;
 
+	/**
+	 * 创建人ID(教师)
+	 */
+	private Integer userId;
+
 	public Integer getId() {
 		return id;
 	}
@@ -42,5 +47,13 @@ public class SubjectEntity implements Serializable {
 
 	public void setSubjectName(String subjectName) {
 		this.subjectName = subjectName;
+	}
+
+	public Integer getUserId() {
+		return userId;
+	}
+
+	public void setUserId(Integer userId) {
+		this.userId = userId;
 	}
 }

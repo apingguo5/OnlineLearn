@@ -58,6 +58,11 @@ import Point from '../views/studentweb/point/Point.vue'
 import WatchTime from '../views/studentweb/watchtime/WatchTime.vue'
 import TeacherAskAndAnswer from '../views/container/askandanswer/TeacherAskAndAnswer.vue'
 import TeacherDashboard from '../views/teacher/TeacherDashboard.vue'
+import TeacherCourseManagement from '../views/teacher/TeacherCourseManagement.vue'
+import TeacherClassManagement from '../views/teacher/TeacherClassManagement.vue'
+import TeacherAssessment from '../views/teacher/TeacherAssessment.vue'
+import TeacherGradebook from '../views/teacher/TeacherGradebook.vue'
+import TeacherCommunication from '../views/teacher/TeacherCommunication.vue'
 import TestComponent from '../views/test/TestComponent.vue'
 import SimpleTest from '../views/test/SimpleTest.vue'
 Vue.use(VueRouter)
@@ -566,6 +571,46 @@ const routes = [
                 path: '/teacherdashboard',
                 name: 'TeacherDashboard',
                 component: TeacherDashboard,
+                meta: {
+                    requireAuth: true,
+                },
+            },
+            {
+                path: '/teachercoursemanagement',
+                name: 'TeacherCourseManagement',
+                component: TeacherCourseManagement,
+                meta: {
+                    requireAuth: true,
+                },
+            },
+            {
+                path: '/teacherclassmanagement',
+                name: 'TeacherClassManagement',
+                component: TeacherClassManagement,
+                meta: {
+                    requireAuth: true,
+                },
+            },
+            {
+                path: '/teacherassessment',
+                name: 'TeacherAssessment',
+                component: TeacherAssessment,
+                meta: {
+                    requireAuth: true,
+                },
+            },
+            {
+                path: '/teachergradebook',
+                name: 'TeacherGradebook',
+                component: TeacherGradebook,
+                meta: {
+                    requireAuth: true,
+                },
+            },
+            {
+                path: '/teachercommunication',
+                name: 'TeacherCommunication',
+                component: TeacherCommunication,
                 meta: {
                     requireAuth: true,
                 },

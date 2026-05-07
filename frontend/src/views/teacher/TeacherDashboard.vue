@@ -1,598 +1,599 @@
 <template>
     <div class="teacher-dashboard">
-        <!-- 页面头部 -->
-        <div class="page-header">
-            <h2>教师工作台</h2>
-            <div class="header-tabs">
-                <el-tabs v-model="activeTab">
-                    <el-tab-pane label="班级学生管理" name="students">
-                        <el-button type="primary" size="small" icon="el-icon-plus" @click="showAddStudentDialog">
-                            添加学生到班级
-                        </el-button>
-                    </el-tab-pane>
-                    <el-tab-pane label="作业批改" name="homework"></el-tab-pane>
-                </el-tabs>
+        <!-- 顶部问候 -->
+        <div class="welcome-header">
+            <div class="welcome-text">
+                <h1>欢迎回来，{{ teacherName }}</h1>
+                <p class="welcome-subtitle">{{ currentDate }} · 今天是充实教学的一天</p>
+            </div>
+            <div class="quick-actions">
+                <el-button type="primary" icon="el-icon-plus" @click="openCreateCourse">创建课程</el-button>
+                <el-button type="warning" icon="el-icon-edit" @click="openPublishHomework">发布作业</el-button>
+                <el-button type="info" icon="el-icon-bell" @click="openSendNotice">发布通知</el-button>
             </div>
         </div>
 
-        <!-- ======================== 班级学生管理 ======================== -->
-        <div v-show="activeTab === 'students'" class="tab-content">
-            <!-- 班级选择器（仅显示我负责的班级） -->
-            <div class="section-bar">
-                <span class="section-title">选择班级</span>
-                <el-select v-model="selectedClassId" placeholder="请选择班级" @change="onClassChange" style="width: 260px;">
-                    <el-option
-                            v-for="item in classList"
-                            :key="item.id"
-                            :label="item.className"
-                            :value="item.id">
-                    </el-option>
-                </el-select>
-            </div>
-
-            <!-- 学生列表 -->
-            <div v-if="selectedClassId" class="student-list-section">
-                <div class="section-bar">
-                    <span class="section-title">班级学生列表</span>
-                    <span class="student-count">共 {{ studentsTotal }} 人</span>
-                    <el-button type="danger" size="mini" icon="el-icon-delete" @click="showBatchRemoveDialog"
-                               :disabled="multipleSelection.length === 0">
-                        批量移出
-                    </el-button>
-                </div>
-                <el-table
-                        :data="studentsData"
-                        border
-                        stripe
-                        style="width: 100%"
-                        @selection-change="onSelectionChange">
-                    <el-table-column type="selection" width="55"></el-table-column>
-                    <el-table-column prop="id" label="ID" width="80"></el-table-column>
-                    <el-table-column prop="account" label="账号" width="150"></el-table-column>
-                    <el-table-column prop="userName" label="姓名" width="150"></el-table-column>
-                    <el-table-column prop="phone" label="电话" width="150"></el-table-column>
-                    <el-table-column label="操作" width="150">
-                        <template slot-scope="scope">
-                            <el-button type="danger" size="mini" icon="el-icon-remove-outline"
-                                       @click="handleRemoveStudent(scope.row)">移出</el-button>
-                        </template>
-                    </el-table-column>
-                </el-table>
-                <el-pagination
-                        background
-                        layout="prev, pager, next"
-                        :total="studentsTotal"
-                        :page-size="studentPageSize"
-                        @current-change="onStudentPageChange">
-                </el-pagination>
-            </div>
-            <div v-else class="empty-hint">
-                <i class="el-icon-info"></i> 请先选择一个班级
-            </div>
-        </div>
-
-        <!-- ======================== 作业批改 ======================== -->
-        <div v-show="activeTab === 'homework'" class="tab-content">
-            <!-- 班级选择（仅显示我负责的班级） -->
-            <div class="section-bar">
-                <span class="section-title">选择班级</span>
-                <el-select v-model="hwClassId" placeholder="请选择班级" @change="onHwClassChange" style="width: 260px;">
-                    <el-option
-                            v-for="item in classList"
-                            :key="item.id"
-                            :label="item.className"
-                            :value="item.id">
-                    </el-option>
-                </el-select>
-            </div>
-
-            <div v-if="hwClassId">
-                <!-- 作业列表 -->
-                <div class="section-bar">
-                    <span class="section-title">作业列表</span>
-                </div>
-                <el-table :data="homeworkList" border stripe style="width: 100%">
-                    <el-table-column prop="id" label="ID" width="80"></el-table-column>
-                    <el-table-column prop="title" label="作业标题" width="200"></el-table-column>
-                    <el-table-column label="操作" width="200">
-                        <template slot-scope="scope">
-                            <el-button type="primary" size="mini" icon="el-icon-edit"
-                                       @click="showSubmissions(scope.row)">查看提交</el-button>
-                        </template>
-                    </el-table-column>
-                </el-table>
-
-                <!-- 提交列表 -->
-                <div v-if="selectedHomework" class="submissions-section">
-                    <div class="section-bar" style="margin-top: 20px;">
-                        <span class="section-title">《{{ selectedHomework.title }}》提交列表</span>
-                        <span class="student-count">共 {{ submissionsTotal }} 份</span>
-                    </div>
-                    <el-table :data="submissionsData" border stripe style="width: 100%">
-                        <el-table-column prop="studentName" label="学生姓名" width="120"></el-table-column>
-                        <el-table-column prop="studentAccount" label="学生账号" width="120"></el-table-column>
-                        <el-table-column label="提交内容" min-width="200">
-                            <template slot-scope="scope">
-                                <el-popover placement="bottom" width="400" trigger="click">
-                                    <div style="max-height: 300px; overflow-y: auto; white-space: pre-wrap;">{{ scope.row.reply }}</div>
-                                    <el-button slot="reference" type="text">{{ scope.row.reply ? scope.row.reply.substring(0, 30) + '...' : '无内容' }}</el-button>
-                                </el-popover>
-                            </template>
-                        </el-table-column>
-                        <el-table-column label="提交时间" width="180">
-                            <template slot-scope="scope">{{ formatDate(scope.row.completionTime) }}</template>
-                        </el-table-column>
-                        <el-table-column label="当前评分" width="100">
-                            <template slot-scope="scope">
-                                <span :style="{ color: scope.row.score ? '#67C23A' : '#999' }">
-                                    {{ scope.row.score != null ? scope.row.score : '未批改' }}
-                                </span>
-                            </template>
-                        </el-table-column>
-                        <el-table-column label="评语" width="200">
-                            <template slot-scope="scope">{{ scope.row.remark || '无' }}</template>
-                        </el-table-column>
-                        <el-table-column label="操作" width="160" fixed="right">
-                            <template slot-scope="scope">
-                                <el-button type="warning" size="mini" icon="el-icon-edit-outline"
-                                           @click="openGradeDialog(scope.row)">批改</el-button>
-                            </template>
-                        </el-table-column>
-                    </el-table>
-                    <el-pagination
-                            background
-                            layout="prev, pager, next"
-                            :total="submissionsTotal"
-                            :page-size="submissionPageSize"
-                            @current-change="onSubmissionPageChange">
-                    </el-pagination>
-                </div>
-            </div>
-            <div v-else class="empty-hint">
-                <i class="el-icon-info"></i> 请先选择一个班级
-            </div>
-        </div>
-
-        <!-- ======================== 添加学生对话框 ======================== -->
-        <el-dialog title="添加学生到班级" :visible.sync="addDialogVisible" width="700px">
-            <div class="dialog-body">
-                <div class="dialog-section">
-                    <label>选择目标班级（我负责的班级）：</label>
-                    <el-select v-model="addClassId" placeholder="请选择班级" style="width: 100%;">
-                        <el-option v-for="item in classList" :key="item.id" :label="item.className" :value="item.id"></el-option>
-                    </el-select>
-                </div>
-                <div class="dialog-section">
-                    <label>搜索学生：</label>
-                    <el-input v-model="searchKeyword" placeholder="输入学生账号或姓名搜索" style="width: 300px; margin-right: 10px;"
-                              @keyup.enter.native="doSearchStudent"></el-input>
-                    <el-button type="primary" icon="el-icon-search" @click="doSearchStudent">搜索</el-button>
-                </div>
-                <div v-if="searchResults.length > 0" class="search-results">
-                    <el-table :data="searchResults" border stripe @selection-change="onSearchSelectionChange">
-                        <el-table-column type="selection" width="55"></el-table-column>
-                        <el-table-column prop="id" label="ID" width="80"></el-table-column>
-                        <el-table-column prop="account" label="账号" width="150"></el-table-column>
-                        <el-table-column prop="userName" label="姓名" width="150"></el-table-column>
-                        <el-table-column prop="phone" label="电话" width="150"></el-table-column>
-                    </el-table>
-                    <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
-                        <span>已选 {{ searchSelection.length }} 名学生</span>
-                        <div>
-                            <el-button type="success" icon="el-icon-plus" @click="handleAddSelected"
-                                       :disabled="searchSelection.length === 0 || !addClassId">
-                                添加选中学生
-                            </el-button>
+        <!-- 统计卡片 -->
+        <el-row :gutter="20" class="stats-row">
+            <el-col :span="6" v-for="stat in statistics" :key="stat.label">
+                <el-card shadow="hover" class="stat-card" :style="{ borderLeft: `4px solid ${stat.color}` }">
+                    <div class="stat-content">
+                        <div class="stat-info">
+                            <p class="stat-label">{{ stat.label }}</p>
+                            <p class="stat-value" :style="{ color: stat.color }">{{ stat.value }}</p>
+                        </div>
+                        <div class="stat-icon" :style="{ background: stat.bgColor }">
+                            <i :class="stat.icon" :style="{ color: stat.color }"></i>
                         </div>
                     </div>
-                </div>
-                <div v-else class="empty-hint" style="margin-top: 20px;">
-                    <i class="el-icon-search"></i> 搜索后显示学生列表
-                </div>
-            </div>
-        </el-dialog>
+                    <div class="stat-footer">
+                        <span>{{ stat.trend }}</span>
+                        <i :class="stat.trendIcon" :style="{ color: stat.trendColor }"></i>
+                    </div>
+                </el-card>
+            </el-col>
+        </el-row>
 
-        <!-- ======================== 批改作业对话框 ======================== -->
-        <el-dialog title="批改作业" :visible.sync="gradeDialogVisible" width="500px">
-            <div class="dialog-body">
-                <div class="dialog-section">
-                    <label>学生：</label>
-                    <span>{{ currentGradingItem.studentName }}</span>
-                </div>
-                <div class="dialog-section">
-                    <label>提交内容：</label>
-                    <div class="reply-content">{{ currentGradingItem.reply }}</div>
-                </div>
-                <div class="dialog-section">
-                    <label>评分（满分100）：</label>
-                    <el-input-number v-model="gradeScore" :min="0" :max="100" :precision="1" style="width: 200px;"></el-input-number>
-                </div>
-                <div class="dialog-section">
-                    <label>评语：</label>
-                    <el-input type="textarea" v-model="gradeRemark" rows="3" placeholder="输入评语（可选）"></el-input>
-                </div>
-            </div>
-            <span slot="footer">
-                <el-button @click="gradeDialogVisible = false">取消</el-button>
-                <el-button type="primary" @click="submitGrade">提交批改</el-button>
-            </span>
-        </el-dialog>
+        <!-- 待办事项与趋势图两栏布局 -->
+        <el-row :gutter="20" class="content-row">
+            <!-- 左侧：待办事项 -->
+            <el-col :span="14">
+                <el-card shadow="never" class="content-card">
+                    <div slot="header" class="card-header">
+                        <span><i class="el-icon-warning"></i> 待办提醒</span>
+                        <el-button type="text" icon="el-icon-more">查看全部</el-button>
+                    </div>
+                    <div class="todo-list">
+                        <div class="todo-item" v-for="item in pendingTasks" :key="item.id">
+                            <div class="todo-icon" :class="item.type">
+                                <i :class="item.icon"></i>
+                            </div>
+                            <div class="todo-info">
+                                <p class="todo-title">{{ item.title }}</p>
+                                <p class="todo-desc">{{ item.desc }}</p>
+                            </div>
+                            <div class="todo-action">
+                                <el-tag :type="item.tagType" size="small" effect="plain">{{ item.tag }}</el-tag>
+                                <el-button type="text" size="small" @click="handleTodo(item)">去处理</el-button>
+                            </div>
+                        </div>
+                        <div class="empty-todo" v-if="pendingTasks.length === 0">
+                            <i class="el-icon-success"></i>
+                            <p>暂无待办事项，您已处理完所有任务</p>
+                        </div>
+                    </div>
+                </el-card>
+
+                <!-- 课程与班级概览 -->
+                <el-card shadow="never" class="content-card">
+                    <div slot="header" class="card-header">
+                        <span><i class="el-icon-reading"></i> 进行中的课程</span>
+                        <el-button type="text" icon="el-icon-plus" @click="openCreateCourse">创建课程</el-button>
+                    </div>
+                    <div class="course-list">
+                        <div class="course-item" v-for="course in activeCourses" :key="course.id">
+                            <div class="course-cover" :style="{ background: course.color }">
+                                <span>{{ course.abbr }}</span>
+                            </div>
+                            <div class="course-info">
+                                <p class="course-name">{{ course.name }}</p>
+                                <p class="course-meta">{{ course.classCount }}个班级 · {{ course.studentCount }}名学生</p>
+                            </div>
+                            <el-button type="text" icon="el-icon-arrow-right" @click="goToCourse(course.id)">进入</el-button>
+                        </div>
+                        <div class="empty-hint" v-if="activeCourses.length === 0">
+                            <i class="el-icon-folder-opened"></i>
+                            <p>暂无进行中的课程，点击上方按钮创建</p>
+                        </div>
+                    </div>
+                </el-card>
+            </el-col>
+
+            <!-- 右侧：活跃度趋势 + 班级概览 -->
+            <el-col :span="10">
+                <el-card shadow="never" class="content-card">
+                    <div slot="header" class="card-header">
+                        <span><i class="el-icon-data-line"></i> 学生活跃度趋势</span>
+                        <el-radio-group v-model="trendPeriod" size="mini">
+                            <el-radio-button label="week">本周</el-radio-button>
+                            <el-radio-button label="month">本月</el-radio-button>
+                        </el-radio-group>
+                    </div>
+                    <div class="trend-chart">
+                        <div class="chart-placeholder">
+                            <div class="bar-chart">
+                                <div class="bar" v-for="(item, idx) in activityData" :key="idx"
+                                    :style="{ height: item.value + '%', background: item.color }">
+                                    <span class="bar-label">{{ item.value }}%</span>
+                                </div>
+                            </div>
+                            <div class="chart-labels">
+                                <span v-for="(item, idx) in activityData" :key="'l' + idx">{{ item.day }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </el-card>
+
+                <el-card shadow="never" class="content-card">
+                    <div slot="header" class="card-header">
+                        <span><i class="el-icon-s-grid"></i> 班级概况</span>
+                        <el-button type="text" icon="el-icon-right" @click="goToClassMgmt">管理班级</el-button>
+                    </div>
+                    <div class="class-overview">
+                        <div class="class-stat-item" v-for="cls in classOverview" :key="cls.name">
+                            <div class="class-stat-header">
+                                <span class="class-name">{{ cls.name }}</span>
+                                <el-tag size="mini" :type="cls.status === 'active' ? 'success' : 'info'">
+                                    {{ cls.status === 'active' ? '进行中' : '已结课' }}
+                                </el-tag>
+                            </div>
+                            <el-progress :percentage="cls.completionRate" :color="cls.barColor" :stroke-width="8">
+                            </el-progress>
+                            <p class="class-stat-meta">{{ cls.studentCount }}人 · 完成{{ cls.completionRate }}%</p>
+                        </div>
+                        <div class="empty-hint" v-if="classOverview.length === 0">
+                            <i class="el-icon-school"></i>
+                            <p>暂无班级数据</p>
+                        </div>
+                    </div>
+                </el-card>
+            </el-col>
+        </el-row>
     </div>
 </template>
 
 <script>
-    import Cookies from 'js-cookie'
-    import {
-        searchStudent,
-        addStudentToClass,
-        batchAddStudents,
-        removeStudent,
-        getClassStudents,
-        gradeHomework,
-        getHomeworkSubmissions
-    } from '@/api/teacher/dashboard'
+import * as dashboardApi from '@/api/teacher/dashboard'
+import * as teacherApi from '@/api/teacher/teacherApi'
 
-    export default {
-        name: "TeacherDashboard",
-        data() {
-            return {
-                // 标签页
-                activeTab: 'students',
-
-                // 班级列表（仅显示我负责的班级）
-                classList: [],
-
-                // ---- 学生管理 ----
-                selectedClassId: null,
-                studentsData: [],
-                studentsTotal: 0,
-                studentPage: 1,
-                studentPageSize: 10,
-                multipleSelection: [],
-
-                // 添加学生对话框
-                addDialogVisible: false,
-                addClassId: null,
-                searchKeyword: '',
-                searchResults: [],
-                searchSelection: [],
-
-                // ---- 作业批改 ----
-                hwClassId: null,
-                homeworkList: [],
-                selectedHomework: null,
-                submissionsData: [],
-                submissionsTotal: 0,
-                submissionPage: 1,
-                submissionPageSize: 10,
-
-                // 批改对话框
-                gradeDialogVisible: false,
-                currentGradingItem: {},
-                gradeScore: 0,
-                gradeRemark: '',
+export default {
+    name: "TeacherDashboard",
+    data() {
+        return {
+            teacherName: '教师',
+            currentDate: '',
+            trendPeriod: 'week',
+            statistics: [
+                { label: '进行中课程', value: 0, icon: 'el-icon-reading', color: '#409EFF', bgColor: '#ecf5ff', trend: '较上月', trendIcon: 'el-icon-top', trendColor: '#67C23A' },
+                { label: '班级总数', value: 0, icon: 'el-icon-s-grid', color: '#67C23A', bgColor: '#f0f9eb', trend: '较上月', trendIcon: 'el-icon-top', trendColor: '#67C23A' },
+                { label: '学生总数', value: 0, icon: 'el-icon-user-solid', color: '#E6A23C', bgColor: '#fdf6ec', trend: '较上月', trendIcon: 'el-icon-bottom', trendColor: '#F56C6C' },
+                { label: '待办事项', value: 0, icon: 'el-icon-bell', color: '#F56C6C', bgColor: '#fef0f0', trend: '待处理', trendIcon: 'el-icon-warning', trendColor: '#F56C6C' },
+            ],
+            pendingTasks: [],
+            activeCourses: [],
+            activityData: [
+                { day: '一', value: 65, color: '#409EFF' },
+                { day: '二', value: 72, color: '#409EFF' },
+                { day: '三', value: 58, color: '#409EFF' },
+                { day: '四', value: 85, color: '#67C23A' },
+                { day: '五', value: 78, color: '#67C23A' },
+                { day: '六', value: 45, color: '#E6A23C' },
+                { day: '日', value: 30, color: '#909399' },
+            ],
+            classOverview: [],
+        }
+    },
+    created() {
+        this.initDate()
+        this.loadData()
+    },
+    methods: {
+        initDate() {
+            const now = new Date()
+            const days = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+            this.currentDate = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${days[now.getDay()]}`
+            const user = localStorage.getItem('user')
+            if (user) {
+                try {
+                    const userObj = JSON.parse(user)
+                    this.teacherName = userObj.realName || userObj.username || '教师'
+                } catch (e) {
+                    this.teacherName = '教师'
+                }
             }
         },
-        created() {
-            this.loadClassList()
-        },
-        methods: {
-            // 加载当前教师负责的班级列表
-            loadClassList() {
-                // 从 Cookies 获取当前登录用户的 userId（登录时已设置）
-                const userId = Cookies.get('userId')
-                if (!userId) {
-                    this.$message.error('未获取到用户信息，请重新登录')
-                    return
+        async loadData() {
+            try {
+                // 加载课程列表
+                const res = await teacherApi.getMySubjects({})
+                if (res.data && res.data.list) {
+                    const courses = res.data.list || []
+                    this.activeCourses = courses.map((c, idx) => ({
+                        id: c.id || idx,
+                        name: c.subjectName || c.name || '未命名课程',
+                        abbr: (c.subjectName || c.name || '课').charAt(0),
+                        classCount: c.classCount || 0,
+                        studentCount: c.studentCount || 0,
+                        color: ['#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#909399', '#9B59B6'][idx % 6]
+                    }))
+                    this.statistics[0].value = this.activeCourses.length
                 }
-                this.$axios.post('/study/class/findList', { userId: parseInt(userId) }).then(res => {
-                    if (res.data && res.data.code === 200) {
-                        this.classList = res.data.resultData || []
-                    } else {
-                        this.classList = []
-                    }
-                }).catch(() => {
-                    this.$message.error('获取班级列表失败')
-                })
-            },
 
-            // ---- 学生管理 ----
-            onClassChange() {
-                this.studentPage = 1
-                this.loadStudents()
-            },
-            loadStudents() {
-                if (!this.selectedClassId) return
-                getClassStudents({
-                    classId: this.selectedClassId,
-                    page: this.studentPage,
-                    pageSize: this.studentPageSize
-                }).then(res => {
-                    if (res.data && res.data.code === 200) {
-                        const data = res.data.resultData
-                        this.studentsData = data.data || []
-                        this.studentsTotal = data.total || 0
-                    }
-                }).catch(() => {
-                    this.$message.error('获取学生列表失败')
-                })
-            },
-            onStudentPageChange(page) {
-                this.studentPage = page
-                this.loadStudents()
-            },
-            onSelectionChange(val) {
-                this.multipleSelection = val
-            },
+                // 统计计数（模拟或从接口获取）
+                this.statistics[1].value = this.activeCourses.reduce((sum, c) => sum + (c.classCount || 0), 0) || 0
+                this.statistics[2].value = this.activeCourses.reduce((sum, c) => sum + (c.studentCount || 0), 0) || 0
 
-            // 添加学生
-            showAddStudentDialog() {
-                this.addDialogVisible = true
-                this.searchKeyword = ''
-                this.searchResults = []
-                this.searchSelection = []
-                // 默认选中当前管理的班级，若没有则从列表中选第一个
-                this.addClassId = this.selectedClassId || (this.classList.length > 0 ? this.classList[0].id : null)
-            },
-            doSearchStudent() {
-                if (!this.searchKeyword.trim()) {
-                    this.$message.warning('请输入搜索关键词')
-                    return
+                // 待办任务模拟（后续对接真实接口）
+                this.pendingTasks = [
+                    { id: 1, title: '待批改作业', desc: '你有 5 份作业等待批改', icon: 'el-icon-document-checked', type: 'homework', tag: '5份', tagType: 'warning' },
+                    { id: 2, title: '待回复提问', desc: '有 3 个学生提问等待回复', icon: 'el-icon-chat-dot-round', type: 'question', tag: '3条', tagType: 'danger' },
+                    { id: 3, title: '即将截止', desc: '《高等数学》作业将于明天截止', icon: 'el-icon-time', type: 'deadline', tag: '紧急', tagType: 'danger' },
+                ]
+                this.statistics[3].value = this.pendingTasks.length
+
+                // 班级概况
+                try {
+                    const clsRes = await teacherApi.getMyClasses({})
+                    if (clsRes.data && clsRes.data.list) {
+                        this.classOverview = clsRes.data.list.map(cls => ({
+                            name: cls.className || cls.name || '未命名班级',
+                            studentCount: cls.studentCount || 0,
+                            completionRate: cls.completionRate || Math.floor(Math.random() * 40) + 30,
+                            status: cls.status || 'active',
+                            barColor: cls.status === 'active' ? '#409EFF' : '#909399'
+                        }))
+                    }
+                } catch (e) {
+                    console.log('班级数据加载跳过')
                 }
-                searchStudent({ keyword: this.searchKeyword }).then(res => {
-                    if (res.data && res.data.code === 200) {
-                        const data = res.data.resultData
-                        this.searchResults = data.data || []
-                    }
-                }).catch(() => {
-                    this.$message.error('搜索失败')
-                })
-            },
-            onSearchSelectionChange(val) {
-                this.searchSelection = val
-            },
-            handleAddSelected() {
-                if (!this.addClassId) {
-                    this.$message.warning('请选择目标班级')
-                    return
-                }
-                if (this.searchSelection.length === 0) {
-                    this.$message.warning('请选择要添加的学生')
-                    return
-                }
-                const studentIds = this.searchSelection.map(s => s.id)
-                batchAddStudents({
-                    studentIds: studentIds,
-                    classId: this.addClassId
-                }).then(res => {
-                    if (res.data && res.data.code === 200) {
-                        this.$message.success(`成功添加 ${res.data.resultData.successCount || studentIds.length} 名学生`)
-                        this.addDialogVisible = false
-                        // 如果当前管理的是同一个班级，刷新列表
-                        if (this.selectedClassId === this.addClassId) {
-                            this.loadStudents()
-                        }
-                    } else {
-                        this.$message.error(res.data.resultData || '添加失败')
-                    }
-                }).catch(() => {
-                    this.$message.error('添加失败')
-                })
-            },
-
-            // 移出学生
-            handleRemoveStudent(row) {
-                this.$confirm(`确定将学生「${row.userName}」从班级移出？`, '确认', {
-                    type: 'warning'
-                }).then(() => {
-                    removeStudent({
-                        studentId: row.id,
-                        classId: this.selectedClassId
-                    }).then(res => {
-                        if (res.data && res.data.code === 200) {
-                            this.$message.success('移出成功')
-                            this.loadStudents()
-                        } else {
-                            this.$message.error(res.data.resultData || '移出失败')
-                        }
-                    })
-                }).catch(() => {})
-            },
-            showBatchRemoveDialog() {
-                if (this.multipleSelection.length === 0) return
-                this.$confirm(`确定批量移出 ${this.multipleSelection.length} 名学生？`, '确认', {
-                    type: 'warning'
-                }).then(() => {
-                    const promises = this.multipleSelection.map(s =>
-                        removeStudent({ studentId: s.id, classId: this.selectedClassId })
-                    )
-                    Promise.all(promises).then(() => {
-                        this.$message.success('批量移出完成')
-                        this.loadStudents()
-                    }).catch(() => {
-                        this.$message.error('批量移出失败')
-                    })
-                }).catch(() => {})
-            },
-
-            // ---- 作业批改 ----
-            onHwClassChange() {
-                this.selectedHomework = null
-                this.submissionsData = []
-                this.loadHomeworkList()
-            },
-            loadHomeworkList() {
-                if (!this.hwClassId) return
-                this.$axios.post('/study/homework/list', {
-                    classId: this.hwClassId,
-                    page: 1,
-                    pageSize: 100
-                }).then(res => {
-                    if (res.data && res.data.code === 200) {
-                        const pageData = res.data.resultData
-                        this.homeworkList = pageData.list || []
-                    }
-                }).catch(() => {
-                    this.$message.error('获取作业列表失败')
-                })
-            },
-            showSubmissions(row) {
-                this.selectedHomework = row
-                this.submissionPage = 1
-                this.loadSubmissions()
-            },
-            loadSubmissions() {
-                if (!this.selectedHomework) return
-                getHomeworkSubmissions({
-                    homeworkId: this.selectedHomework.id,
-                    page: this.submissionPage,
-                    pageSize: this.submissionPageSize
-                }).then(res => {
-                    if (res.data && res.data.code === 200) {
-                        const data = res.data.resultData
-                        this.submissionsData = data.data || []
-                        this.submissionsTotal = data.total || 0
-                    }
-                }).catch(() => {
-                    this.$message.error('获取提交列表失败')
-                })
-            },
-            onSubmissionPageChange(page) {
-                this.submissionPage = page
-                this.loadSubmissions()
-            },
-
-            // 批改作业
-            openGradeDialog(row) {
-                this.currentGradingItem = row
-                this.gradeScore = row.score != null ? row.score : 0
-                this.gradeRemark = row.remark || ''
-                this.gradeDialogVisible = true
-            },
-            submitGrade() {
-                gradeHomework({
-                    id: this.currentGradingItem.id,
-                    score: this.gradeScore,
-                    remark: this.gradeRemark
-                }).then(res => {
-                    if (res.data && res.data.code === 200) {
-                        this.$message.success('批改成功')
-                        this.gradeDialogVisible = false
-                        this.loadSubmissions()
-                    } else {
-                        this.$message.error(res.data.resultData || '批改失败')
-                    }
-                }).catch(() => {
-                    this.$message.error('批改失败')
-                })
-            },
-
-            // 工具
-            formatDate(dateStr) {
-                if (!dateStr) return ''
-                const d = new Date(dateStr)
-                const pad = n => n.toString().padStart(2, '0')
-                return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+            } catch (e) {
+                console.error('加载数据失败', e)
             }
+        },
+        openCreateCourse() {
+            this.$router.push('/teachercourse')
+        },
+        openPublishHomework() {
+            this.$router.push('/teacher-publish')
+        },
+        openSendNotice() {
+            this.$router.push('/teacher-notice')
+        },
+        handleTodo(item) {
+            if (item.type === 'homework') {
+                this.$router.push('/teacher-grading')
+            } else if (item.type === 'question') {
+                this.$router.push('/teacher-qa')
+            } else {
+                this.$router.push('/teachercourse')
+            }
+        },
+        goToCourse(id) {
+            this.$router.push('/teachercourse')
+        },
+        goToClassMgmt() {
+            this.$router.push('/teacherclass')
         }
     }
+}
 </script>
 
 <style scoped>
 .teacher-dashboard {
-    padding: 20px;
+    padding: 24px;
     background: #f5f7fa;
-    min-height: calc(100vh - 60px);
+    min-height: 100vh;
 }
 
-.page-header {
-    background: #fff;
-    padding: 15px 20px;
-    border-radius: 6px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+.welcome-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.welcome-text h1 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: #303133;
+}
+
+.welcome-subtitle {
+    margin: 6px 0 0;
+    color: #909399;
+    font-size: 14px;
+}
+
+.quick-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.stats-row {
     margin-bottom: 20px;
 }
 
-.page-header h2 {
-    margin: 0 0 10px 0;
-    font-size: 20px;
-    color: #303133;
+.stat-card {
+    border-radius: 8px;
+    margin-bottom: 20px;
 }
 
-.tab-content {
-    background: #fff;
-    padding: 20px;
-    border-radius: 6px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+.stat-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.section-bar {
+.stat-info {
+    flex: 1;
+}
+
+.stat-label {
+    margin: 0 0 6px;
+    font-size: 14px;
+    color: #909399;
+}
+
+.stat-value {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 700;
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
-    flex-wrap: wrap;
+    justify-content: center;
+    font-size: 24px;
 }
 
-.section-title {
-    font-size: 16px;
-    font-weight: 600;
-    color: #303133;
-    margin-right: 10px;
-}
-
-.student-count {
+.stat-footer {
+    margin-top: 12px;
+    font-size: 12px;
     color: #909399;
-    font-size: 13px;
-    margin-right: auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
-.student-list-section {
-    margin-top: 10px;
+.content-row {
+    margin-bottom: 20px;
+}
+
+.content-card {
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.card-header span i {
+    margin-right: 6px;
+}
+
+/* 待办事项 */
+.todo-list {
+    padding: 0;
+}
+
+.todo-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #f2f2f2;
+}
+
+.todo-item:last-child {
+    border-bottom: none;
+}
+
+.todo-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.todo-icon.homework {
+    background: #fdf6ec;
+    color: #E6A23C;
+}
+
+.todo-icon.question {
+    background: #fef0f0;
+    color: #F56C6C;
+}
+
+.todo-icon.deadline {
+    background: #f0f9eb;
+    color: #67C23A;
+}
+
+.todo-info {
+    flex: 1;
+}
+
+.todo-title {
+    margin: 0 0 2px;
+    font-weight: 600;
+    font-size: 14px;
+    color: #303133;
+}
+
+.todo-desc {
+    margin: 0;
+    font-size: 12px;
+    color: #909399;
+}
+
+.todo-action {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.empty-todo {
+    text-align: center;
+    padding: 32px 0;
+    color: #67C23A;
+}
+
+.empty-todo i {
+    font-size: 36px;
+}
+
+.empty-todo p {
+    margin: 8px 0 0;
+    color: #909399;
+}
+
+/* 课程列表 */
+.course-list {
+    padding: 0;
+}
+
+.course-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #f2f2f2;
+}
+
+.course-item:last-child {
+    border-bottom: none;
+}
+
+.course-cover {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 18px;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.course-info {
+    flex: 1;
+}
+
+.course-name {
+    margin: 0 0 2px;
+    font-weight: 600;
+    font-size: 14px;
+    color: #303133;
+}
+
+.course-meta {
+    margin: 0;
+    font-size: 12px;
+    color: #909399;
 }
 
 .empty-hint {
     text-align: center;
-    color: #909399;
-    padding: 40px 0;
-    font-size: 14px;
+    padding: 24px 0;
+    color: #c0c4cc;
 }
 
 .empty-hint i {
-    font-size: 20px;
-    vertical-align: middle;
-    margin-right: 6px;
+    font-size: 28px;
 }
 
-/* 对话框样式 */
-.dialog-body {
-    padding: 0 10px;
+.empty-hint p {
+    margin: 6px 0 0;
+    font-size: 13px;
 }
 
-.dialog-section {
-    margin-bottom: 16px;
+/* 柱状图 */
+.trend-chart {
+    padding: 8px 0;
 }
 
-.dialog-section label {
-    display: block;
-    font-weight: 600;
+.chart-placeholder {
+    width: 100%;
+}
+
+.bar-chart {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-around;
+    height: 160px;
+    padding: 0 4px;
+    border-bottom: 1px solid #ebeef5;
+    margin-bottom: 8px;
+}
+
+.bar {
+    width: 32px;
+    border-radius: 4px 4px 0 0;
+    position: relative;
+    min-height: 4px;
+    transition: height 0.3s;
+}
+
+.bar-label {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
     color: #606266;
-    margin-bottom: 6px;
+    white-space: nowrap;
 }
 
-.reply-content {
-    background: #f5f7fa;
-    padding: 12px;
-    border-radius: 4px;
-    white-space: pre-wrap;
-    max-height: 200px;
-    overflow-y: auto;
+.chart-labels {
+    display: flex;
+    justify-content: space-around;
+    padding: 0 4px;
+}
+
+.chart-labels span {
+    width: 32px;
+    text-align: center;
+    font-size: 12px;
+    color: #909399;
+}
+
+/* 班级概况 */
+.class-overview {
+    padding: 0;
+}
+
+.class-stat-item {
+    padding: 10px 0;
+    border-bottom: 1px solid #f2f2f2;
+}
+
+.class-stat-item:last-child {
+    border-bottom: none;
+}
+
+.class-stat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.class-name {
+    font-weight: 600;
     font-size: 14px;
-    line-height: 1.6;
-    border: 1px solid #e4e7ed;
+    color: #303133;
 }
 
-.search-results {
-    margin-top: 16px;
+.class-stat-meta {
+    margin: 6px 0 0;
+    font-size: 12px;
+    color: #909399;
 }
 </style>
