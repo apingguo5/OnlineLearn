@@ -144,7 +144,7 @@
 
 <script>
 import * as dashboardApi from '@/api/teacher/dashboard'
-import * as teacherApi from '@/api/teacher/teacherApi'
+import teacherApi from '@/api/teacher/teacherApi'
 
 export default {
     name: "TeacherDashboard",
@@ -182,38 +182,57 @@ export default {
             const now = new Date()
             const days = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
             this.currentDate = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${days[now.getDay()]}`
-            const user = localStorage.getItem('user')
-            if (user) {
-                try {
-                    const userObj = JSON.parse(user)
-                    this.teacherName = userObj.realName || userObj.username || '教师'
-                } catch (e) {
-                    this.teacherName = '教师'
-                }
-            }
         },
         async loadData() {
             try {
-                // 加载课程列表
-                const res = await teacherApi.getMySubjects({})
-                if (res.data && res.data.list) {
-                    const courses = res.data.list || []
-                    this.activeCourses = courses.map((c, idx) => ({
-                        id: c.id || idx,
-                        name: c.subjectName || c.name || '未命名课程',
-                        abbr: (c.subjectName || c.name || '课').charAt(0),
-                        classCount: c.classCount || 0,
-                        studentCount: c.studentCount || 0,
-                        color: ['#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#909399', '#9B59B6'][idx % 6]
-                    }))
-                    this.statistics[0].value = this.activeCourses.length
+                // 从 localStorage 获取用户信息
+                let userId = localStorage.getItem('userId')
+                const userName = localStorage.getItem('userName')
+                if (userName) {
+                    this.teacherName = userName
+                }
+                if (!userId) {
+                    const userStr = sessionStorage.getItem('user') || localStorage.getItem('user')
+                    if (userStr) {
+                        try {
+                            const userObj = JSON.parse(userStr)
+                            userId = userObj.id
+                            if (!this.teacherName || this.teacherName === '教师') {
+                                this.teacherName = userObj.realName || userObj.username || '教师'
+                            }
+                        } catch (e) {}
+                    }
                 }
 
-                // 统计计数（模拟或从接口获取）
+                // 加载课程列表
+                if (userId) {
+                    const res = await teacherApi.getMyCourses(userId)
+                    const body = res.data
+                    let courseList = []
+                    if (body.code === 200) {
+                        courseList = body.resultData || []
+                        if (!Array.isArray(courseList)) {
+                            courseList = []
+                        }
+                    }
+                    if (courseList.length > 0) {
+                        this.activeCourses = courseList.map((c, idx) => ({
+                            id: c.id || idx,
+                            name: c.courseName || c.name || '未命名课程',
+                            abbr: (c.courseName || c.name || '课').charAt(0),
+                            classCount: c.classCount || 0,
+                            studentCount: c.studentCount || 0,
+                            color: ['#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#909399', '#9B59B6'][idx % 6]
+                        }))
+                    }
+                }
+                this.statistics[0].value = this.activeCourses.length
+
+                // 统计计数
                 this.statistics[1].value = this.activeCourses.reduce((sum, c) => sum + (c.classCount || 0), 0) || 0
                 this.statistics[2].value = this.activeCourses.reduce((sum, c) => sum + (c.studentCount || 0), 0) || 0
 
-                // 待办任务模拟（后续对接真实接口）
+                // 待办任务模拟
                 this.pendingTasks = [
                     { id: 1, title: '待批改作业', desc: '你有 5 份作业等待批改', icon: 'el-icon-document-checked', type: 'homework', tag: '5份', tagType: 'warning' },
                     { id: 2, title: '待回复提问', desc: '有 3 个学生提问等待回复', icon: 'el-icon-chat-dot-round', type: 'question', tag: '3条', tagType: 'danger' },
@@ -223,9 +242,11 @@ export default {
 
                 // 班级概况
                 try {
-                    const clsRes = await teacherApi.getMyClasses({})
-                    if (clsRes.data && clsRes.data.list) {
-                        this.classOverview = clsRes.data.list.map(cls => ({
+                    const clsRes = await dashboardApi.myClasses({ userId })
+                    if (clsRes.code === 0) {
+                        const clsData = clsRes.data
+                        const clsList = Array.isArray(clsData) ? clsData : (clsData && clsData.data ? clsData.data : [])
+                        this.classOverview = clsList.map(cls => ({
                             name: cls.className || cls.name || '未命名班级',
                             studentCount: cls.studentCount || 0,
                             completionRate: cls.completionRate || Math.floor(Math.random() * 40) + 30,

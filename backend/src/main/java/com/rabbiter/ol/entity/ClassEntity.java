@@ -1,6 +1,7 @@
 package com.rabbiter.ol.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
@@ -9,13 +10,8 @@ import java.util.Date;
 
 
 /**
- * 
- * 
- * @author 
- * @email ${email}
- * @date 2024-02-12 00:22:45
+ * 班级表
  */
-
 @TableName("class")
 public class ClassEntity implements Serializable {
 	private static final long serialVersionUID = 1L;
@@ -34,33 +30,19 @@ public class ClassEntity implements Serializable {
 	 */
 	private Integer userId;
 	/**
-	 * 科目ID
+	 * 课程ID (对应 course 表)
 	 */
-	private Integer subjectId;
+	@TableField("course_id")
+	private Integer courseId;
 	/**
 	 * 学习时长(小时)
 	 */
 	private Integer studyDuration;
 
-	public Integer getSubjectId() {
-		return subjectId;
-	}
-
-	public void setSubjectId(Integer subjectId) {
-		this.subjectId = subjectId;
-	}
-
-	public Integer getStudyDuration() {
-		return studyDuration;
-	}
-
-	public void setStudyDuration(Integer studyDuration) {
-		this.studyDuration = studyDuration;
-	}
-
 	/**
 	 * 班级创建时间
 	 */
+	@TableField("create_time")
 	private Date createTime;
 
 	public Integer getId() {
@@ -85,6 +67,22 @@ public class ClassEntity implements Serializable {
 
 	public void setUserId(Integer userId) {
 		this.userId = userId;
+	}
+
+	public Integer getCourseId() {
+		return courseId;
+	}
+
+	public void setCourseId(Integer courseId) {
+		this.courseId = courseId;
+	}
+
+	public Integer getStudyDuration() {
+		return studyDuration;
+	}
+
+	public void setStudyDuration(Integer studyDuration) {
+		this.studyDuration = studyDuration;
 	}
 
 	public Date getCreateTime() {

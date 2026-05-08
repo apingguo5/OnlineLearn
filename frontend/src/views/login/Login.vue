@@ -256,6 +256,10 @@ export default {
           Cookies.set('roleId', roleId)
           Cookies.set('userId', result.userId)
           Cookies.set('classId', result.classId)
+          // 同时存储到 localStorage，供其他页面使用
+          localStorage.setItem('userId', result.userId)
+          localStorage.setItem('roleId', roleId)
+          localStorage.setItem('userName', result.userName || '')
 
           this.$message({ message: '登录成功', type: 'success' });
 

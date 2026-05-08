@@ -16,7 +16,7 @@
                         </div>
                     </template>
                 </el-table-column>
-                <el-table-column prop="subjectName" label="所属课程" min-width="140"></el-table-column>
+                <el-table-column prop="courseName" label="所属课程" min-width="140"></el-table-column>
                 <el-table-column prop="studentCount" label="学生人数" width="100" align="center">
                     <template slot-scope="scope">
                         <el-tag>{{ scope.row.studentCount || 0 }}人</el-tag>
@@ -42,9 +42,9 @@
         <!-- 创建班级对话框 -->
         <el-dialog title="创建班级" :visible.sync="showCreateDialog" width="500px">
             <el-form :model="classForm" :rules="classRules" ref="classForm" label-width="100px">
-                <el-form-item label="选择课程" prop="subjectId">
-                    <el-select v-model="classForm.subjectId" placeholder="请选择课程" style="width:100%">
-                        <el-option v-for="c in subjectList" :key="c.id" :label="c.subjectName" :value="c.id"></el-option>
+                <el-form-item label="选择课程" prop="courseId">
+                    <el-select v-model="classForm.courseId" placeholder="请选择课程" style="width:100%">
+                        <el-option v-for="c in courseList" :key="c.id" :label="c.courseName" :value="c.id"></el-option>
                     </el-select>
                 </el-form-item>
                 <el-form-item label="班级名称" prop="className">
@@ -141,16 +141,16 @@ export default {
             loading: false,
             saving: false,
             classList: [],
-            subjectList: [],
+            courseList: [],
             showCreateDialog: false,
             classForm: {
-                subjectId: null,
+                courseId: null,
                 className: '',
                 startTime: null,
                 endTime: null
             },
             classRules: {
-                subjectId: [{ required: true, message: '请选择课程', trigger: 'change' }],
+                courseId: [{ required: true, message: '请选择课程', trigger: 'change' }],
                 className: [{ required: true, message: '请输入班级名称', trigger: 'blur' }]
             },
             // 学生管理
@@ -185,7 +185,7 @@ export default {
     },
     created() {
         this.loadClasses()
-        this.loadSubjects()
+        this.loadCourses()
     },
     methods: {
         async loadClasses() {
@@ -199,12 +199,12 @@ export default {
             }
             this.loading = false
         },
-        async loadSubjects() {
+        async loadCourses() {
             try {
-                const res = await teacherApi.getSubjects()
-                this.subjectList = (res.data && res.data.list) ? res.data.list : []
+                const res = await teacherApi.getCourses()
+                this.courseList = (res.data && res.data.list) ? res.data.list : []
             } catch (e) {
-                this.subjectList = []
+                this.courseList = []
             }
         },
         createClass() {
@@ -215,7 +215,7 @@ export default {
                     await teacherApi.createClass(this.classForm)
                     this.$message.success('创建成功')
                     this.showCreateDialog = false
-                    this.classForm = { subjectId: null, className: '', startTime: null, endTime: null }
+                    this.classForm = { courseId: null, className: '', startTime: null, endTime: null }
                     this.loadClasses()
                 } catch (e) {
                     this.$message.error('创建失败')

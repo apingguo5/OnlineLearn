@@ -9,11 +9,9 @@ import com.rabbiter.ol.common.Result;
 import com.rabbiter.ol.entity.UserClassEntity;
 import com.rabbiter.ol.entity.UserEntity;
 import com.rabbiter.ol.entity.UserRoleEntity;
-import com.rabbiter.ol.entity.UserSubjectEntity;
 import com.rabbiter.ol.service.UserClassService;
 import com.rabbiter.ol.service.UserRoleService;
 import com.rabbiter.ol.service.UserService;
-import com.rabbiter.ol.service.UserSubjectService;
 import com.rabbiter.ol.tool.MD5Util;
 import com.rabbiter.ol.vo.LoginVo;
 import com.rabbiter.ol.vo.RegistryVo;
@@ -39,9 +37,6 @@ public class UserController {
 
     @Autowired
     private UserClassService userClassService;
-
-    @Autowired
-    private UserSubjectService userSubjectService;
 
     @Autowired
     private UserRoleService userRoleService;
@@ -129,13 +124,6 @@ public class UserController {
             userClassEntity.setClassId(user.getClassId());
             userClassEntity.setUserId(user.getUserEntity().getId());
             userClassService.save(userClassEntity);
-        }
-
-        if (user.getSubjectId() != null) {
-            UserSubjectEntity userSubjectEntity = new UserSubjectEntity();
-            userSubjectEntity.setSubjectId(user.getSubjectId());
-            userSubjectEntity.setUserId(user.getUserEntity().getId());
-            userSubjectService.save(userSubjectEntity);
         }
 
         if (save) {
@@ -238,17 +226,6 @@ public class UserController {
             }
 
 
-            if (userVo.getSubjectId() != null) {
-                //根据老师ID删除老师所对应的科目并重新新增
-                QueryWrapper<UserSubjectEntity> userSubjectQueryWrapper = new QueryWrapper<>();
-                userSubjectQueryWrapper.eq("user_id", userVo.getUserEntity().getId());
-                userSubjectService.remove(userSubjectQueryWrapper);
-
-                UserSubjectEntity userSubjectEntity = new UserSubjectEntity();
-                userSubjectEntity.setSubjectId(userVo.getSubjectId());
-                userSubjectEntity.setUserId(userVo.getUserEntity().getId());
-                userSubjectService.save(userSubjectEntity);
-            }
             return Result.successCode();
         }
         return Result.failureCode();

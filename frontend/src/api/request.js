@@ -6,7 +6,7 @@ import './admin/initialize';
 
 
 const service = axios.create({
-    baseURL: 'http://localhost:9251',
+    baseURL: '',
     timeout: 30000 // 请求超时时间
 })
 //添加request拦截器

@@ -8,7 +8,7 @@
         <result property="id" column="id"/>
         <result property="className" column="class_name"/>
         <result property="userId" column="user_id"/>
-        <result property="subjectId" column="subject_id"/>
+        <result property="courseId" column="course_id"/>
         <result property="studyDuration" column="study_duration"/>
         <result property="createTime" column="create_time"/>
     </resultMap>
@@ -17,7 +17,7 @@
         c.id,
         c.class_name AS className,
         c.user_id AS userId,
-        c.subject_id AS subjectId,
+        c.course_id AS courseId,
         c.study_duration AS studyDuration,
         DATE_FORMAT(c.create_time ,'%Y-%m-%d %H:%i:%s') AS createTime
     </sql>

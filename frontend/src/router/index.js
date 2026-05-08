@@ -103,19 +103,11 @@ const routes = [
         },
     },
     {
-        path: '/nothomework',
-        name: 'NotHomework',
-        component: NotHomework,
+        path: '/teachermanagement',
+        name: 'teacherManagement',
+        component: TeacherManagement,
         meta: {
-            requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
-        },
-    },
-    {
-        path: '/pdetailteacher',
-        name: 'PDetail',
-        component: PDetail,
-        meta: {
-            requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+            requireAuth: true,
         },
     },
     {

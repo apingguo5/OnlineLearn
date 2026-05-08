@@ -5,33 +5,49 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
 import java.io.Serializable;
+import java.util.Date;
 
 /**
+ * 课程表 (course)
  * 
- * 
- * @author 
- * @email ${email}
- * @date 2024-02-15 21:39:15
  */
-
-@TableName("subject")
+@TableName("course")
 public class SubjectEntity implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	/**
-	 * 科目ID
+	 * 课程ID
 	 */
 	@TableId(type = IdType.AUTO)
 	private Integer id;
 	/**
-	 * 科目名称
+	 * 课程名称
 	 */
-	private String subjectName;
-
+	private String courseName;
 	/**
-	 * 创建人ID(教师)
+	 * 课程描述
 	 */
-	private Integer userId;
+	private String description;
+	/**
+	 * 课程创建者
+	 */
+	private Integer creatorId;
+	/**
+	 * 课程封面图URL
+	 */
+	private String coverUrl;
+	/**
+	 * 课程状态（1: 启用, 2: 停用, 3: 草稿）
+	 */
+	private Integer status;
+	/**
+	 * 创建时间
+	 */
+	private Date createTime;
+	/**
+	 * 最后更新时间
+	 */
+	private Date updateTime;
 
 	public Integer getId() {
 		return id;
@@ -41,19 +57,59 @@ public class SubjectEntity implements Serializable {
 		this.id = id;
 	}
 
-	public String getSubjectName() {
-		return subjectName;
+	public String getCourseName() {
+		return courseName;
 	}
 
-	public void setSubjectName(String subjectName) {
-		this.subjectName = subjectName;
+	public void setCourseName(String courseName) {
+		this.courseName = courseName;
 	}
 
-	public Integer getUserId() {
-		return userId;
+	public String getDescription() {
+		return description;
 	}
 
-	public void setUserId(Integer userId) {
-		this.userId = userId;
+	public void setDescription(String description) {
+		this.description = description;
+	}
+
+	public Integer getCreatorId() {
+		return creatorId;
+	}
+
+	public void setCreatorId(Integer creatorId) {
+		this.creatorId = creatorId;
+	}
+
+	public String getCoverUrl() {
+		return coverUrl;
+	}
+
+	public void setCoverUrl(String coverUrl) {
+		this.coverUrl = coverUrl;
+	}
+
+	public Integer getStatus() {
+		return status;
+	}
+
+	public void setStatus(Integer status) {
+		this.status = status;
+	}
+
+	public Date getCreateTime() {
+		return createTime;
+	}
+
+	public void setCreateTime(Date createTime) {
+		this.createTime = createTime;
+	}
+
+	public Date getUpdateTime() {
+		return updateTime;
+	}
+
+	public void setUpdateTime(Date updateTime) {
+		this.updateTime = updateTime;
 	}
 }

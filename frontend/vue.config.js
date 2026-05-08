@@ -11,13 +11,17 @@ module.exports = {
             warning: false,
             errors: false
         },
-        proxy: {  //配置跨域
+        proxy: {
             '/api': {
-                target: 'http://localhost:9251/',  //这里后台的地址模拟的;应该填写你们真实的后台接口
-                changOrigin: true,  //允许跨域
+                target: 'http://localhost:9251/',
+                changOrigin: true,
                 pathRewrite: {
-                     '^/api': ''  
+                     '^/api': ''
                 }
+            },
+            '/study': {
+                target: 'http://localhost:9251/',
+                changOrigin: true
             },
         },
     }

@@ -72,28 +72,16 @@ def main():
 
     # ---- 2. 导入依赖 ----
     try:
-        import bcrypt
-    except ImportError:
-        print("错误：缺少 bcrypt 库。请执行: pip install bcrypt")
-        sys.exit(1)
-
-    try:
         import mysql.connector
     except ImportError:
         print("错误：缺少 mysql-connector-python 库。请执行: pip install mysql-connector-python")
         sys.exit(1)
 
-    # ---- 3. BCrypt 加密密码（兼容 Spring Security）----
-    print(">>> 正在加密密码...")
-    salt = bcrypt.gensalt(rounds=10)
-    hashed = bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
-    # Python bcrypt 默认使用 $2b$ 前缀，Spring Security 使用 $2a$ 前缀
-    # 将 $2b$ 替换为 $2a$ 以确保兼容
-    if hashed.startswith("$2b$"):
-        hashed_password = "$2a$" + hashed[4:]
-    else:
-        hashed_password = hashed
-    print(f"    加密完成: {hashed_password[:20]}...")
+    # ---- 3. MD5 加密密码（与后端 MD5Util/UserServiceImpl 保持一致）----
+    print(">>> 正在加密密码（MD5）...")
+    import hashlib
+    hashed_password = hashlib.md5(password.encode("utf-8")).hexdigest()
+    print(f"    加密完成: {hashed_password}")
     print()
 
     # ---- 4. 连接数据库 ----

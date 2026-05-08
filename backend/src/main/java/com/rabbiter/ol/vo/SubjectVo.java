@@ -1,12 +1,9 @@
 package com.rabbiter.ol.vo;
 
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
-
 import java.io.Serializable;
 
 /**
- * 
+ * 课程 (course表) VO
  * 
  * @author 
  * @email ${email}
@@ -15,13 +12,13 @@ import java.io.Serializable;
 public class SubjectVo {
 
 	/**
-	 * 科目ID
+	 * 课程ID
 	 */
 	private Integer id;
 	/**
-	 * 科目名称
+	 * 课程名称
 	 */
-	private String subjectName;
+	private String courseName;
 	/**
 	 * 当前页
 	 */
@@ -33,9 +30,14 @@ public class SubjectVo {
 	private Integer pageSize;
 
 	/**
-	 * 班级
+	 * 班级ID
 	 */
 	private Integer classId;
+
+	/**
+	 * 教师用户ID
+	 */
+	private Integer userId;
 
 	public Integer getId() {
 		return id;
@@ -45,12 +47,12 @@ public class SubjectVo {
 		this.id = id;
 	}
 
-	public String getSubjectName() {
-		return subjectName;
+	public String getCourseName() {
+		return courseName;
 	}
 
-	public void setSubjectName(String subjectName) {
-		this.subjectName = subjectName;
+	public void setCourseName(String courseName) {
+		this.courseName = courseName;
 	}
 
 	public Integer getPage() {
@@ -75,5 +77,13 @@ public class SubjectVo {
 
 	public void setClassId(Integer classId) {
 		this.classId = classId;
+	}
+
+	public Integer getUserId() {
+		return userId;
+	}
+
+	public void setUserId(Integer userId) {
+		this.userId = userId;
 	}
 }
