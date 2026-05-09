@@ -11,5 +11,6 @@ public class MyWebMvnConfig implements WebMvcConfigurer {
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/file/videoFile/**").addResourceLocations("file:" + PathUtils.getClassLoadRootPath() + "/file/videoFile/");
         registry.addResourceHandler("/file/imageFile/**").addResourceLocations("file:" + PathUtils.getClassLoadRootPath() + "/file/imageFile/");
+        registry.addResourceHandler("/file/resourceFile/**").addResourceLocations("file:" + PathUtils.getClassLoadRootPath() + "/file/resourceFile/");
     }
 }

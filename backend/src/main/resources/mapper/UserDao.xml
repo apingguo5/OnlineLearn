@@ -71,9 +71,11 @@
         u.id AS userId,
         u.user_name AS userName,
         u.password AS password,
+        ur.role_id AS roleId,
         uc.class_id AS classId
         FROM
         `user` u
+        LEFT JOIN user_role ur ON u.id = ur.user_id
         LEFT JOIN user_class uc ON u.id = uc.user_id
         <where>
             <if test="account != null">

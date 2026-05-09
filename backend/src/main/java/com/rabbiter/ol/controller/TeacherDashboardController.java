@@ -1,12 +1,18 @@
 package com.rabbiter.ol.controller;
 
 import com.rabbiter.ol.entity.SubjectEntity;
+import com.rabbiter.ol.entity.CourseResourceEntity;
 import com.rabbiter.ol.service.SubjectService;
+import com.rabbiter.ol.service.CourseResourceService;
+import com.rabbiter.ol.tool.FileUtil;
+import com.rabbiter.ol.tool.PathUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -86,6 +92,47 @@ public class TeacherDashboardController {
     }
 
     /**
+     * 更新课程
+     * POST /study/teacher/dashboard/updateSubject
+     * @param params { id, courseName, description? }
+     */
+    @PostMapping("/updateSubject")
+    public Map<String, Object> updateSubject(@RequestBody Map<String, Object> params) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            Integer id = Integer.valueOf(params.get("id").toString());
+            String courseName = (String) params.get("courseName");
+            if (courseName == null || courseName.trim().isEmpty()) {
+                result.put("code", 400);
+                result.put("resultData", "课程名称不能为空");
+                return result;
+            }
+
+            String description = (String) params.get("description");
+
+            SubjectEntity entity = subjectService.getById(id);
+            if (entity == null) {
+                result.put("code", 400);
+                result.put("resultData", "课程不存在");
+                return result;
+            }
+
+            entity.setCourseName(courseName.trim());
+            entity.setDescription(description != null ? description.trim() : null);
+            entity.setUpdateTime(new Date());
+
+            subjectService.updateById(entity);
+
+            result.put("code", 200);
+            result.put("resultData", entity);
+        } catch (Exception e) {
+            result.put("code", 500);
+            result.put("resultData", "更新课程失败: " + e.getMessage());
+        }
+        return result;
+    }
+
+    /**
      * 删除课程
      * POST /study/teacher/dashboard/deleteSubject
      * @param params { id }
@@ -125,6 +172,108 @@ public class TeacherDashboardController {
         } catch (Exception e) {
             result.put("code", 500);
             result.put("resultData", "获取课程列表失败: " + e.getMessage());
+        }
+        return result;
+    }
+
+    // ======================== 课件资源管理 ========================
+
+    @Autowired
+    private CourseResourceService courseResourceService;
+
+    /**
+     * 上传课件资源文件
+     * POST /study/teacher/dashboard/uploadFile
+     * @param file 上传的文件
+     * @param subjectId 课程ID
+     */
+    @PostMapping("/uploadFile")
+    public Map<String, Object> uploadFile(@RequestParam("file") MultipartFile file,
+                                          @RequestParam("subjectId") Integer subjectId) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            if (file.isEmpty()) {
+                result.put("code", 400);
+                result.put("resultData", "文件不能为空");
+                return result;
+            }
+
+            long randomNum = System.currentTimeMillis();
+            String originalFileName = file.getOriginalFilename();
+            String fileName = randomNum + originalFileName;
+
+            // 保存文件
+            FileUtil.uploadFile(file.getBytes(),
+                    PathUtils.getClassLoadRootPath() + "/file/resourceFile/",
+                    fileName);
+
+            // 保存资源记录
+            CourseResourceEntity resource = new CourseResourceEntity();
+            resource.setSubjectId(subjectId);
+            resource.setFileName(originalFileName);
+            resource.setFilePath("/file/resourceFile/" + fileName);
+            resource.setFileSize(file.getSize());
+            resource.setFileType(originalFileName.substring(originalFileName.lastIndexOf(".") + 1));
+            resource.setCreateTime(new Date());
+
+            courseResourceService.save(resource);
+
+            result.put("code", 200);
+            result.put("resultData", resource);
+        } catch (Exception e) {
+            result.put("code", 500);
+            result.put("resultData", "上传文件失败: " + e.getMessage());
+        }
+        return result;
+    }
+
+    /**
+     * 获取课程资源列表
+     * POST /study/teacher/dashboard/getResources
+     * @param params { subjectId }
+     */
+    @PostMapping("/getResources")
+    public Map<String, Object> getResources(@RequestBody Map<String, Object> params) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            Integer subjectId = Integer.valueOf(params.get("subjectId").toString());
+            List<CourseResourceEntity> list = courseResourceService.lambdaQuery()
+                    .eq(CourseResourceEntity::getSubjectId, subjectId)
+                    .orderByDesc(CourseResourceEntity::getId)
+                    .list();
+
+            result.put("code", 200);
+            result.put("resultData", list);
+        } catch (Exception e) {
+            result.put("code", 500);
+            result.put("resultData", "获取资源列表失败: " + e.getMessage());
+        }
+        return result;
+    }
+
+    /**
+     * 删除资源
+     * POST /study/teacher/dashboard/deleteResource
+     * @param params { id }
+     */
+    @PostMapping("/deleteResource")
+    public Map<String, Object> deleteResource(@RequestBody Map<String, Object> params) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            Integer id = Integer.valueOf(params.get("id").toString());
+            CourseResourceEntity resource = courseResourceService.getById(id);
+            if (resource != null) {
+                // 删除物理文件
+                FileUtil.deleteFile(PathUtils.getClassLoadRootPath() + resource.getFilePath());
+                // 删除数据库记录
+                courseResourceService.removeById(id);
+            }
+
+            result.put("code", 200);
+            result.put("resultData", "删除成功");
+        } catch (Exception e) {
+            result.put("code", 500);
+            result.put("resultData", "删除资源失败: " + e.getMessage());
         }
         return result;
     }

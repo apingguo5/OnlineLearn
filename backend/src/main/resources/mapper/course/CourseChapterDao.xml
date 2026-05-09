@@ -17,7 +17,7 @@
             cc.chapter_name AS chapterName,
             cc.sort_order AS sortOrder,
             cc.create_time AS createTime,
-            (SELECT COUNT(*) FROM chapter_content WHERE chapter_id = cc.id) AS contentCount
+            IFNULL((SELECT COUNT(*) FROM chapter_resource_ref crf WHERE crf.chapter_id = cc.id), 0) AS resourceCount
         FROM course_chapter cc
         WHERE cc.class_id = #{classId}
         ORDER BY cc.sort_order ASC, cc.id ASC
