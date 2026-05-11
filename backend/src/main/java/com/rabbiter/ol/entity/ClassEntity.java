@@ -24,10 +24,12 @@ public class ClassEntity implements Serializable {
 	/**
 	 * 班级名称
 	 */
+	@TableField("class_name")
 	private String className;
 	/**
 	 * 班级负责人
 	 */
+	@TableField("user_id")
 	private Integer userId;
 	/**
 	 * 课程ID (对应 course 表)
@@ -35,10 +37,20 @@ public class ClassEntity implements Serializable {
 	@TableField("course_id")
 	private Integer courseId;
 	/**
-	 * 学习时长(小时)
+	 * 学年 (例如: 2025-2026)
 	 */
-	private Integer studyDuration;
-
+	@TableField("academic_year")
+	private String academicYear;
+	/**
+	 * 学期 (1: 春季, 2: 秋季)
+	 */
+	@TableField("semester")
+	private Integer semester;
+	/**
+	 * 班级最大学生数
+	 */
+	@TableField("max_students")
+	private Integer maxStudents;
 	/**
 	 * 班级创建时间
 	 */
@@ -77,12 +89,28 @@ public class ClassEntity implements Serializable {
 		this.courseId = courseId;
 	}
 
-	public Integer getStudyDuration() {
-		return studyDuration;
+	public String getAcademicYear() {
+		return academicYear;
 	}
 
-	public void setStudyDuration(Integer studyDuration) {
-		this.studyDuration = studyDuration;
+	public void setAcademicYear(String academicYear) {
+		this.academicYear = academicYear;
+	}
+
+	public Integer getSemester() {
+		return semester;
+	}
+
+	public void setSemester(Integer semester) {
+		this.semester = semester;
+	}
+
+	public Integer getMaxStudents() {
+		return maxStudents;
+	}
+
+	public void setMaxStudents(Integer maxStudents) {
+		this.maxStudents = maxStudents;
 	}
 
 	public Date getCreateTime() {

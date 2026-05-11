@@ -50,11 +50,19 @@
                 <el-form-item label="班级名称" prop="className">
                     <el-input v-model="classForm.className" placeholder="如：2024春季1班"></el-input>
                 </el-form-item>
-                <el-form-item label="开课时间">
-                    <el-date-picker v-model="classForm.startTime" type="date" placeholder="选填" style="width:100%"></el-date-picker>
+                <el-form-item label="学年">
+                    <el-select v-model="classForm.academicYear" placeholder="选填" style="width:100%">
+                        <el-option v-for="y in academicYearOptions" :key="y" :label="y" :value="y"></el-option>
+                    </el-select>
                 </el-form-item>
-                <el-form-item label="结课时间">
-                    <el-date-picker v-model="classForm.endTime" type="date" placeholder="选填" style="width:100%"></el-date-picker>
+                <el-form-item label="学期">
+                    <el-select v-model="classForm.semester" placeholder="选填" style="width:100%">
+                        <el-option label="春季学期" :value="1"></el-option>
+                        <el-option label="秋季学期" :value="2"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="最大人数">
+                    <el-input-number v-model="classForm.maxStudents" :min="0" :max="200" style="width:100%"></el-input-number>
                 </el-form-item>
             </el-form>
             <span slot="footer">
@@ -146,8 +154,9 @@ export default {
             classForm: {
                 courseId: null,
                 className: '',
-                startTime: null,
-                endTime: null
+                academicYear: '',
+                semester: null,
+                maxStudents: 50
             },
             classRules: {
                 courseId: [{ required: true, message: '请选择课程', trigger: 'change' }],
@@ -181,6 +190,10 @@ export default {
                 (s.realName || '').includes(this.studentSearch) ||
                 (s.username || '').includes(this.studentSearch)
             )
+        },
+        academicYearOptions() {
+            const year = new Date().getFullYear()
+            return [`${year}-${year + 1}`, `${year - 1}-${year}`, `${year + 1}-${year + 2}`]
         }
     },
     created() {
@@ -191,8 +204,15 @@ export default {
         async loadClasses() {
             this.loading = true
             try {
-                const res = await teacherApi.getMyClasses({})
-                this.classList = (res.data && res.data.list) ? res.data.list : []
+                // 从localStorage获取当前教师用户ID（与Login.vue存储方式一致）
+                const userId = localStorage.getItem('userId')
+                const params = {}
+                if (userId) {
+                    params.userId = Number(userId)
+                }
+                const res = await teacherApi.getMyClasses(params)
+                // /study/class/findList 返回 { resultData: [...], code: 200 } (resultData 是数组)
+                this.classList = (res.data && res.data.resultData) ? res.data.resultData : []
             } catch (e) {
                 console.error(e)
                 this.classList = []
@@ -202,7 +222,8 @@ export default {
         async loadCourses() {
             try {
                 const res = await teacherApi.getCourses()
-                this.courseList = (res.data && res.data.list) ? res.data.list : []
+                // GET /study/teacher/dashboard/subjects 返回 { code: 0, data: { list: [...] } }
+                this.courseList = (res.data && res.data.data && res.data.data.list) ? res.data.data.list : []
             } catch (e) {
                 this.courseList = []
             }
@@ -212,10 +233,16 @@ export default {
                 if (!valid) return
                 this.saving = true
                 try {
-                    await teacherApi.createClass(this.classForm)
+                    // 从localStorage获取当前教师用户ID（与Login.vue存储方式一致）
+                    const userId = localStorage.getItem('userId')
+                    const params = {
+                        ...this.classForm,
+                        userId: userId ? Number(userId) : null
+                    }
+                    await teacherApi.createClass(params)
                     this.$message.success('创建成功')
                     this.showCreateDialog = false
-                    this.classForm = { courseId: null, className: '', startTime: null, endTime: null }
+                    this.classForm = { courseId: null, className: '', academicYear: '', semester: null, maxStudents: 50 }
                     this.loadClasses()
                 } catch (e) {
                     this.$message.error('创建失败')
@@ -242,7 +269,8 @@ export default {
             this.studentLoading = true
             try {
                 const res = await teacherApi.getClassStudents({ classId: row.id })
-                this.studentList = (res.data && res.data.list) ? res.data.list : []
+                // /study/userClass/findList 返回 { resultData: [...], code: 200 }
+                this.studentList = (res.data && res.data.resultData) ? res.data.resultData : []
             } catch (e) {
                 this.studentList = []
             }
@@ -252,7 +280,8 @@ export default {
             this.$confirm(`确定将学生"${row.realName}"移出班级吗？`, '提示', { type: 'warning' })
                 .then(async () => {
                     try {
-                        await teacherApi.removeStudent({ studentId: row.id, classId: this.currentClassId })
+                        // /study/userClass/delete 期望 { userId }（后端使用的是 userId 字段）
+                        await teacherApi.removeStudent({ userId: row.userId || row.user_id || row.id })
                         this.$message.success('已移出')
                         this.manageStudents({ id: this.currentClassId, className: this.currentClassName })
                     } catch (e) {
@@ -260,21 +289,36 @@ export default {
                     }
                 }).catch(() => {})
         },
-        doBatchImport() {
+        async doBatchImport() {
             if (!this.importStudentsText.trim()) {
                 this.$message.warning('请输入学生学号')
                 return
             }
             const ids = this.importStudentsText.split('\n').filter(s => s.trim()).map(s => s.trim())
-            teacherApi.batchAddStudents({ classId: this.currentClassId, studentIds: ids })
-                .then(() => {
-                    this.$message.success(`成功导入 ${ids.length} 名学生`)
-                    this.showImportDialog = false
-                    this.importStudentsText = ''
-                    this.manageStudents({ id: this.currentClassId, className: this.currentClassName })
-                }).catch(() => {
-                    this.$message.error('导入失败')
-                })
+            // 批量导入通过逐条添加到 user_class 表
+            try {
+                let successCount = 0
+                let failCount = 0
+                for (const username of ids) {
+                    try {
+                        await teacherApi.batchAddStudents({
+                            classId: this.currentClassId,
+                            username: username,
+                            userId: username,
+                            realName: username
+                        })
+                        successCount++
+                    } catch (e) {
+                        failCount++
+                    }
+                }
+                this.$message.success(`导入完成：成功 ${successCount} 人，失败 ${failCount} 人`)
+                this.showImportDialog = false
+                this.importStudentsText = ''
+                this.manageStudents({ id: this.currentClassId, className: this.currentClassName })
+            } catch (e) {
+                this.$message.error('导入失败')
+            }
         },
         async viewMonitor(row) {
             this.currentClassId = row.id
@@ -283,9 +327,10 @@ export default {
             this.monitorLoading = true
             try {
                 const res = await teacherApi.getStudentLearningStatus({ classId: row.id })
-                if (res.data && res.data.list) {
-                    this.monitorStudents = res.data.list
-                    // 更新统计
+                // /study/userClass/findList 返回 { resultData: [...], code: 200 }
+                const list = (res.data && res.data.resultData) ? res.data.resultData : []
+                if (list && list.length > 0) {
+                    this.monitorStudents = list
                     const total = this.monitorStudents.length
                     if (total > 0) {
                         this.monitorStats[0].value = Math.round(this.monitorStudents.reduce((s, st) => s + (st.videoCompletion || 0), 0) / total) + '%'

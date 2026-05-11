@@ -195,6 +195,87 @@ export function createQuestion(params) {
   return post(`/study/teacher/course/addQuestion`, params)
 }
 
+// ========== 班级与学生管理 ==========
+
+/**
+ * 获取所有课程（用于创建班级时选择课程）
+ * 调用 /study/teacher/dashboard/subjects (GET)
+ * 返回格式: { code: 0, data: { list: [...] } }
+ * 课程对象字段: { id, courseName, creatorId, status, createTime, ... }
+ */
+export function getCourses() {
+  return get(`${TEACHER_BASE}/subjects`)
+}
+
+/**
+ * 获取我的班级列表
+ * 调用 /study/class/findList (POST) 按教师ID查询，无需分页参数
+ * @param {Object} params - { userId }
+ * 返回格式: { resultData: [...], code: 200 }  (resultData 为数组)
+ */
+export function getMyClasses(params) {
+  return post(`/study/class/findList`, params)
+}
+
+/**
+ * 创建班级
+ * 调用 /study/class/save (POST)
+ * @param {Object} params - { courseId, className, userId, academicYear?, semester?, maxStudents? }
+ * 返回格式: { code: 0, msg: "success" }
+ */
+export function createClass(params) {
+  return post(`/study/class/save`, params)
+}
+
+/**
+ * 删除班级
+ * 调用 /study/class/delete (POST)
+ * @param {Object} params - { id }
+ * 返回格式: { code: 0, msg: "success" }
+ */
+export function deleteClass(params) {
+  return post(`/study/class/delete`, params)
+}
+
+/**
+ * 获取班级学生列表
+ * 调用 /study/userClass/findList (POST)
+ * @param {Object} params - { classId }
+ * 返回格式: { code: 0, data: [...] }
+ */
+export function getClassStudents(params) {
+  return post(`/study/userClass/findList`, params)
+}
+
+/**
+ * 移出班级学生
+ * 调用 /study/userClass/delete (POST)
+ * @param {Object} params - { userId, classId? }
+ * 返回格式: { code: 0, msg: "success" }
+ */
+export function removeStudent(params) {
+  return post(`/study/userClass/delete`, params)
+}
+
+/**
+ * 批量导入学生
+ * 调用 /study/userClass/save (POST) - 逐条添加
+ * @param {Object} params - { classId, studentIds: [...] }
+ * 返回格式: { code: 0, msg: "success" }
+ */
+export function batchAddStudents(params) {
+  return post(`/study/userClass/save`, params)
+}
+
+/**
+ * 获取学生学习状态（学情监控）
+ * 调用 /study/class/info (POST) 获取班级详情及学习情况
+ * @param {Object} params - { classId }
+ */
+export function getStudentLearningStatus(params) {
+  return post(`/study/userClass/findList`, params)
+}
+
 // 默认导出（向后兼容）
 export default {
   getMyCourses,
@@ -219,5 +300,14 @@ export default {
   scanCourseTree,
   scanCourseOverview,
   getQuestions,
-  createQuestion
+  createQuestion,
+  // 班级管理
+  getCourses,
+  getMyClasses,
+  createClass,
+  deleteClass,
+  getClassStudents,
+  removeStudent,
+  batchAddStudents,
+  getStudentLearningStatus
 }

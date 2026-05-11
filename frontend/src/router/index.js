@@ -16,7 +16,6 @@ import CheckHomeWork from '../views/studentweb/homeworkmanagement/checkhomework/
 import NoHomeWork from '../views/studentweb/homeworkmanagement/checkhomework/NoHomeWork.vue'
 import AskAndAnswer from '../views/studentweb/askandanswer/AskAndAnswer.vue'
 import StudentPractice from '../views/studentweb/practice/StudentPractice.vue'
-import OnLineLearn from '../views/studentweb/onlinelearn/OnLineLearn.vue'
 import EssentiaInfo from '../views/studentweb/essentialinformation/EssentiaInfo.vue'
 import StudentManagement from '../views/studentweb/studentmanagement/StudentManagement.vue'
 import AdminManagement from '../views/admin/AdminManagement.vue'
@@ -24,7 +23,6 @@ import MarkDown from '../views/studentweb/markdown/MarkDown.vue'
 import DetaliCourse from '../views/studentweb/askandanswer/DetaliCourse.vue'
 import home from '../views/studentweb/contain/home.vue'
 import StudentCourses from '../views/studentweb/courses/StudentCourses.vue'
-import StudentGroups from '../views/studentweb/groups/StudentGroups.vue'
 import StudentNotes from '../views/studentweb/notes/StudentNotes.vue'
 import StudentInbox from '../views/studentweb/inbox/StudentInbox.vue'
 import AdminStudentManagement from '../views/admin/studentmanagement/StudentManagement.vue'
@@ -285,14 +283,6 @@ const routes = [
                 },
             },
             {
-                path: '/studentgroups',
-                name: 'StudentGroups',
-                component: StudentGroups,
-                meta: {
-                    requireAuth: true,
-                },
-            },
-            {
                 path: '/studentnotes',
                 name: 'StudentNotes',
                 component: StudentNotes,
@@ -353,14 +343,6 @@ const routes = [
                 path: '/studentpractice',
                 name: 'StudentPractice',
                 component: StudentPractice,
-                meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
-                },
-            },
-            {
-                path: '/onlinelearn',
-                name: 'OnLineLearn',
-                component: OnLineLearn,
                 meta: {
                     requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
                 },

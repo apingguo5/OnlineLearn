@@ -7,35 +7,27 @@
                     <i class="el-icon-s-home" style="font-size: 26px;color: white;"></i>
                     <span slot="title" style="font-size: 20px;"> 首页</span>
                 </el-menu-item>
+                <el-menu-item index="/studentcourses">
+                    <i class="el-icon-reading" style="font-size: 26px;color: white;"></i>
+                    <span slot="title" style="font-size: 20px;"> 课程列表（正在学的）</span>
+                </el-menu-item>
                 <el-submenu index="1">
                     <template slot="title">
-                        <i class="el-icon-reading" style="font-size: 26px;color: white;"></i>
-                        <span style="font-size: 20px;"> 课程</span>
+                        <i class="el-icon-edit-outline" style="font-size: 26px;color: white;"></i>
+                        <span style="font-size: 20px;"> 作业习题</span>
                     </template>
-                    <el-menu-item index="/studentcourses">
-                        <i class="el-icon-video-play" style="font-size: 22px;color: white;"></i>
-                        <span slot="title"> 所有课程（按班级）</span>
-                    </el-menu-item>
-                    <el-menu-item index="/onlinelearn">
-                        <i class="el-icon-video-camera" style="font-size: 22px;color: white;"></i>
-                        <span slot="title"> 线上课程学习</span>
-                    </el-menu-item>
                     <el-menu-item index="/studentpractice">
-                        <i class="el-icon-edit-outline" style="font-size: 22px;color: white;"></i>
+                        <i class="el-icon-document" style="font-size: 22px;color: white;"></i>
                         <span slot="title"> 试题练习</span>
                     </el-menu-item>
                     <el-menu-item index="/checkhomework">
-                        <i class="el-icon-document" style="font-size: 22px;color: white;"></i>
+                        <i class="el-icon-tickets" style="font-size: 22px;color: white;"></i>
                         <span slot="title"> 作业管理</span>
                     </el-menu-item>
-                    <el-menu-item index="/askandanswer">
-                        <i class="el-icon-chat-dot-round" style="font-size: 22px;color: white;"></i>
-                        <span slot="title"> 问答社区</span>
-                    </el-menu-item>
                 </el-submenu>
-                <el-menu-item index="/studentgroups">
-                    <i class="el-icon-s-grid" style="font-size: 26px;color: white;"></i>
-                    <span slot="title" style="font-size: 20px;"> 群组</span>
+                <el-menu-item index="/askandanswer">
+                    <i class="el-icon-chat-dot-round" style="font-size: 26px;color: white;"></i>
+                    <span slot="title" style="font-size: 20px;"> 问答社区</span>
                 </el-menu-item>
                 <el-submenu index="2">
                     <template slot="title">

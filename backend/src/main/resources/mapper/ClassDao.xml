@@ -9,7 +9,9 @@
         <result property="className" column="class_name"/>
         <result property="userId" column="user_id"/>
         <result property="courseId" column="course_id"/>
-        <result property="studyDuration" column="study_duration"/>
+        <result property="academicYear" column="academic_year"/>
+        <result property="semester" column="semester"/>
+        <result property="maxStudents" column="max_students"/>
         <result property="createTime" column="create_time"/>
     </resultMap>
 
@@ -18,8 +20,11 @@
         c.class_name AS className,
         c.user_id AS userId,
         c.course_id AS courseId,
-        c.study_duration AS studyDuration,
-        DATE_FORMAT(c.create_time ,'%Y-%m-%d %H:%i:%s') AS createTime
+        c.academic_year AS academicYear,
+        c.semester AS semester,
+        c.max_students AS maxStudents,
+        DATE_FORMAT(c.create_time ,'%Y-%m-%d %H:%i:%s') AS createTime,
+        co.course_name AS courseName
     </sql>
 
     <select id="queryCount" resultType="java.lang.Integer">
@@ -48,6 +53,7 @@
         FROM
         class c
         LEFT JOIN `user` u ON u.id = c.user_id
+        LEFT JOIN `course` co ON co.id = c.course_id
         <where>
             <if test="className != null">
                 AND c.class_name = #{className}
@@ -70,6 +76,7 @@
         FROM
         class c
         LEFT JOIN `user` u ON u.id = c.user_id
+        LEFT JOIN `course` co ON co.id = c.course_id
         <where>
             <if test="userId != null">
                 AND c.user_id = #{userId}
