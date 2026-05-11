@@ -221,9 +221,12 @@ export default {
         },
         async loadCourses() {
             try {
-                const res = await teacherApi.getCourses()
-                // GET /study/teacher/dashboard/subjects 返回 { code: 0, data: { list: [...] } }
-                this.courseList = (res.data && res.data.data && res.data.data.list) ? res.data.data.list : []
+                // 仅获取当前教师自己创建的课程
+                const userId = localStorage.getItem('userId')
+                const params = userId ? { userId: Number(userId) } : {}
+                const res = await teacherApi.getMyCourses(params)
+                // POST /study/teacher/dashboard/mySubjects 返回 { code: 200, resultData: [...] }
+                this.courseList = (res.data && res.data.resultData) ? res.data.resultData : []
             } catch (e) {
                 this.courseList = []
             }
