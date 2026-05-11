@@ -7,11 +7,10 @@ import org.apache.ibatis.annotations.Mapper;
 import java.util.HashMap;
 import java.util.List;
 
-/**
- * 课程章节 DAO
- */
 @Mapper
 public interface CourseChapterDao extends BaseMapper<CourseChapterEntity> {
 
     List<HashMap> queryListByClassId(Integer classId);
+
+    List<HashMap> queryTreeByClassId(Integer classId);
 }

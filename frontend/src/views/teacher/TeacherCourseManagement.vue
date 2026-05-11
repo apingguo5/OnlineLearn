@@ -1,1061 +1,1322 @@
 <template>
-  <div class="course-management">
-    <!-- ==================== 顶部操作栏 ==================== -->
-    <div class="top-bar">
-      <div class="top-bar-left">
-        <h2>课程管理</h2>
+  <div class="outline-editor" tabindex="0" @keydown="handleGlobalKeydown">
+    <!-- 顶部栏 -->
+    <header class="editor-header">
+      <div class="header-left">
+        <el-button size="mini" icon="el-icon-back" @click="goBack" style="margin-right:8px">返回</el-button>
+        <i class="el-icon-s-management" style="font-size:20px;color:#409eff"></i>
+        <h2><i class="el-icon-notebook-2"></i>{{ courseName || '课程大纲编辑器' }}</h2>
+        <span v-if="autoSaveStatus" class="save-status"><i class="el-icon-success"></i> 已自动保存</span>
+        <span v-if="saving" class="save-status saving"><i class="el-icon-loading"></i> 保存中...</span>
       </div>
-      <div class="top-bar-right">
-        <el-button type="primary" size="medium" @click="showCreateCourseDialog">
-          <i class="el-icon-plus"></i> 创建课程
-        </el-button>
+      <div class="header-actions">
+        <el-tooltip content="全屏编辑 (F11)" placement="bottom">
+          <el-button size="mini" :icon="isFullscreen ? 'el-icon-full-screen' : 'el-icon-c-scale-to-original'" @click="toggleFullscreen"></el-button>
+        </el-tooltip>
       </div>
-    </div>
+    </header>
 
-    <!-- ==================== 主体内容 ==================== -->
-    <div class="main-content">
-      <!-- 左侧：课程列表 -->
-      <div class="course-list-panel" :class="{ collapsed: selectedCourse }">
-        <div class="panel-header">
-          <span>我的课程 ({{ courseList.length }})</span>
-        </div>
-        <div class="panel-body">
-          <div
-            v-for="course in courseList"
-            :key="course.id"
-            class="course-item"
-            :class="{ active: selectedCourse && selectedCourse.id === course.id }"
-            @click="selectCourse(course)"
-          >
-            <div class="course-icon">
-              <i class="el-icon-notebook-2"></i>
-            </div>
-            <div class="course-info">
-              <div class="course-name">{{ course.courseName }}</div>
-              <div class="course-desc">{{ course.description || '暂无描述' }}</div>
-            </div>
-            <div class="course-actions">
-              <el-button
-                type="text"
-                size="mini"
-                icon="el-icon-edit"
-                @click.stop="editCourse(course)"
-              ></el-button>
-              <el-button
-                type="text"
-                size="mini"
-                icon="el-icon-delete"
-                style="color: #f56c6c"
-                @click.stop="deleteCourse(course)"
-              ></el-button>
-            </div>
-          </div>
-          <div v-if="courseList.length === 0" class="empty-tip">
-            <i class="el-icon-document"></i>
-            <p>暂无课程，点击上方按钮创建</p>
+    <!-- 主体 -->
+    <div class="editor-body">
+      <!-- ====== 左侧：大纲树 ====== -->
+      <aside class="left-panel">
+        <!-- 课程信息栏 -->
+        <div class="course-info-bar">
+          <span class="outline-title">
+            <i class="el-icon-s-unfold"></i> 章节大纲
+            <el-tag size="mini" type="info" style="margin-left:6px">{{ flatChapters.length }}</el-tag>
+          </span>
+          <div class="outline-actions">
+            <el-tooltip content="展开全部" placement="top">
+              <el-button size="mini" icon="el-icon-arrow-down" circle @click="expandAll"></el-button>
+            </el-tooltip>
+            <el-tooltip content="折叠全部" placement="top">
+              <el-button size="mini" icon="el-icon-arrow-up" circle @click="collapseAll"></el-button>
+            </el-tooltip>
+            <el-tooltip content="新增同级章节 (Enter)" placement="top">
+              <el-button size="mini" icon="el-icon-plus" type="primary" circle @click="addChapter(null)"></el-button>
+            </el-tooltip>
           </div>
         </div>
-      </div>
 
-      <!-- 右侧：课程详情（选择课程后显示） -->
-      <div v-if="selectedCourse" class="course-detail-panel">
-        <!-- Tab 切换 -->
-        <el-tabs v-model="activeTab" class="detail-tabs">
-          <!-- ===== Tab 1: 章节目录 ===== -->
-          <el-tab-pane label="章节目录" name="chapters">
-            <div class="tab-toolbar">
-              <span class="tab-title">{{ selectedCourse.courseName }} - 章节目录</span>
-              <el-button type="primary" size="small" @click="showAddChapterDialog">
-                <i class="el-icon-plus"></i> 添加章节
-              </el-button>
+        <!-- 大纲树 -->
+        <div class="outline-tree">
+          <div v-if="loading" class="empty-outline">
+            <i class="el-icon-loading"></i>
+            <p>加载中...</p>
+          </div>
+          <div v-else-if="chapterTree.length === 0" class="empty-outline">
+            <i class="el-icon-document-add"></i>
+            <p>暂无章节，点击 <el-button size="mini" type="text" @click="addChapter(null)">新增章节</el-button></p>
+            <p style="font-size:12px;color:#909399;margin-top:8px">快捷键 Enter 快速添加</p>
+          </div>
+          <template v-else>
+            <TreeNode
+              v-for="node in chapterTree"
+              :key="node.id"
+              :node="node"
+              :depth="0"
+              :selectedId="selectedChapterId"
+              :draggedNode="dragNode"
+              @select="selectChapter"
+              @drag-start="handleDragStart"
+              @drag-end="handleDragEnd"
+              @drop="handleTreeDrop"
+              @add="addChapter"
+              @copy="copyChapter"
+              @delete="deleteChapter"
+              @toggle="toggleExpand"
+            />
+          </template>
+        </div>
+      </aside>
+
+      <!-- ====== 右侧：编辑面板 ====== -->
+      <main class="right-panel" :class="{ placeholder: !selectedChapter }">
+        <!-- 未选中占位 -->
+        <template v-if="!selectedChapter">
+          <i class="el-icon-document"></i>
+          <h3>选择左侧章节开始编辑</h3>
+          <p style="color:#909399;margin-bottom:16px">支持拖拽排序、键盘快捷键操作</p>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+            <kbd>Enter</kbd> <span style="color:#909399">新增同级</span>
+            <kbd>Tab</kbd> <span style="color:#909399">缩进</span>
+            <kbd>Shift+Tab</kbd> <span style="color:#909399">提升</span>
+            <kbd>Delete</kbd> <span style="color:#909399">删除</span>
+          </div>
+        </template>
+
+        <!-- 选中章节编辑面板 -->
+        <template v-if="selectedChapter">
+          <div class="right-panel-scroll" v-loading="rightPanelLoading">
+            <!-- 编辑头部 -->
+            <div class="panel-header">
+              <div class="breadcrumb">
+                <span @click="selectChapter(null)" style="cursor:pointer;color:#409eff">章节大纲</span>
+                <i class="el-icon-arrow-right"></i>
+                <span class="breadcrumb-current">{{ selectedChapter.title || '编辑章节' }}</span>
+              </div>
+              <div class="panel-actions">
+                <el-button size="mini" icon="el-icon-view" @click="previewChapter">预览</el-button>
+              </div>
             </div>
 
-            <div class="chapter-list">
-              <div v-for="chapter in chapterList" :key="chapter.id" class="chapter-item">
-                <div class="chapter-header">
-                  <div class="chapter-index">{{ chapter.sort }}</div>
-                  <div class="chapter-name">{{ chapter.chapterName }}</div>
-                  <div class="chapter-actions">
-                    <el-button type="text" size="mini" icon="el-icon-edit" @click="editChapter(chapter)"></el-button>
-                    <el-button type="text" size="mini" icon="el-icon-delete" style="color: #f56c6c" @click="deleteChapter(chapter)"></el-button>
-                    <el-button type="text" size="mini" icon="el-icon-upload2" @click="showUploadResource(chapter)">上传资源</el-button>
+            <!-- 基础信息 -->
+            <el-form :model="editForm" label-width="80px" size="small">
+              <el-form-item label="章节标题">
+                <el-input
+                  v-model="editForm.title"
+                  placeholder="输入章节标题"
+                  @input="autoSave()"
+                  maxlength="200"
+                />
+              </el-form-item>
+              <el-form-item label="简介">
+                <el-input
+                  v-model="editForm.summary"
+                  type="textarea"
+                  :rows="2"
+                  placeholder="输入章节简介（可选）"
+                  @input="autoSave()"
+                  maxlength="500"
+                />
+              </el-form-item>
+
+              <!-- 类型切换 -->
+              <el-form-item label="学习类型">
+                <el-radio-group v-model="editForm.type" @change="onTypeChange" size="small">
+                  <el-radio-button label="video">
+                    <i class="el-icon-video-camera" style="color:#409eff"></i> 视频学习
+                  </el-radio-button>
+                  <el-radio-button label="quiz">
+                    <i class="el-icon-edit-outline" style="color:#e6a23c"></i> 答题测验
+                  </el-radio-button>
+                  <el-radio-button label="reading">
+                    <i class="el-icon-document-copy" style="color:#67c23a"></i> 阅读
+                  </el-radio-button>
+                </el-radio-group>
+              </el-form-item>
+
+              <!-- 视频配置 -->
+              <template v-if="editForm.type === 'video'">
+                <el-form-item label="视频来源">
+                  <el-radio-group v-model="videoSourceType" size="small">
+                    <el-radio label="link">视频链接</el-radio>
+                    <el-radio label="upload">上传文件</el-radio>
+                    <el-radio label="library">媒资库</el-radio>
+                  </el-radio-group>
+                </el-form-item>
+                <el-form-item label="视频链接" v-if="videoSourceType === 'link'">
+                  <el-input
+                    v-model="editForm.content.videoUrl"
+                    placeholder="粘贴视频链接（支持 YouTube、Bilibili 等）"
+                    @input="autoSave()"
+                  />
+                </el-form-item>
+                <el-form-item label="上传视频" v-if="videoSourceType === 'upload'">
+                  <el-upload
+                    :action="uploadUrl"
+                    :headers="{ token: getToken() }"
+                    :data="{ type: 'video', courseId: courseId }"
+                    :on-success="handleVideoUploadSuccess"
+                    :before-upload="beforeVideoUpload"
+                    accept="video/*"
+                  >
+                    <el-button size="small" type="primary">点击上传</el-button>
+                    <div slot="tip" class="el-upload__tip">支持 mp4, webm, ogg 格式</div>
+                  </el-upload>
+                </el-form-item>
+                <el-form-item label="防拖拽">
+                  <el-switch v-model="editForm.content.disableSeek" @change="autoSave()" />
+                  <span style="margin-left:8px;color:#909399;font-size:12px">启用后学生无法拖动进度条</span>
+                </el-form-item>
+                <el-form-item label="允许倍速">
+                  <el-switch v-model="editForm.content.allowSpeed" @change="autoSave()" />
+                </el-form-item>
+              </template>
+
+              <!-- 测验配置 -->
+              <template v-if="editForm.type === 'quiz'">
+                <el-alert
+                  v-if="!editForm.content.questionIds || editForm.content.questionIds.length === 0"
+                  title="此测验章节尚未添加题目，学生将无法进入"
+                  type="warning"
+                  :closable="false"
+                  show-icon
+                  style="margin-bottom:16px"
+                />
+                <el-form-item label="题目">
+                  <div class="quiz-question-list">
+                    <el-tag
+                      v-for="(qid, idx) in editForm.content.questionIds || []"
+                      :key="qid"
+                      closable
+                      @close="removeQuestion(qid)"
+                      style="margin:4px"
+                    >
+                      {{ getQuestionTitle(qid) || ('题目 ' + (idx + 1)) }}
+                    </el-tag>
+                    <el-button
+                      size="small"
+                      icon="el-icon-plus"
+                      @click="showQuestionBank = true"
+                    >从题库选择</el-button>
+                    <el-button
+                      size="small"
+                      icon="el-icon-document-add"
+                      @click="quickCreateQuestion"
+                    >快速新建</el-button>
                   </div>
-                </div>
-                <!-- 章节资源列表 -->
-                <div v-if="chapterResources[chapter.id] && chapterResources[chapter.id].length > 0" class="chapter-resources">
-                  <div v-for="res in chapterResources[chapter.id]" :key="res.id" class="resource-item">
+                </el-form-item>
+                <el-form-item label="及格分数">
+                  <el-input-number
+                    v-model="editForm.content.passScore"
+                    :min="0"
+                    :max="100"
+                    size="small"
+                    @change="autoSave()"
+                  /> 分
+                </el-form-item>
+                <el-form-item label="允许重试">
+                  <el-switch v-model="editForm.content.allowRetry" @change="autoSave()" />
+                </el-form-item>
+              </template>
+
+              <!-- 阅读配置 -->
+              <template v-if="editForm.type === 'reading'">
+                <el-form-item label="上传文档">
+                  <el-upload
+                    :action="uploadUrl"
+                    :headers="{ token: getToken() }"
+                    :data="{ type: 'document', courseId: courseId }"
+                    :on-success="handleDocUploadSuccess"
+                    accept=".pdf,.ppt,.pptx,.doc,.docx"
+                  >
+                    <el-button size="small" type="primary">上传 PDF/PPT</el-button>
+                    <div slot="tip" class="el-upload__tip">支持 pdf, ppt, pptx, doc, docx 格式</div>
+                  </el-upload>
+                </el-form-item>
+                <el-form-item label="上传的文件">
+                  <div v-if="editForm.content.docUrl" class="uploaded-file">
                     <i class="el-icon-document"></i>
-                    <span class="res-name">{{ res.fileName }}</span>
-                    <span class="res-size">{{ formatSize(res.fileSize) }}</span>
-                    <span class="res-time">{{ res.createTime }}</span>
-                    <el-button type="text" size="mini" icon="el-icon-delete" style="color: #f56c6c" @click="deleteResource(res)"></el-button>
+                    <span>{{ editForm.content.docName || '已上传文档' }}</span>
+                    <el-button size="mini" type="text" @click="editForm.content.docUrl = ''; editForm.content.docName = ''; autoSave()">移除</el-button>
                   </div>
-                </div>
-              </div>
-              <div v-if="chapterList.length === 0" class="empty-tip">
-                <i class="el-icon-s-management"></i>
-                <p>暂无章节，点击上方按钮添加</p>
-              </div>
-            </div>
-          </el-tab-pane>
+                  <span v-else style="color:#909399">暂无上传文件</span>
+                </el-form-item>
+                <el-form-item label="正文内容">
+                  <div class="rich-editor-wrapper">
+                    <quill-editor
+                      v-if="quillReady"
+                      v-model="editForm.content.htmlContent"
+                      :options="quillOptions"
+                      @change="autoSave()"
+                    />
+                    <div v-else class="editor-loading">
+                      <i class="el-icon-loading"></i> 富文本编辑器加载中...
+                    </div>
+                  </div>
+                </el-form-item>
+              </template>
 
-          <!-- ===== Tab 2: 课程资源总览 ===== -->
-          <el-tab-pane label="课程资源" name="resources">
-            <div class="tab-toolbar">
-              <span class="tab-title">{{ selectedCourse.courseName }} - 课件资源</span>
-              <el-upload
-                :action="uploadUrl"
-                :headers="uploadHeaders"
-                :data="{ subjectId: selectedCourse.id }"
-                :on-success="handleUploadSuccess"
-                :on-error="handleUploadError"
-                :show-file-list="false"
-                accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.mp4,.avi,.zip,.rar,.jpg,.png"
-              >
-                <el-button size="small" type="primary">
-                  <i class="el-icon-upload"></i> 上传资源
+              <!-- 发布设置 -->
+              <el-divider><i class="el-icon-setting"></i> 发布设置</el-divider>
+              <el-form-item label="发布状态">
+                <el-switch
+                  v-model="editForm.publishStatus"
+                  active-value="published"
+                  inactive-value="draft"
+                  active-color="#67c23a"
+                  inactive-color="#909399"
+                  @change="autoSave()"
+                />
+                <span style="margin-left:8px;font-size:12px">
+                  {{ editForm.publishStatus === 'published' ? '已发布，学生可见' : '草稿，仅自己可见' }}
+                </span>
+              </el-form-item>
+              <el-form-item label="发布时间">
+                <el-date-picker
+                  v-model="editForm.publishTime"
+                  type="datetime"
+                  placeholder="立即发布（不选）"
+                  @change="autoSave()"
+                />
+              </el-form-item>
+
+              <!-- 保存按钮 -->
+              <el-form-item>
+                <el-button type="primary" @click="saveChapter" :loading="saving">
+                  <i class="el-icon-circle-check"></i> 保存
                 </el-button>
-              </el-upload>
-            </div>
-
-            <div class="all-resources">
-              <div v-for="res in allResources" :key="res.id" class="resource-card" @click="previewResource(res)">
-                <div class="resource-icon">
-                  <i :class="getFileIcon(res.fileType)"></i>
-                </div>
-                <div class="resource-name">{{ res.fileName }}</div>
-                <div class="resource-meta">
-                  <span>{{ formatSize(res.fileSize) }}</span>
-                  <span class="res-type">{{ getFileTypeLabel(res.fileType) }}</span>
-                </div>
-                <div class="resource-actions">
-                  <el-button type="text" size="mini" icon="el-icon-download" @click.stop="downloadResource(res)"></el-button>
-                  <el-button type="text" size="mini" icon="el-icon-delete" style="color: #f56c6c" @click.stop="deleteResource(res)"></el-button>
-                </div>
-              </div>
-              <div v-if="allResources.length === 0" class="empty-tip">
-                <i class="el-icon-folder-opened"></i>
-                <p>暂无资源，点击上方按钮上传</p>
-              </div>
-            </div>
-          </el-tab-pane>
-        </el-tabs>
-      </div>
-
-      <!-- 未选择课程时的提示 -->
-      <div v-else class="no-course-selected">
-        <i class="el-icon-notebook-1"></i>
-        <p>请从左侧选择一个课程</p>
-      </div>
+                <el-button @click="previewChapter">
+                  <i class="el-icon-view"></i> 预览本章节
+                </el-button>
+              </el-form-item>
+            </el-form>
+          </div>
+        </template>
+      </main>
     </div>
 
-    <!-- ==================== 创建/编辑课程对话框 ==================== -->
+    <!-- 题库选择对话框 -->
     <el-dialog
-      :title="courseDialog.title"
-      :visible.sync="courseDialog.visible"
-      width="500px"
+      title="从题库选择题目"
+      :visible.sync="showQuestionBank"
+      width="600px"
       :close-on-click-modal="false"
     >
-      <el-form :model="courseDialog.form" :rules="courseDialog.rules" ref="courseForm" label-width="80px">
-        <el-form-item label="课程名称" prop="courseName">
-          <el-input v-model="courseDialog.form.courseName" placeholder="请输入课程名称" maxlength="50"></el-input>
-        </el-form-item>
-        <el-form-item label="课程描述" prop="description">
-          <el-input
-            v-model="courseDialog.form.description"
-            type="textarea"
-            :rows="4"
-            placeholder="请输入课程描述（可选）"
-            maxlength="200"
-          ></el-input>
-        </el-form-item>
-      </el-form>
-      <span slot="footer">
-        <el-button @click="courseDialog.visible = false">取消</el-button>
-        <el-button type="primary" @click="submitCourseForm" :loading="courseDialog.loading">确定</el-button>
-      </span>
-    </el-dialog>
-
-    <!-- ==================== 添加/编辑章节对话框 ==================== -->
-    <el-dialog
-      :title="chapterDialog.title"
-      :visible.sync="chapterDialog.visible"
-      width="400px"
-      :close-on-click-modal="false"
-    >
-      <el-form :model="chapterDialog.form" :rules="chapterDialog.rules" ref="chapterForm" label-width="80px">
-        <el-form-item label="章节名称" prop="chapterName">
-          <el-input v-model="chapterDialog.form.chapterName" placeholder="请输入章节名称" maxlength="50"></el-input>
-        </el-form-item>
-        <el-form-item label="排序" prop="sort">
-          <el-input-number v-model="chapterDialog.form.sort" :min="1" :max="999"></el-input-number>
-        </el-form-item>
-      </el-form>
-      <span slot="footer">
-        <el-button @click="chapterDialog.visible = false">取消</el-button>
-        <el-button type="primary" @click="submitChapterForm" :loading="chapterDialog.loading">确定</el-button>
-      </span>
-    </el-dialog>
-
-    <!-- ==================== 上传资源到章节对话框 ==================== -->
-    <el-dialog
-      title="上传课件资源"
-      :visible.sync="uploadDialog.visible"
-      width="450px"
-      :close-on-click-modal="false"
-    >
-      <div class="upload-info">
-        <p><strong>课程：</strong>{{ selectedCourse ? selectedCourse.courseName : '' }}</p>
-        <p><strong>章节：</strong>{{ uploadDialog.chapter ? uploadDialog.chapter.chapterName : '' }}</p>
-      </div>
-      <el-upload
-        drag
-        :action="uploadUrl"
-        :headers="uploadHeaders"
-        :data="{ subjectId: selectedCourse ? selectedCourse.id : '' }"
-        :on-success="handleChapterUploadSuccess"
-        :on-error="handleUploadError"
-        :show-file-list="true"
-        :multiple="true"
-        accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.mp4,.avi,.zip,.rar,.jpg,.png"
-        class="upload-area"
+      <el-input
+        v-model="questionSearch"
+        placeholder="搜索题目..."
+        prefix-icon="el-icon-search"
+        style="margin-bottom:12px"
+      />
+      <el-table
+        :data="filteredQuestions"
+        @selection-change="onQuestionSelect"
+        ref="questionTable"
+        height="360"
       >
-        <i class="el-icon-upload"></i>
-        <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
-        <div class="el-upload__tip" slot="tip">支持 PDF、PPT、Word、Excel、视频、压缩包等格式</div>
-      </el-upload>
+        <el-table-column type="selection" width="50" />
+        <el-table-column prop="title" label="题目内容" min-width="200" show-overflow-tooltip />
+        <el-table-column label="类型" width="80">
+          <template slot-scope="{ row }">
+            <el-tag size="mini" :type="row.type === 'choice' ? 'primary' : 'warning'">
+              {{ row.type === 'choice' ? '选择题' : '判断题' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+      <span slot="footer">
+        <el-button @click="showQuestionBank = false">取消</el-button>
+        <el-button type="primary" @click="confirmQuestionSelect">添加选中题目</el-button>
+      </span>
+    </el-dialog>
+
+    <!-- 快速新建题目对话框 -->
+    <el-dialog
+      title="快速新建题目"
+      :visible.sync="showQuickCreateQuestion"
+      width="500px"
+    >
+      <el-form :model="quickQuestion" label-width="80px" size="small">
+        <el-form-item label="题目类型">
+          <el-radio-group v-model="quickQuestion.type">
+            <el-radio label="choice">选择题</el-radio>
+            <el-radio label="judge">判断题</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="题干">
+          <el-input v-model="quickQuestion.title" type="textarea" :rows="2" placeholder="输入题目内容" />
+        </el-form-item>
+        <template v-if="quickQuestion.type === 'choice'">
+          <el-form-item
+            v-for="(opt, idx) in quickQuestion.options"
+            :key="idx"
+            :label="'选项 ' + String.fromCharCode(65 + idx)"
+          >
+            <el-input v-model="quickQuestion.options[idx]" placeholder="输入选项内容">
+              <el-checkbox
+                slot="prefix"
+                v-model="quickQuestion.correct[idx]"
+                style="line-height:36px;margin-left:4px"
+              />
+            </el-input>
+          </el-form-item>
+          <el-form-item>
+            <el-button size="mini" @click="addOption">+ 添加选项</el-button>
+          </el-form-item>
+        </template>
+        <template v-if="quickQuestion.type === 'judge'">
+          <el-form-item label="正确答案">
+            <el-radio-group v-model="quickQuestion.correctJudge">
+              <el-radio :label="true">正确</el-radio>
+              <el-radio :label="false">错误</el-radio>
+            </el-radio-group>
+          </el-form-item>
+        </template>
+      </el-form>
+      <span slot="footer">
+        <el-button @click="showQuickCreateQuestion = false">取消</el-button>
+        <el-button type="primary" @click="submitQuickQuestion" :loading="creatingQuestion">添加</el-button>
+      </span>
+    </el-dialog>
+
+    <!-- 预览对话框 -->
+    <el-dialog
+      title="章节预览 - 学生视角"
+      :visible.sync="showPreview"
+      width="700px"
+      top="40px"
+      :close-on-click-modal="false"
+    >
+      <div class="preview-content" v-loading="previewLoading">
+        <h2 style="margin-bottom:16px">{{ editForm.title }}</h2>
+        <p v-if="editForm.summary" style="color:#606266;margin-bottom:16px">{{ editForm.summary }}</p>
+        <el-tag size="small" :type="editForm.type === 'video' ? 'primary' : editForm.type === 'quiz' ? 'warning' : 'success'">
+          {{ editForm.type === 'video' ? '视频学习' : editForm.type === 'quiz' ? '答题测验' : '阅读' }}
+        </el-tag>
+        <el-divider />
+        <template v-if="editForm.type === 'video' && editForm.content.videoUrl">
+          <video
+            :src="editForm.content.videoUrl"
+            controls
+            style="width:100%;max-height:400px"
+            :controlsList="editForm.content.disableSeek ? 'nodownload noremoteplayback' : ''"
+          />
+        </template>
+        <template v-else-if="editForm.type === 'reading'">
+          <div class="preview-html" v-html="editForm.content.htmlContent"></div>
+          <div v-if="editForm.content.docUrl" style="margin-top:12px">
+            <i class="el-icon-document"></i> 附件：{{ editForm.content.docName || '文档' }}
+          </div>
+        </template>
+        <template v-else-if="editForm.type === 'quiz'">
+          <p>共 {{ (editForm.content.questionIds || []).length }} 道题目</p>
+          <p>及格线：{{ editForm.content.passScore || 0 }} 分</p>
+        </template>
+        <template v-else>
+          <p style="color:#909399">此章节尚未配置内容</p>
+        </template>
+      </div>
     </el-dialog>
   </div>
 </template>
 
 <script>
-import teacherApi from '@/api/teacher/teacherApi'
+import { getChaptersByCourseId, createChapter, updateChapter, deleteChapter, reorderChapters } from '@/api/teacher/teacherApi'
+
+// 树节点递归组件
+const TreeNode = {
+  name: 'TreeNode',
+  props: ['node', 'depth', 'selectedId', 'draggedNode'],
+  template: `
+    <div
+      class="tree-node"
+      :class="{
+        selected: node.id === selectedId,
+        dragging: draggedNode && draggedNode.id === node.id,
+        'has-warning': node.hasWarning
+      }"
+      :style="{ paddingLeft: depth * 16 + 'px' }"
+      draggable="true"
+      @click.stop="$emit('select', node)"
+      @dragstart.stop="$emit('drag-start', node)"
+      @dragover.prevent=""
+      @dragenter.prevent="$emit('drag-start', node)"
+      @drop.stop="$emit('drop', { target: node, dragged: draggedNode })"
+      @dragend.stop="$emit('drag-end')"
+    >
+      <div class="node-content">
+        <span class="expand-btn" @click.stop="$emit('toggle', node)">
+          <i v-if="node.children && node.children.length > 0" :class="node.expanded ? 'el-icon-caret-bottom' : 'el-icon-caret-right'"></i>
+          <i v-else class="el-icon-minus" style="visibility:hidden"></i>
+        </span>
+        <i
+          class="type-icon"
+          :class="{
+            'el-icon-video-camera': node.type === 'video',
+            'el-icon-edit-outline': node.type === 'quiz',
+            'el-icon-document-copy': node.type === 'reading',
+            'el-icon-document': !node.type || node.type === ''
+          }"
+          :style="{
+            color: node.type === 'video' ? '#409eff' : node.type === 'quiz' ? '#e6a23c' : node.type === 'reading' ? '#67c23a' : '#909399'
+          }"
+        ></i>
+        <span class="node-title" :title="node.title">{{ node.title || '未命名章节' }}</span>
+        <span v-if="node.hasWarning" class="warning-dot" title="此章节缺少必要配置">
+          <i class="el-icon-warning" style="color:#e6a23c"></i>
+        </span>
+        <span class="node-actions" @click.stop>
+          <el-button size="mini" type="text" @click="$emit('add', node)" icon="el-icon-plus" title="添加子章节"></el-button>
+          <el-button size="mini" type="text" @click="$emit('copy', node)" icon="el-icon-copy-document" title="复制"></el-button>
+          <el-button size="mini" type="text" @click="$emit('delete', node)" icon="el-icon-delete" title="删除" style="color:#f56c6c"></el-button>
+        </span>
+      </div>
+      <template v-if="node.children && node.children.length > 0 && node.expanded !== false">
+        <TreeNode
+          v-for="child in node.children"
+          :key="child.id"
+          :node="child"
+          :depth="depth + 1"
+          :selectedId="selectedId"
+          :draggedNode="draggedNode"
+          @select="$emit('select', $event)"
+          @drag-start="$emit('drag-start', $event)"
+          @drag-end="$emit('drag-end', $event)"
+          @drop="$emit('drop', $event)"
+          @add="$emit('add', $event)"
+          @copy="$emit('copy', $event)"
+          @delete="$emit('delete', $event)"
+          @toggle="$emit('toggle', $event)"
+        />
+      </template>
+    </div>
+  `
+}
 
 export default {
   name: 'TeacherCourseManagement',
+  components: { TreeNode },
   data() {
     return {
-      // 用户信息 - 从 localStorage 读取单个字段
-      userId: localStorage.getItem('userId') || '',
-      userInfo: {
-        id: localStorage.getItem('userId') || ''
-      },
+      // 课程信息
+      courseId: null,
+      courseName: '',
+      loading: false,
 
-      // 课程列表
-      courseList: [],
+      // 大纲数据
+      chapterTree: [],
+      flatChapters: [],
+      selectedChapter: null,
+      selectedChapterId: null,
+      rightPanelLoading: false,
+      saving: false,
+      autoSaveStatus: false,
 
-      // 选中的课程
-      selectedCourse: null,
+      // 编辑表单
+      editForm: this.getEmptyEditForm(),
 
-      // 当前 Tab
-      activeTab: 'chapters',
+      // 视频配置
+      videoSourceType: 'link',
 
-      // 章节列表
-      chapterList: [],
+      // 题库
+      showQuestionBank: false,
+      questionSearch: '',
+      mockQuestions: [],
+      selectedQuestions: [],
 
-      // 章节资源映射 { chapterId: [resources] }
-      chapterResources: {},
+      // 快速新建题目
+      showQuickCreateQuestion: false,
+      quickQuestion: this.getEmptyQuickQuestion(),
+      creatingQuestion: false,
 
-      // 所有资源
-      allResources: [],
+      // 预览
+      showPreview: false,
+      previewLoading: false,
 
-      // ===== 对话框状态 =====
-      courseDialog: {
-        title: '创建课程',
-        visible: false,
-        loading: false,
-        isEdit: false,
-        editId: null,
-        form: { courseName: '', description: '' },
-        rules: {
-          courseName: [{ required: true, message: '请输入课程名称', trigger: 'blur' }]
+      // 拖拽
+      dragNode: null,
+      autoSaveTimer: null,
+      isFullscreen: false,
+
+      // 富文本
+      quillReady: false,
+      quillOptions: {
+        theme: 'snow',
+        modules: {
+          toolbar: [
+            ['bold', 'italic', 'underline', 'strike'],
+            [{ header: [1, 2, 3, false] }],
+            [{ list: 'ordered' }, { list: 'bullet' }],
+            ['blockquote', 'code-block'],
+            [{ color: [] }, { background: [] }],
+            ['link', 'image'],
+            ['clean']
+          ]
         }
-      },
-
-      chapterDialog: {
-        title: '添加章节',
-        visible: false,
-        loading: false,
-        isEdit: false,
-        editId: null,
-        form: { chapterName: '', sort: 1 },
-        rules: {
-          chapterName: [{ required: true, message: '请输入章节名称', trigger: 'blur' }]
-        }
-      },
-
-      uploadDialog: {
-        visible: false,
-        chapter: null
       }
     }
   },
-
   computed: {
     uploadUrl() {
-      const base = process.env.VUE_APP_API_BASE || ''
-      return base + '/study/teacher/dashboard/uploadFile'
+      // Use relative path pointing to backend upload endpoint
+      return '/api/upload'  
     },
-    uploadHeaders() {
-      return {
-        'Authorization': localStorage.getItem('token') || ''
-      }
+    filteredQuestions() {
+      if (!this.questionSearch) return this.mockQuestions
+      const q = this.questionSearch.toLowerCase()
+      return this.mockQuestions.filter(qi => (qi.title || '').toLowerCase().includes(q))
     }
   },
-
-  mounted() {
-    this.loadCourses()
-  },
-
-  methods: {
-    // ============================================================
-    // 课程 CRUD
-    // ============================================================
-
-    async loadCourses() {
-      try {
-        const resp = await teacherApi.getMyCourses(this.userInfo.id)
-        var res = resp.data
-        if (res.code === 200) {
-          this.courseList = res.resultData || []
-        }
-      } catch (e) {
-        this.$message.error('获取课程列表失败')
-      }
-    },
-
-    selectCourse(course) {
-      this.selectedCourse = course
-      this.activeTab = 'chapters'
+  created() {
+    this.courseId = this.$route.params.courseId
+    this.courseName = this.$route.query.courseName || ''
+    if (this.courseId) {
       this.loadChapters()
-      this.loadAllResources()
+    }
+    this.loadMockQuestions()
+    // Try loading Quill
+    this.initQuill()
+  },
+  methods: {
+    getToken() {
+      return localStorage.getItem('token') || ''
     },
-
-    showCreateCourseDialog() {
-      this.courseDialog.title = '创建课程'
-      this.courseDialog.isEdit = false
-      this.courseDialog.editId = null
-      this.courseDialog.form = { courseName: '', description: '' }
-      this.courseDialog.visible = true
-    },
-
-    editCourse(course) {
-      this.courseDialog.title = '编辑课程'
-      this.courseDialog.isEdit = true
-      this.courseDialog.editId = course.id
-      this.courseDialog.form = {
-        courseName: course.courseName,
-        description: course.description
+    getEmptyEditForm() {
+      return {
+        id: null,
+        title: '',
+        summary: '',
+        type: 'video',
+        content: {
+          videoUrl: '',
+          disableSeek: false,
+          allowSpeed: true,
+          questionIds: [],
+          passScore: 60,
+          allowRetry: true,
+          htmlContent: '',
+          docUrl: '',
+          docName: ''
+        },
+        publishStatus: 'draft',
+        publishTime: null
       }
-      this.courseDialog.visible = true
     },
-
-    submitCourseForm() {
-      this.$refs.courseForm.validate(async (valid) => {
-        if (!valid) return
-        this.courseDialog.loading = true
-        try {
-          if (this.courseDialog.isEdit) {
-            var resp = await teacherApi.updateCourse({
-              id: this.courseDialog.editId,
-              courseName: this.courseDialog.form.courseName,
-              description: this.courseDialog.form.description
-            })
-            var res = resp.data
-            if (res.code === 200) {
-              this.$message.success('课程更新成功')
-              this.courseDialog.visible = false
-              this.loadCourses()
-            } else {
-              this.$message.error(res.resultData || '更新失败')
-            }
-          } else {
-            var resp2 = await teacherApi.createCourse({
-              courseName: this.courseDialog.form.courseName,
-              description: this.courseDialog.form.description,
-              userId: this.userInfo.id
-            })
-            var res2 = resp2.data
-            if (res2.code === 200) {
-              this.$message.success('课程创建成功')
-              this.courseDialog.visible = false
-              this.loadCourses()
-            } else {
-              this.$message.error(res2.resultData || '创建失败')
-            }
-          }
-        } catch (e) {
-          this.$message.error('操作失败')
-        } finally {
-          this.courseDialog.loading = false
+    getEmptyQuickQuestion() {
+      return {
+        type: 'choice',
+        title: '',
+        options: ['', ''],
+        correct: [false, false],
+        correctJudge: true
+      }
+    },
+    initQuill() {
+      // Check if quill editor is available globally or via dynamic import
+      if (typeof window !== 'undefined' && window.Quill) {
+        this.quillReady = true
+      } else {
+        // Try dynamic import
+        import('quill').then(() => {
+          this.quillReady = true
+        }).catch(() => {
+          // Quill not installed, will show loading
+        })
+      }
+    },
+    goBack() {
+      if (window.history.length > 1) {
+        this.$router.go(-1)
+      } else {
+        this.$router.push('/teachercourselist')
+      }
+    },
+    async loadChapters() {
+      if (!this.courseId) return
+      this.loading = true
+      try {
+        const resp = await getChaptersByCourseId({ courseId: this.courseId })
+        const data = resp.data || resp
+        this.buildTree(data.list || data || [])
+        this.buildFlatList()
+      } catch (e) {
+        console.error('加载章节失败:', e)
+        this.$message.error('加载章节失败')
+      } finally {
+        this.loading = false
+      }
+    },
+    buildTree(chapters) {
+      const map = {}
+      const roots = []
+      // Create map
+      chapters.forEach(ch => {
+        map[ch.id] = { ...ch, children: [], expanded: ch.expanded !== false, hasWarning: this.checkWarning(ch) }
+      })
+      // Build tree
+      chapters.forEach(ch => {
+        const node = map[ch.id]
+        if (node.parentId && map[node.parentId]) {
+          map[node.parentId].children.push(node)
+        } else {
+          roots.push(node)
         }
       })
+      this.chapterTree = roots
     },
-
-    deleteCourse(course) {
-      this.$confirm('确定删除课程"' + course.courseName + '"吗？', '提示', {
-        confirmButtonText: '确定',
+    buildFlatList() {
+      const flat = []
+      const traverse = (nodes) => {
+        nodes.forEach(n => {
+          flat.push(n)
+          if (n.children && n.children.length > 0) traverse(n.children)
+        })
+      }
+      traverse(this.chapterTree)
+      this.flatChapters = flat
+    },
+    checkWarning(chapter) {
+      if (!chapter.type) return false
+      if (chapter.type === 'quiz' && (!chapter.content || !chapter.content.questionIds || chapter.content.questionIds.length === 0)) {
+        return true
+      }
+      if (chapter.type === 'video' && (!chapter.content || !chapter.content.videoUrl)) {
+        return true
+      }
+      return false
+    },
+    selectChapter(chapter) {
+      this.selectedChapter = chapter
+      this.selectedChapterId = chapter ? chapter.id : null
+      if (chapter) {
+        this.loadChapterEditForm(chapter)
+      }
+    },
+    loadChapterEditForm(chapter) {
+      this.editForm = {
+        id: chapter.id,
+        title: chapter.title || '',
+        summary: chapter.summary || '',
+        type: chapter.type || 'video',
+        content: chapter.content || { ...this.getEmptyEditForm().content },
+        publishStatus: chapter.publishStatus || 'draft',
+        publishTime: chapter.publishTime || null
+      }
+      this.videoSourceType = this.editForm.content.videoUrl ? 'link' : 'upload'
+    },
+    async addChapter(parentNode) {
+      const newChapter = {
+        courseId: this.courseId,
+        parentId: parentNode ? parentNode.id : null,
+        title: '新章节',
+        type: parentNode ? parentNode.type || 'video' : 'video',
+        sort: this.getNextSort(parentNode),
+        content: { ...this.getEmptyEditForm().content },
+        publishStatus: 'draft'
+      }
+      try {
+        const resp = await createChapter(newChapter)
+        const saved = resp.data || resp
+        this.$message.success('章节创建成功')
+        await this.loadChapters()
+        // Select the new chapter
+        const flatNode = this.flatChapters.find(c => c.id === saved.id)
+        if (flatNode) this.selectChapter(flatNode)
+      } catch (e) {
+        this.$message.error('创建失败')
+      }
+    },
+    getNextSort(parentNode) {
+      if (!parentNode) return this.chapterTree.length
+      if (parentNode.children) return parentNode.children.length
+      return 0
+    },
+    async saveChapter() {
+      if (!this.editForm.id) return
+      this.saving = true
+      try {
+        await updateChapter({
+          id: this.editForm.id,
+          title: this.editForm.title,
+          summary: this.editForm.summary,
+          type: this.editForm.type,
+          content: JSON.stringify(this.editForm.content),
+          publishStatus: this.editForm.publishStatus,
+          publishTime: this.editForm.publishTime
+        })
+        this.$message.success('保存成功')
+        this.autoSaveStatus = true
+        setTimeout(() => { this.autoSaveStatus = false }, 2000)
+        await this.loadChapters()
+      } catch (e) {
+        this.$message.error('保存失败')
+      } finally {
+        this.saving = false
+      }
+    },
+    autoSave() {
+      if (this.autoSaveTimer) clearTimeout(this.autoSaveTimer)
+      this.autoSaveTimer = setTimeout(() => {
+        this.saveChapter()
+      }, 2000)
+    },
+    onTypeChange(type) {
+      // Keep common fields, reset content per type as needed
+      if (type === 'video' && !this.editForm.content.videoUrl) {
+        this.editForm.content = { videoUrl: '', disableSeek: false, allowSpeed: true }
+      } else if (type === 'quiz' && !this.editForm.content.questionIds) {
+        this.editForm.content = { questionIds: [], passScore: 60, allowRetry: true }
+      } else if (type === 'reading' && !this.editForm.content.htmlContent) {
+        this.editForm.content = { htmlContent: '', docUrl: '', docName: '' }
+      }
+      this.autoSave()
+    },
+    async copyChapter(chapter) {
+      this.$confirm(`复制章节《${chapter.title}》及其子章节？`, '确认复制', {
+        confirmButtonText: '复制',
         cancelButtonText: '取消',
-        type: 'warning'
+        type: 'info'
       }).then(async () => {
         try {
-          var resp = await teacherApi.deleteCourse(course.id)
-          var res = resp.data
-          if (res.code === 200) {
-            this.$message.success('删除成功')
-            if (this.selectedCourse && this.selectedCourse.id === course.id) {
-              this.selectedCourse = null
-              this.chapterList = []
-              this.allResources = []
-            }
-            this.loadCourses()
-          } else {
-            this.$message.error(res.resultData || '删除失败')
+          await createChapter({
+            courseId: this.courseId,
+            parentId: chapter.parentId,
+            title: chapter.title + ' (副本)',
+            type: chapter.type || 'video',
+            content: JSON.stringify(chapter.content || {}),
+            sort: (chapter.sort || 0) + 1,
+            publishStatus: 'draft'
+          })
+          this.$message.success('复制成功')
+          await this.loadChapters()
+        } catch (e) {
+          this.$message.error('复制失败')
+        }
+      }).catch(() => {})
+    },
+    async deleteChapter(chapter) {
+      this.$confirm(`确认删除章节《${chapter.title}》？`, '警告', {
+        confirmButtonText: '确认删除',
+        cancelButtonText: '取消',
+        type: 'error'
+      }).then(async () => {
+        try {
+          await deleteChapter({ id: chapter.id })
+          this.$message.success('删除成功')
+          if (this.selectedChapterId === chapter.id) {
+            this.selectedChapter = null
+            this.selectedChapterId = null
           }
+          await this.loadChapters()
         } catch (e) {
           this.$message.error('删除失败')
         }
       }).catch(() => {})
     },
-
-    // ============================================================
-    // 章节 CRUD
-    // ============================================================
-
-    async loadChapters() {
-      if (!this.selectedCourse) return
+    handleDragStart(node) {
+      this.dragNode = node
+    },
+    handleDragEnd() {
+      this.dragNode = null
+    },
+    async handleTreeDrop({ target, dragged }) {
+      if (!dragged || !target) return
+      if (dragged.id === target.id) return
+      // Simple reorder logic: move dragged as child of target
       try {
-        var resp = await teacherApi.getChapters(this.selectedCourse.id)
-        var res = resp.data
-        if (res.code === 200) {
-          this.chapterList = res.resultData || []
-          // 加载每个章节的资源
-          var self = this
-          this.chapterList.forEach(function(ch) {
-            self.loadChapterResources(ch.id)
-          })
-        }
+        await reorderChapters({
+          chapterId: dragged.id,
+          targetId: target.id,
+          position: 'inner' // or 'before', 'after'
+        })
+        await this.loadChapters()
+        this.autoSave()
       } catch (e) {
-        this.$message.error('获取章节列表失败')
+        console.error('Reorder failed:', e)
+      }
+    },
+    toggleExpand(node) {
+      node.expanded = !(node.expanded !== false)
+      this.$forceUpdate()
+    },
+    expandAll() {
+      const expand = (nodes) => {
+        nodes.forEach(n => {
+          n.expanded = true
+          if (n.children) expand(n.children)
+        })
+      }
+      expand(this.chapterTree)
+      this.$forceUpdate()
+    },
+    collapseAll() {
+      const collapse = (nodes) => {
+        nodes.forEach(n => {
+          n.expanded = false
+          if (n.children) collapse(n.children)
+        })
+      }
+      collapse(this.chapterTree)
+      this.$forceUpdate()
+    },
+    handleGlobalKeydown(e) {
+      // Enter: add sibling chapter
+      if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault()
+        this.addChapter(this.selectedChapter ? { id: this.selectedChapter.parentId } : null)
+      }
+      // Tab: indent (make child of previous sibling)
+      if (e.key === 'Tab' && !e.shiftKey && this.selectedChapter) {
+        e.preventDefault()
+        this.indentChapter()
+      }
+      // Shift+Tab: outdent
+      if (e.key === 'Tab' && e.shiftKey && this.selectedChapter) {
+        e.preventDefault()
+        this.outdentChapter()
+      }
+      // Delete: delete selected chapter
+      if (e.key === 'Delete' && this.selectedChapter) {
+        this.deleteChapter(this.selectedChapter)
+      }
+      // F11: toggle fullscreen
+      if (e.key === 'F11') {
+        e.preventDefault()
+        this.toggleFullscreen()
+      }
+    },
+    async indentChapter() {
+      // Make this chapter a child of its previous sibling
+      if (!this.selectedChapter) return
+      const flat = this.flatChapters
+      const idx = flat.findIndex(c => c.id === this.selectedChapter.id)
+      if (idx <= 0) return
+      const prevSibling = flat[idx - 1]
+      if (!prevSibling) return
+      try {
+        await updateChapter({ id: this.selectedChapter.id, parentId: prevSibling.id })
+        await this.loadChapters()
+      } catch (e) {
+        this.$message.error('缩进失败')
+      }
+    },
+    async outdentChapter() {
+      if (!this.selectedChapter || !this.selectedChapter.parentId) return
+      try {
+        await updateChapter({ id: this.selectedChapter.id, parentId: null })
+        await this.loadChapters()
+      } catch (e) {
+        this.$message.error('提升失败')
+      }
+    },
+    previewChapter() {
+      this.showPreview = true
+    },
+    toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().then(() => {
+          this.isFullscreen = true
+        }).catch(() => {})
+      } else {
+        document.exitFullscreen().then(() => {
+          this.isFullscreen = false
+        }).catch(() => {})
       }
     },
 
-    async loadChapterResources(chapterId) {
-      try {
-        var resp = await teacherApi.getResources(this.selectedCourse.id)
-        var res = resp.data
-        if (res.code === 200) {
-          this.$set(this.chapterResources, chapterId, res.resultData || [])
-        }
-      } catch (e) {
-        // ignore
-      }
+    // === 题库相关 ===
+    loadMockQuestions() {
+      // Mock data for demonstration
+      this.mockQuestions = [
+        { id: 'q1', title: '云计算的定义是什么？', type: 'choice' },
+        { id: 'q2', title: '以下哪个是 IaaS 服务？', type: 'choice' },
+        { id: 'q3', title: '虚拟化是云计算的必要技术', type: 'judge' },
+        { id: 'q4', title: 'SaaS 的全称是？', type: 'choice' },
+        { id: 'q5', title: '公有云比私有云更安全', type: 'judge' }
+      ]
     },
-
-    showAddChapterDialog() {
-      if (!this.selectedCourse) {
-        this.$message.warning('请先选择一个课程')
+    onQuestionSelect(selection) {
+      this.selectedQuestions = selection
+    },
+    confirmQuestionSelect() {
+      const currentIds = this.editForm.content.questionIds || []
+      this.selectedQuestions.forEach(q => {
+        if (!currentIds.includes(q.id)) {
+          currentIds.push(q.id)
+        }
+      })
+      this.editForm.content.questionIds = currentIds
+      this.showQuestionBank = false
+      this.autoSave()
+    },
+    removeQuestion(qid) {
+      const ids = this.editForm.content.questionIds || []
+      this.editForm.content.questionIds = ids.filter(id => id !== qid)
+      this.autoSave()
+    },
+    getQuestionTitle(qid) {
+      const q = this.mockQuestions.find(qi => qi.id === qid)
+      return q ? q.title : ''
+    },
+    quickCreateQuestion() {
+      this.quickQuestion = this.getEmptyQuickQuestion()
+      this.showQuickCreateQuestion = true
+    },
+    addOption() {
+      this.quickQuestion.options.push('')
+      this.quickQuestion.correct.push(false)
+    },
+    async submitQuickQuestion() {
+      if (!this.quickQuestion.title) {
+        this.$message.warning('请输入题目内容')
         return
       }
-      this.chapterDialog.title = '添加章节'
-      this.chapterDialog.isEdit = false
-      this.chapterDialog.editId = null
-      this.chapterDialog.form = {
-        chapterName: '',
-        sort: this.chapterList.length + 1
-      }
-      this.chapterDialog.visible = true
-    },
-
-    editChapter(chapter) {
-      this.chapterDialog.title = '编辑章节'
-      this.chapterDialog.isEdit = true
-      this.chapterDialog.editId = chapter.id
-      this.chapterDialog.form = {
-        chapterName: chapter.chapterName,
-        sort: chapter.sort
-      }
-      this.chapterDialog.visible = true
-    },
-
-    submitChapterForm() {
-      this.$refs.chapterForm.validate(async (valid) => {
-        if (!valid) return
-        this.chapterDialog.loading = true
-        try {
-          if (this.chapterDialog.isEdit) {
-            var resp = await teacherApi.updateChapter({
-              id: this.chapterDialog.editId,
-              chapterName: this.chapterDialog.form.chapterName
-            })
-            var res = resp.data
-            if (res.code === 200) {
-              this.$message.success('章节更新成功')
-              this.chapterDialog.visible = false
-              this.loadChapters()
-            } else {
-              this.$message.error(res.resultData || '更新失败')
-            }
-          } else {
-            var resp2 = await teacherApi.addChapter({
-              classId: this.selectedCourse.id,
-              chapterName: this.chapterDialog.form.chapterName
-            })
-            var res2 = resp2.data
-            if (res2.code === 200) {
-              this.$message.success('章节添加成功')
-              this.chapterDialog.visible = false
-              this.loadChapters()
-            } else {
-              this.$message.error(res2.resultData || '添加失败')
-            }
-          }
-        } catch (e) {
-          this.$message.error('操作失败')
-        } finally {
-          this.chapterDialog.loading = false
-        }
-      })
-    },
-
-    deleteChapter(chapter) {
-      this.$confirm('确定删除章节"' + chapter.chapterName + '"吗？', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }).then(async () => {
-        try {
-          var resp = await teacherApi.deleteChapter(chapter.id)
-          var res = resp.data
-          if (res.code === 200) {
-            this.$message.success('删除成功')
-            this.loadChapters()
-          } else {
-            this.$message.error(res.resultData || '删除失败')
-          }
-        } catch (e) {
-          this.$message.error('删除失败')
-        }
-      }).catch(() => {})
-    },
-
-    // ============================================================
-    // 资源管理
-    // ============================================================
-
-    showUploadResource(chapter) {
-      this.uploadDialog.chapter = chapter
-      this.uploadDialog.visible = true
-    },
-
-    async loadAllResources() {
-      if (!this.selectedCourse) return
+      this.creatingQuestion = true
       try {
-        var resp = await teacherApi.getResources(this.selectedCourse.id)
-        var res = resp.data
-        if (res.code === 200) {
-          this.allResources = res.resultData || []
+        // In a real app, this would call an API to save the question
+        const newId = 'q_new_' + Date.now()
+        const newQuestion = {
+          id: newId,
+          title: this.quickQuestion.title,
+          type: this.quickQuestion.type
         }
+        this.mockQuestions.push(newQuestion)
+        const currentIds = this.editForm.content.questionIds || []
+        currentIds.push(newId)
+        this.editForm.content.questionIds = currentIds
+        this.showQuickCreateQuestion = false
+        this.$message.success('题目创建成功')
+        this.autoSave()
       } catch (e) {
-        // ignore
+        this.$message.error('创建失败')
+      } finally {
+        this.creatingQuestion = false
       }
     },
 
-    handleUploadSuccess(response) {
-      if (response.code === 200) {
-        this.$message.success('上传成功')
-        this.loadAllResources()
-        // 刷新所有章节的资源
-        var self = this
-        this.chapterList.forEach(function(ch) {
-          self.loadChapterResources(ch.id)
-        })
-      } else {
-        this.$message.error(response.resultData || '上传失败')
+    // === 上传相关 ===
+    handleVideoUploadSuccess(res) {
+      if (res && res.data) {
+        this.editForm.content.videoUrl = res.data.url || res.data
+        this.autoSave()
+        this.$message.success('视频上传成功')
       }
     },
-
-    handleChapterUploadSuccess(response) {
-      if (response.code === 200) {
-        this.$message.success('上传成功')
-        this.uploadDialog.visible = false
-        this.loadAllResources()
-        if (this.uploadDialog.chapter) {
-          this.loadChapterResources(this.uploadDialog.chapter.id)
-        }
-      } else {
-        this.$message.error(response.resultData || '上传失败')
+    beforeVideoUpload(file) {
+      const isVideo = file.type.startsWith('video/')
+      if (!isVideo) {
+        this.$message.error('只能上传视频文件')
       }
+      return isVideo
     },
-
-    handleUploadError() {
-      this.$message.error('上传失败，请检查网络')
-    },
-
-    deleteResource(resource) {
-      this.$confirm('确定删除资源"' + resource.fileName + '"吗？', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }).then(async () => {
-        try {
-          var resp = await teacherApi.deleteResource(resource.id)
-          var res = resp.data
-          if (res.code === 200) {
-            this.$message.success('删除成功')
-            this.loadAllResources()
-            var self = this
-            this.chapterList.forEach(function(ch) {
-              self.loadChapterResources(ch.id)
-            })
-          } else {
-            this.$message.error(res.resultData || '删除失败')
-          }
-        } catch (e) {
-          this.$message.error('删除失败')
-        }
-      }).catch(() => {})
-    },
-
-    previewResource(resource) {
-      window.open(this.getResourceUrl(resource), '_blank')
-    },
-
-    downloadResource(resource) {
-      var link = document.createElement('a')
-      link.href = this.getResourceUrl(resource)
-      link.download = resource.fileName
-      link.click()
-    },
-
-    getResourceUrl(resource) {
-      var base = process.env.VUE_APP_API_BASE || ''
-      return base + resource.filePath
-    },
-
-    getFileIcon(fileType) {
-      if (!fileType) return 'el-icon-document'
-      var type = fileType.toLowerCase()
-      var icons = {
-        pdf: 'el-icon-document',
-        ppt: 'el-icon-picture-outline',
-        pptx: 'el-icon-picture-outline',
-        doc: 'el-icon-document',
-        docx: 'el-icon-document',
-        xls: 'el-icon-s-data',
-        xlsx: 'el-icon-s-data',
-        mp4: 'el-icon-video-camera',
-        avi: 'el-icon-video-camera',
-        zip: 'el-icon-folder',
-        rar: 'el-icon-folder',
-        jpg: 'el-icon-picture',
-        jpeg: 'el-icon-picture',
-        png: 'el-icon-picture',
-        gif: 'el-icon-picture'
+    handleDocUploadSuccess(res) {
+      if (res && res.data) {
+        this.editForm.content.docUrl = res.data.url || res.data
+        this.editForm.content.docName = res.data.name || '文档'
+        this.$message.success('文档上传成功')
       }
-      return icons[type] || 'el-icon-document'
-    },
-
-    getFileTypeLabel(fileType) {
-      if (!fileType) return ''
-      return fileType.toUpperCase()
-    },
-
-    formatSize(bytes) {
-      if (!bytes) return ''
-      var units = ['B', 'KB', 'MB', 'GB']
-      var i = 0
-      var size = bytes
-      while (size >= 1024 && i < units.length - 1) {
-        size = size / 1024
-        i++
-      }
-      return size.toFixed(1) + ' ' + units[i]
     }
   }
 }
 </script>
 
 <style scoped>
-.course-management {
-  height: 100%;
+.outline-editor {
   display: flex;
   flex-direction: column;
+  height: 100%;
   background: #f5f7fa;
-  padding: 20px;
+  outline: none;
+  user-select: none;
 }
 
-/* ===== 顶部栏 ===== */
-.top-bar {
+/* 顶部栏 */
+.editor-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  justify-content: space-between;
+  padding: 8px 16px;
   background: #fff;
-  border-radius: 8px;
-  padding: 16px 24px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  border-bottom: 1px solid #e4e7ed;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  z-index: 10;
 }
 
-.top-bar-left h2 {
-  margin: 0;
-  font-size: 20px;
-  color: #303133;
-  font-weight: 600;
-}
-
-/* ===== 主体 ===== */
-.main-content {
-  flex: 1;
+.header-left {
   display: flex;
-  gap: 20px;
-  min-height: 0;
+  align-items: center;
+  gap: 8px;
 }
 
-/* ===== 左侧课程列表 ===== */
-.course-list-panel {
+.header-left h2 {
+  font-size: 16px;
+  margin: 0;
+  color: #303133;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.save-status {
+  font-size: 12px;
+  color: #67c23a;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.save-status.saving {
+  color: #909399;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* 主体 */
+.editor-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* 左侧面板 */
+.left-panel {
   width: 320px;
   min-width: 280px;
   background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  border-right: 1px solid #e4e7ed;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: width 0.3s;
 }
 
-.panel-header {
-  padding: 14px 20px;
-  font-size: 15px;
+.course-info-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f2f2f2;
+}
+
+.outline-title {
+  font-size: 14px;
   font-weight: 600;
   color: #303133;
-  border-bottom: 1px solid #ebeef5;
-  background: #fafafa;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.panel-body {
+.outline-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.outline-tree {
   flex: 1;
   overflow-y: auto;
   padding: 8px 0;
 }
 
-.course-item {
+.empty-outline {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  padding: 12px 20px;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #c0c4cc;
+  font-size: 14px;
+}
+
+.empty-outline i {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+/* 树节点 */
+.tree-node {
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.15s;
   border-left: 3px solid transparent;
 }
 
-.course-item:hover {
-  background: #f0f9ff;
+.tree-node:hover {
+  background: #f5f7fa;
 }
 
-.course-item.active {
+.tree-node.selected {
   background: #ecf5ff;
   border-left-color: #409eff;
 }
 
-.course-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.tree-node.dragging {
+  opacity: 0.5;
+}
+
+.tree-node.has-warning .node-title::after {
+  content: '';
+}
+
+.node-content {
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 20px;
+  padding: 6px 12px;
+  gap: 4px;
+  position: relative;
+}
+
+.expand-btn {
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+  color: #909399;
+}
+
+.type-icon {
+  font-size: 14px;
   flex-shrink: 0;
 }
 
-.course-info {
+.node-title {
   flex: 1;
-  min-width: 0;
-  margin-left: 12px;
-}
-
-.course-name {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 13px;
   color: #303133;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 
-.course-desc {
-  font-size: 12px;
-  color: #909399;
-  margin-top: 2px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.warning-dot {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
 
-.course-actions {
+.node-actions {
   display: none;
   flex-shrink: 0;
-  margin-left: 8px;
-}
-
-.course-item:hover .course-actions {
-  display: flex;
-  gap: 4px;
-}
-
-/* ===== 右侧详情面板 ===== */
-.course-detail-panel {
-  flex: 1;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.course-detail-panel .detail-tabs {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 0 20px;
-}
-
-.detail-tabs /deep/ .el-tabs__content {
-  flex: 1;
-  overflow-y: auto;
-}
-
-.detail-tabs /deep/ .el-tab-pane {
-  height: 100%;
-}
-
-.tab-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  padding: 8px 0;
-  border-bottom: 1px solid #ebeef5;
-}
-
-.tab-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #303133;
-}
-
-/* ===== 未选中提示 ===== */
-.no-course-selected {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: #c0c4cc;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-}
-
-.no-course-selected i {
-  font-size: 80px;
-  margin-bottom: 16px;
-}
-
-.no-course-selected p {
-  font-size: 16px;
-}
-
-/* ===== 章节列表 ===== */
-.chapter-list {
-  padding: 0;
-}
-
-.chapter-item {
-  border: 1px solid #ebeef5;
-  border-radius: 8px;
-  margin-bottom: 12px;
-  overflow: hidden;
-  transition: box-shadow 0.2s;
-}
-
-.chapter-item:hover {
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-}
-
-.chapter-header {
-  display: flex;
-  align-items: center;
-  padding: 12px 16px;
-  background: #fafafa;
-}
-
-.chapter-index {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: #409eff;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.chapter-name {
-  flex: 1;
-  margin-left: 12px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #303133;
-}
-
-.chapter-actions {
-  display: flex;
   gap: 2px;
 }
 
-/* 章节下的资源列表 */
-.chapter-resources {
-  border-top: 1px solid #ebeef5;
-  padding: 4px 0;
-}
-
-.resource-item {
+.tree-node:hover .node-actions {
   display: flex;
-  align-items: center;
-  padding: 6px 16px 6px 56px;
-  font-size: 13px;
-  color: #606266;
-  transition: background 0.2s;
 }
 
-.resource-item:hover {
-  background: #f5f7fa;
-}
-
-.resource-item i {
-  margin-right: 6px;
-  color: #409eff;
-}
-
-.res-item-name {
+/* 右侧面板 */
+.right-panel {
   flex: 1;
+  background: #fff;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.res-item-size,
-.res-item-time {
-  margin-left: 12px;
-  color: #909399;
-  font-size: 12px;
-  flex-shrink: 0;
-}
-
-/* ===== 资源卡片视图 ===== */
-.all-resources {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
-  padding: 4px 0;
-}
-
-.resource-card {
-  border: 1px solid #ebeef5;
-  border-radius: 8px;
-  padding: 16px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s;
   display: flex;
   flex-direction: column;
+}
+
+.right-panel.placeholder {
+  display: flex;
   align-items: center;
-}
-
-.resource-card:hover {
-  border-color: #409eff;
-  box-shadow: 0 2px 12px rgba(64,158,255,0.15);
-  transform: translateY(-2px);
-}
-
-.resource-icon {
-  font-size: 48px;
-  color: #409eff;
-  margin-bottom: 12px;
-}
-
-.resource-name {
-  font-size: 13px;
-  color: #303133;
-  margin-bottom: 8px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 160px;
-}
-
-.resource-meta {
-  display: flex;
-  gap: 8px;
-  font-size: 12px;
-  color: #909399;
-  margin-bottom: 8px;
-}
-
-.resource-meta .res-type {
-  color: #409eff;
-  font-weight: 500;
-}
-
-.resource-actions {
-  display: none;
-  gap: 8px;
-}
-
-.resource-card:hover .resource-actions {
-  display: flex;
-}
-
-/* ===== 空状态 ===== */
-.empty-tip {
-  text-align: center;
-  padding: 40px 0;
+  justify-content: center;
+  flex-direction: column;
   color: #c0c4cc;
 }
 
-.empty-tip i {
-  font-size: 48px;
-  margin-bottom: 12px;
-}
-
-.empty-tip p {
-  font-size: 14px;
-  margin: 0;
-}
-
-/* ===== 上传弹窗区域 ===== */
-.upload-info {
+.right-panel.placeholder i {
+  font-size: 64px;
   margin-bottom: 16px;
-  padding: 12px;
+}
+
+.right-panel.placeholder h3 {
+  margin: 0 0 8px 0;
+  color: #909399;
+}
+
+.right-panel-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f2f2f2;
+}
+
+.breadcrumb {
+  font-size: 13px;
+  color: #909399;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.breadcrumb-current {
+  color: #303133;
+  font-weight: 500;
+}
+
+/* 测验题目列表 */
+.quiz-question-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+/* 富文本编辑器 */
+.rich-editor-wrapper {
+  min-height: 300px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+}
+
+.editor-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  color: #909399;
+}
+
+/* 上传文件 */
+.uploaded-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
   background: #f5f7fa;
-  border-radius: 6px;
+  border-radius: 4px;
 }
 
-.upload-info p {
-  margin: 4px 0;
-  font-size: 14px;
-  color: #606266;
+/* 预览 */
+.preview-content {
+  max-height: 60vh;
+  overflow-y: auto;
 }
 
-.upload-area {
-  width: 100%;
+.preview-html {
+  line-height: 1.8;
+  color: #303133;
+}
+
+/* 键盘快捷键样式 */
+kbd {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 12px;
+  color: #303133;
+  background: #f5f7fa;
+  border: 1px solid #dcdfe6;
+  border-radius: 3px;
+  box-shadow: 0 1px 0 #dcdfe6;
+  font-family: inherit;
 }
 </style>

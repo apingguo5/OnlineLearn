@@ -41,11 +41,26 @@ public class CourseChapterController {
      */
     @RequestMapping("/chapters")
     public Result getChapters(@RequestBody Map<String, Object> params) {
-        Integer classId = (Integer) params.get("classId");
-        if (classId == null) {
+        Object classIdObj = params.get("classId");
+        if (classIdObj == null) {
             return Result.failure("班级ID不能为空");
         }
+        Integer classId = ((Number) classIdObj).intValue();
         List<HashMap> chapters = courseChapterService.getChaptersByClassId(classId);
+        return Result.success(chapters);
+    }
+
+    /**
+     * 获取章节树形结构
+     */
+    @RequestMapping("/chapterTree")
+    public Result getChapterTree(@RequestBody Map<String, Object> params) {
+        Object classIdObj = params.get("classId");
+        if (classIdObj == null) {
+            return Result.failure("班级ID不能为空");
+        }
+        Integer classId = ((Number) classIdObj).intValue();
+        List<HashMap> chapters = courseChapterService.getChapterTreeByClassId(classId);
         return Result.success(chapters);
     }
 
@@ -54,12 +69,14 @@ public class CourseChapterController {
      */
     @RequestMapping("/addChapter")
     public Result addChapter(@RequestBody Map<String, Object> params) {
-        Integer classId = (Integer) params.get("classId");
+        Object classIdObj = params.get("classId");
         String chapterName = (String) params.get("chapterName");
+        Object parentIdObj = params.get("parentId");
 
-        if (classId == null || chapterName == null || chapterName.trim().isEmpty()) {
+        if (classIdObj == null || chapterName == null || chapterName.trim().isEmpty()) {
             return Result.failure("参数错误");
         }
+        Integer classId = ((Number) classIdObj).intValue();
 
         // 获取当前最大排序值
         int maxSort = courseChapterService.count(new QueryWrapper<CourseChapterEntity>().eq("class_id", classId));
@@ -68,32 +85,82 @@ public class CourseChapterController {
         entity.setClassId(classId);
         entity.setChapterName(chapterName.trim());
         entity.setSortOrder(maxSort);
+        if (parentIdObj != null) {
+            entity.setParentId(((Number) parentIdObj).intValue());
+        }
+        entity.setPublishStatus(0);
         entity.setCreateTime(new Date());
+        entity.setUpdateTime(new Date());
         courseChapterService.save(entity);
 
-        return Result.success(entity);
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", entity.getId());
+        result.put("chapterName", entity.getChapterName());
+        result.put("sortOrder", entity.getSortOrder());
+        result.put("parentId", entity.getParentId());
+        result.put("publishStatus", entity.getPublishStatus());
+        result.put("resourceCount", 0);
+        return Result.success(result);
     }
 
     /**
-     * 更新章节名称
+     * 更新章节
      */
     @RequestMapping("/updateChapter")
     public Result updateChapter(@RequestBody Map<String, Object> params) {
         Object idObj = params.get("id") != null ? params.get("id") : params.get("chapterId");
         Integer id = idObj instanceof Integer ? (Integer) idObj : (idObj != null ? Integer.parseInt(idObj.toString()) : null);
-        String chapterName = (String) params.get("chapterName");
 
-        if (id == null || chapterName == null || chapterName.trim().isEmpty()) {
-            return Result.failure("参数错误");
+        if (id == null) {
+            return Result.failure("章节ID不能为空");
         }
 
         CourseChapterEntity entity = courseChapterService.getById(id);
         if (entity == null) {
             return Result.failure("章节不存在");
         }
-        entity.setChapterName(chapterName.trim());
-        courseChapterService.updateById(entity);
 
+        String chapterName = (String) params.get("chapterName");
+        String chapterType = (String) params.get("chapterType");
+        String description = (String) params.get("description");
+        Integer sortOrder = params.get("sortOrder") != null ? ((Number) params.get("sortOrder")).intValue() : null;
+        Integer parentId = params.get("parentId") != null ? ((Number) params.get("parentId")).intValue() : null;
+        Integer publishStatus = params.get("publishStatus") != null ? ((Number) params.get("publishStatus")).intValue() : null;
+
+        if (chapterName != null) entity.setChapterName(chapterName.trim());
+        if (chapterType != null) entity.setChapterType(chapterType);
+        if (description != null) entity.setDescription(description);
+        if (sortOrder != null) entity.setSortOrder(sortOrder);
+        if (parentId != null) entity.setParentId(parentId);
+        if (publishStatus != null) entity.setPublishStatus(publishStatus);
+        entity.setUpdateTime(new Date());
+
+        courseChapterService.updateById(entity);
+        return Result.successCode();
+    }
+
+    /**
+     * 批量更新章节（排序、层级调整、批量操作）
+     */
+    @RequestMapping("/batchUpdateChapters")
+    public Result batchUpdateChapters(@RequestBody Map<String, Object> params) {
+        List<Map<String, Object>> chapters = (List<Map<String, Object>>) params.get("chapters");
+        if (chapters == null || chapters.isEmpty()) {
+            return Result.failure("参数错误");
+        }
+        Date now = new Date();
+        for (Map<String, Object> ch : chapters) {
+            Integer id = ((Number) ch.get("id")).intValue();
+            CourseChapterEntity entity = courseChapterService.getById(id);
+            if (entity == null) continue;
+            if (ch.containsKey("sortOrder")) entity.setSortOrder(((Number) ch.get("sortOrder")).intValue());
+            if (ch.containsKey("parentId")) {
+                Object pid = ch.get("parentId");
+                entity.setParentId(pid != null ? ((Number) pid).intValue() : null);
+            }
+            entity.setUpdateTime(now);
+            courseChapterService.updateById(entity);
+        }
         return Result.successCode();
     }
 
@@ -103,14 +170,64 @@ public class CourseChapterController {
     @RequestMapping("/deleteChapter")
     public Result deleteChapter(@RequestBody Map<String, Object> params) {
         Object idObj = params.get("id") != null ? params.get("id") : params.get("chapterId");
-        Integer id = idObj instanceof Integer ? (Integer) idObj : (idObj != null ? Integer.parseInt(idObj.toString()) : null);
-        if (id == null) {
+        if (idObj == null) {
             return Result.failure("章节ID不能为空");
         }
-        // 删除章节下的所有内容
-        chapterContentService.remove(new QueryWrapper<ChapterContentEntity>().eq("chapter_id", id));
-        courseChapterService.removeById(id);
+        Integer id;
+        if (idObj instanceof List) {
+            List<Integer> ids = (List<Integer>) idObj;
+            for (Integer cid : ids) {
+                chapterContentService.remove(new QueryWrapper<ChapterContentEntity>().eq("chapter_id", cid));
+                courseChapterService.removeById(cid);
+            }
+        } else {
+            id = idObj instanceof Integer ? (Integer) idObj : Integer.parseInt(idObj.toString());
+            chapterContentService.remove(new QueryWrapper<ChapterContentEntity>().eq("chapter_id", id));
+            courseChapterService.removeById(id);
+        }
         return Result.successCode();
+    }
+
+    /**
+     * 复制章节（包含内容）
+     */
+    @RequestMapping("/copyChapter")
+    public Result copyChapter(@RequestBody Map<String, Object> params) {
+        Integer chapterId = ((Number) params.get("chapterId")).intValue();
+        CourseChapterEntity source = courseChapterService.getById(chapterId);
+        if (source == null) {
+            return Result.failure("章节不存在");
+        }
+        CourseChapterEntity copy = new CourseChapterEntity();
+        copy.setClassId(source.getClassId());
+        copy.setChapterName(source.getChapterName() + " (副本)");
+        copy.setChapterType(source.getChapterType());
+        copy.setDescription(source.getDescription());
+        copy.setParentId(source.getParentId());
+        copy.setSortOrder(source.getSortOrder() + 1);
+        copy.setPublishStatus(0);
+        copy.setCreateTime(new Date());
+        copy.setUpdateTime(new Date());
+        courseChapterService.save(copy);
+
+        // 复制章节内容
+        List<ChapterContentEntity> contents = chapterContentService.list(
+            new QueryWrapper<ChapterContentEntity>().eq("chapter_id", chapterId)
+        );
+        if (contents != null && !contents.isEmpty()) {
+            Date now = new Date();
+            for (ChapterContentEntity content : contents) {
+                content.setId(null);
+                content.setChapterId(copy.getId());
+                content.setCreateTime(now);
+            }
+            chapterContentService.saveBatch(contents);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", copy.getId());
+        result.put("chapterName", copy.getChapterName());
+        return Result.success(result);
     }
 
     /**
@@ -137,10 +254,11 @@ public class CourseChapterController {
      */
     @RequestMapping("/contents")
     public Result getContents(@RequestBody Map<String, Object> params) {
-        Integer chapterId = (Integer) params.get("chapterId");
-        if (chapterId == null) {
+        Object chapterIdObj = params.get("chapterId");
+        if (chapterIdObj == null) {
             return Result.failure("章节ID不能为空");
         }
+        Integer chapterId = ((Number) chapterIdObj).intValue();
         List<HashMap> contents = chapterContentService.getContentsWithDetails(chapterId);
         return Result.success(contents);
     }
@@ -150,33 +268,32 @@ public class CourseChapterController {
      */
     @RequestMapping("/addContent")
     public Result addContent(@RequestBody Map<String, Object> params) {
-        Integer chapterId = (Integer) params.get("chapterId");
-        Integer contentType = (Integer) params.get("contentType");
+        Object chapterIdObj = params.get("chapterId");
+        Object contentTypeObj = params.get("contentType");
         Object contentDataObj = params.get("contentData");
 
-        if (chapterId == null || contentType == null || contentDataObj == null) {
+        if (chapterIdObj == null || contentTypeObj == null || contentDataObj == null) {
             return Result.failure("参数错误");
         }
+        Integer chapterId = ((Number) chapterIdObj).intValue();
+        Integer contentType = ((Number) contentTypeObj).intValue();
 
         Integer refId = contentDataObj instanceof Integer ? (Integer) contentDataObj : Integer.parseInt(contentDataObj.toString());
 
         // 自动解析标题
         String contentTitle = "";
         if (contentType == 1) {
-            // 视频
             com.rabbiter.ol.entity.VideosEntity video = videosService.getById(refId);
             if (video != null) {
                 contentTitle = video.getTopic();
             }
         } else if (contentType == 2) {
-            // 文字阅读（知识点）
             com.rabbiter.ol.entity.KnowledgePointEntity kp = knowledgePointService.getById(refId);
             if (kp != null) {
                 contentTitle = kp.getTitle();
             }
         }
 
-        // 获取当前最大排序值
         int maxSort = chapterContentService.count(new QueryWrapper<ChapterContentEntity>().eq("chapter_id", chapterId));
 
         ChapterContentEntity entity = new ChapterContentEntity();

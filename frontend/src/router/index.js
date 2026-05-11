@@ -59,6 +59,7 @@ import WatchTime from '../views/studentweb/watchtime/WatchTime.vue'
 import TeacherAskAndAnswer from '../views/container/askandanswer/TeacherAskAndAnswer.vue'
 import TeacherDashboard from '../views/teacher/TeacherDashboard.vue'
 import TeacherCourseManagement from '../views/teacher/TeacherCourseManagement.vue'
+import TeacherCourseList from '../views/teacher/TeacherCourseList.vue'
 import TeacherClassManagement from '../views/teacher/TeacherClassManagement.vue'
 import TeacherAssessment from '../views/teacher/TeacherAssessment.vue'
 import TeacherGradebook from '../views/teacher/TeacherGradebook.vue'
@@ -70,8 +71,7 @@ Vue.use(VueRouter)
 const routes = [
     {
         path: '/',
-        name: 'Login',
-        component: Login
+        redirect: '/login'
     },
     {
         path: '/test',
@@ -180,10 +180,9 @@ const routes = [
     },
     {
         path: '/adminmanagement',
-        name: 'AdminManagement',
         component: AdminManagement,
         meta: {
-            requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+            requireAuth: true,
         },
         children: [
             {
@@ -191,24 +190,15 @@ const routes = [
                 name: 'AdminHome',
                 component: AdminHome,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
             {
-                path: '/',
-                name: 'AdminStudentManagement',
-                component: AdminStudentManagement,
-                meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
-                },
-            },
-            {
-
                 path: '/adminstudentmanagement',
                 name: 'AdminStudentManagement',
                 component: AdminStudentManagement,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
             {
@@ -396,16 +386,7 @@ const routes = [
                 name: 'ApplicantHistory',
                 component: ApplicantHistory,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
-                },
-            },
-
-            {
-                path: '/applicanthistory',
-                name: 'ApplicantHistory',
-                component: ApplicantHistory,
-                meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
 
@@ -568,7 +549,15 @@ const routes = [
                 },
             },
             {
-                path: '/teachercoursemanagement',
+                path: '/teachercourselist',
+                name: 'TeacherCourseList',
+                component: TeacherCourseList,
+                meta: {
+                    requireAuth: true,
+                },
+            },
+            {
+                path: '/teachercoursemanagement/:courseId?',
                 name: 'TeacherCourseManagement',
                 component: TeacherCourseManagement,
                 meta: {

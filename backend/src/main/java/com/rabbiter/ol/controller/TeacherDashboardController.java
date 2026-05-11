@@ -210,10 +210,10 @@ public class TeacherDashboardController {
             // 保存资源记录
             CourseResourceEntity resource = new CourseResourceEntity();
             resource.setSubjectId(subjectId);
-            resource.setFileName(originalFileName);
-            resource.setFilePath("/file/resourceFile/" + fileName);
+            resource.setResourceName(originalFileName);
+            resource.setFileUrl("/file/resourceFile/" + fileName);
             resource.setFileSize(file.getSize());
-            resource.setFileType(originalFileName.substring(originalFileName.lastIndexOf(".") + 1));
+            resource.setResourceType(originalFileName.substring(originalFileName.lastIndexOf(".") + 1).hashCode());
             resource.setCreateTime(new Date());
 
             courseResourceService.save(resource);
@@ -264,7 +264,7 @@ public class TeacherDashboardController {
             CourseResourceEntity resource = courseResourceService.getById(id);
             if (resource != null) {
                 // 删除物理文件
-                FileUtil.deleteFile(PathUtils.getClassLoadRootPath() + resource.getFilePath());
+                FileUtil.deleteFile(PathUtils.getClassLoadRootPath() + resource.getFileUrl());
                 // 删除数据库记录
                 courseResourceService.removeById(id);
             }

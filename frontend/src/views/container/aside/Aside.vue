@@ -11,7 +11,7 @@
                 </el-menu-item>
 
                 <!-- ========== 2. 课程管理 ========== -->
-                <el-menu-item index="/teachercoursemanagement">
+                <el-menu-item index="/teachercourselist">
                     <i class="el-icon-reading" style="font-size: 22px;color: white;"></i>
                     <span slot="title" style="font-size: 16px;"> 课程管理</span>
                 </el-menu-item>

@@ -7,20 +7,48 @@
         <result property="id" column="id"/>
         <result property="classId" column="class_id"/>
         <result property="chapterName" column="chapter_name"/>
+        <result property="chapterType" column="chapter_type"/>
+        <result property="description" column="description"/>
+        <result property="parentId" column="parent_id"/>
         <result property="sortOrder" column="sort_order"/>
+        <result property="publishStatus" column="publish_status"/>
         <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
     </resultMap>
 
     <select id="queryListByClassId" resultType="java.util.HashMap">
         SELECT
             cc.id,
             cc.chapter_name AS chapterName,
+            cc.chapter_type AS chapterType,
+            cc.description,
+            cc.parent_id AS parentId,
             cc.sort_order AS sortOrder,
+            cc.publish_status AS publishStatus,
             cc.create_time AS createTime,
+            cc.update_time AS updateTime,
             IFNULL((SELECT COUNT(*) FROM chapter_resource_ref crf WHERE crf.chapter_id = cc.id), 0) AS resourceCount
         FROM course_chapter cc
         WHERE cc.class_id = #{classId}
         ORDER BY cc.sort_order ASC, cc.id ASC
     </select>
 
+    <select id="queryTreeByClassId" resultType="java.util.HashMap">
+        SELECT
+            cc.id,
+            cc.chapter_name AS chapterName,
+            cc.chapter_type AS chapterType,
+            cc.description,
+            cc.parent_id AS parentId,
+            cc.sort_order AS sortOrder,
+            cc.publish_status AS publishStatus,
+            cc.create_time AS createTime,
+            cc.update_time AS updateTime,
+            IFNULL((SELECT COUNT(*) FROM chapter_resource_ref crf WHERE crf.chapter_id = cc.id), 0) AS resourceCount
+        FROM course_chapter cc
+        WHERE cc.class_id = #{classId}
+        ORDER BY cc.parent_id ASC, cc.sort_order ASC, cc.id ASC
+    </select>
+
 </mapper>
+</write_to_file>
