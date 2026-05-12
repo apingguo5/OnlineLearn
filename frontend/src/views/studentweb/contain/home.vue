@@ -73,7 +73,7 @@ export default {
         },
         goToCourse(course) {
             this.$router.push({
-                name: 'Courses',
+                name: 'CourseDetail',
                 query: { courseId: course.id, courseName: course.courseName || course.course_name }
             });
         }

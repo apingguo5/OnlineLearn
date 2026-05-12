@@ -24,5 +24,7 @@ public interface UserClassService extends IService<UserClassEntity> {
     List<UserClassEntity> selectByClassId(Integer classId);
 
     List<HashMap> findList(UserClassVo userClassVo);
+
+    List<HashMap> findEnrolledCoursesByUserId(Integer userId);
 }
 

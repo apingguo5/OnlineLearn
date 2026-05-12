@@ -19,7 +19,7 @@ import AdminManagement from '../views/admin/AdminManagement.vue'
 import MarkDown from '../views/studentweb/markdown/MarkDown.vue'
 import DetaliCourse from '../views/studentweb/askandanswer/DetaliCourse.vue'
 import home from '../views/studentweb/contain/home.vue'
-import Courses from '../views/studentweb/courses/Courses.vue'
+import StudentCourses from '../views/studentweb/courses/StudentCourses.vue'
 import AdminStudentManagement from '../views/admin/studentmanagement/StudentManagement.vue'
 import TeacherManagement from '../views/admin/teacherm/TeacherManagement.vue'
 import AdminHomeWork from '../views/admin/adminhomework/AdminHomeWork.vue'
@@ -262,7 +262,15 @@ const routes = [
             {
                 path: '/courses',
                 name: 'Courses',
-                component: Courses,
+                component: StudentCourses,
+                meta: {
+                    requireAuth: true,
+                },
+            },
+            {
+                path: '/course-detail',
+                name: 'CourseDetail',
+                component: () => import('../views/studentweb/courses/Courses.vue'),
                 meta: {
                     requireAuth: true,
                 },

@@ -107,5 +107,29 @@
         </where>
     </select>
 
+    <select id="findEnrolledCoursesByUserId" resultType="java.util.HashMap">
+        SELECT
+            co.id AS courseId,
+            co.course_name AS courseName,
+            co.description,
+            co.cover_url AS coverUrl,
+            co.status,
+            c.id AS classId,
+            c.class_name AS className,
+            c.academic_year AS academicYear,
+            c.semester,
+            u.user_name AS teacherName
+        FROM
+            user_class uc
+            INNER JOIN class c ON c.id = uc.class_id
+            INNER JOIN course co ON co.id = c.course_id
+            LEFT JOIN `user` u ON u.id = c.user_id
+        <where>
+            <if test="userId != null">
+                AND uc.user_id = #{userId}
+            </if>
+        </where>
+        ORDER BY co.id DESC
+    </select>
 
 </mapper>

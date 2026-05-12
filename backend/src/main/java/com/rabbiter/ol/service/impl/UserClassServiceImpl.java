@@ -41,4 +41,9 @@ public class UserClassServiceImpl extends ServiceImpl<UserClassDao, UserClassEnt
         List<HashMap> lists = userClassDao.findList(userClassVo);
         return lists;
     }
+
+    @Override
+    public List<HashMap> findEnrolledCoursesByUserId(Integer userId) {
+        return userClassDao.findEnrolledCoursesByUserId(userId);
+    }
 }

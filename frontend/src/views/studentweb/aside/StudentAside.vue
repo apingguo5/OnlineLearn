@@ -14,8 +14,8 @@
             </el-menu-item>
 
             <el-menu-item index="/courses">
-                <i class="el-icon-reading"></i>
-                <span slot="title">课程</span>
+                <i class="el-icon-notebook-2"></i>
+                <span slot="title">正在学习</span>
             </el-menu-item>
 
             <el-menu-item index="/studentpractice">

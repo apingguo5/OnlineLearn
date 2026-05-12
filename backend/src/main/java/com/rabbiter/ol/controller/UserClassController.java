@@ -12,6 +12,7 @@ import com.rabbiter.ol.service.UserClassService;
 import com.rabbiter.ol.vo.UserClassVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -85,17 +86,31 @@ public class UserClassController {
     }
 
     /**
-     * 删除
+     * 删除（退选）
+     * 支持按 userId + classId 删除单条记录（退选），
+     * 如果只传 userId 则删除该用户所有选课记录
      */
     @RequestMapping("/delete")
     public Result delete(@RequestBody UserClassEntity userClass) {
         QueryWrapper<UserClassEntity> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("user_id",userClass.getUserId());
+        if (userClass.getClassId() != null) {
+            queryWrapper.eq("class_id", userClass.getClassId());
+        }
         boolean remove = userClassService.remove(queryWrapper);
         if (remove){
             return Result.successCode();
         }
         return Result.failureCode();
+    }
+
+    /**
+     * 查询用户已选班级的详细信息（含课程信息、班级信息、教师信息）
+     */
+    @GetMapping("/enrolledCourses/{userId}")
+    public Result getEnrolledCourses(@PathVariable("userId") Integer userId) {
+        List<HashMap> list = userClassService.findEnrolledCoursesByUserId(userId);
+        return Result.success(list);
     }
 
 }
