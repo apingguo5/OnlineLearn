@@ -27,7 +27,7 @@
             cc.publish_status AS publishStatus,
             cc.create_time AS createTime,
             cc.update_time AS updateTime,
-            IFNULL((SELECT COUNT(*) FROM chapter_resource_ref crf WHERE crf.chapter_id = cc.id), 0) AS resourceCount
+            0 AS resourceCount
         FROM course_chapter cc
         WHERE cc.class_id = #{classId}
         ORDER BY cc.sort_order ASC, cc.id ASC
@@ -44,11 +44,10 @@
             cc.publish_status AS publishStatus,
             cc.create_time AS createTime,
             cc.update_time AS updateTime,
-            IFNULL((SELECT COUNT(*) FROM chapter_resource_ref crf WHERE crf.chapter_id = cc.id), 0) AS resourceCount
+            0 AS resourceCount
         FROM course_chapter cc
         WHERE cc.class_id = #{classId}
         ORDER BY cc.parent_id ASC, cc.sort_order ASC, cc.id ASC
     </select>
 
 </mapper>
-</write_to_file>
