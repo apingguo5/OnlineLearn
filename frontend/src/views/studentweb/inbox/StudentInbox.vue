@@ -1,8 +1,8 @@
 <template>
     <div>
         <div class="page-header">
-            <h2><i class="el-icon-message"></i> 收件箱</h2>
-            <p>接收学校系统通知、管理员公告、以及所有正在上课的班级通知</p>
+            <h2><i class="el-icon-message"></i> 通知</h2>
+            <p>接收系统通知、管理员公告和班级通知</p>
         </div>
 
         <div class="toolbar">
@@ -45,6 +45,7 @@
 </template>
 
 <script>
+import { getInboxList, markAsRead, deleteInbox } from '../../../api/studentweb/inbox'
 import Cookies from 'js-cookie'
 export default {
     name: "StudentInbox",
@@ -64,8 +65,8 @@ export default {
             if (this.filterType !== 'all') {
                 params.type = this.filterType
             }
-            this.$axios.get('/notice/list', { params }).then(resp => {
-                if (resp.data.code === 200) {
+            getInboxList(params).then(resp => {
+                if (resp.data && resp.data.code === 200) {
                     this.messages = resp.data.resultData || []
                     this.unreadCount = this.messages.filter(m => m.status === 0).length
                 }
@@ -108,21 +109,19 @@ export default {
         },
         viewMessage(msg) {
             if (msg.status === 0) {
-                this.$axios.post('/notice/read', { id: msg.id }).then(() => {
+                markAsRead({ id: msg.id }).then(() => {
                     msg.status = 1
                     this.unreadCount = Math.max(0, this.unreadCount - 1)
                 }).catch(() => {})
             }
-            this.$alert(msg.content, msg.title, {
+            this.$alert(msg.content || '无内容', msg.title || '消息', {
                 confirmButtonText: '确定',
                 dangerouslyUseHTMLString: true
             })
         },
         markAllRead() {
-            this.$axios.post('/notice/readAll', {
-                userId: Cookies.get('userId')
-            }).then(resp => {
-                if (resp.data.code === 200) {
+            markAsRead({ userId: Cookies.get('userId'), all: true }).then(resp => {
+                if (resp.data && resp.data.code === 200) {
                     this.messages.forEach(m => { m.status = 1 })
                     this.unreadCount = 0
                     this.$message.success('已全部标为已读')

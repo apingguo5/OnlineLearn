@@ -47,6 +47,16 @@ public class ClassEntity implements Serializable {
 	@TableField("semester")
 	private Integer semester;
 	/**
+	 * 课程开始时间
+	 */
+	@TableField("start_time")
+	private Date startTime;
+	/**
+	 * 课程结束时间
+	 */
+	@TableField("end_time")
+	private Date endTime;
+	/**
 	 * 班级最大学生数
 	 */
 	@TableField("max_students")
@@ -103,6 +113,22 @@ public class ClassEntity implements Serializable {
 
 	public void setSemester(Integer semester) {
 		this.semester = semester;
+	}
+
+	public Date getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(Date startTime) {
+		this.startTime = startTime;
+	}
+
+	public Date getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(Date endTime) {
+		this.endTime = endTime;
 	}
 
 	public Integer getMaxStudents() {

@@ -1,79 +1,64 @@
-# 学生端侧边栏及首页重构总结
+# 学生端侧边栏重构与课程页面优化
 
-## 修改目标
+## 背景
 
-优化学生首页界面侧边栏，删除不必要的功能，重构冗余代码，使菜单结构更清晰合理。
+学生首页侧边栏存在以下问题：
+- 课程栏目存在多余二级菜单（课程列表、课程管理、试题练习），实际只需"课程列表（正在学）"
+- 试题练习和课程管理应合并为"作业习题"
+- 存在不必要的功能入口（群组、收件箱等）
+- 代码冗余，部分功能从未实现（如详情页的"返回课程列表"按钮）
+- 首页跳转课程详情后渲染崩溃
 
 ## 修改内容
 
-### 1. 侧边栏重构（StudentAside.vue）
+### 1. 侧边栏精简 `StudentAside.vue`
 
-**原结构（8项，含二级菜单）：**
-- 首页
-- 课程（含二级：课程广场、课程列表）
-- 试题练习
-- 课程管理
-- 问答社区
-- 群组
-- 我的笔记
-- 收件箱
+| 原菜单 | 新菜单 | 说明 |
+|--------|--------|------|
+| 首页 | 首页 | 保留 |
+| 课程 → 课程列表 / 课程管理 / 试题练习 | 课程（直接进入课程列表） | 合并扁平化 |
+| 群组 | 删除 | 未实现功能 |
+| 收件箱 | 删除 | 未实现功能 |
+| 笔记 | 删除 | 未实现功能 |
+| 问答社区 | 问答社区 | 保留 |
+| — | 作业习题 | 新增入口 |
 
-**新结构（7项，扁平化）：**
-- 🏠 首页
-- 📖 课程列表（正在学的）
-- ✏️ 作业习题（原试题练习 + 课程管理整合）
-- 💬 问答社区（保留）
-- 📓 我的笔记
-- 📩 收件箱
-- 📊 学习统计（原个人信息改名并保留入口）
+### 2. 课程页面重构 `Courses.vue`
 
-**删除了：**
-- 课程下的二级栏目（课程广场菜单移除，功能移至首页展示）
-- 群组功能
+- 新建课程列表/详情一体化组件
+- 兼容两种模式：`mode='list'`（课程列表）和 `mode='detail'`（单个课程详情）
+- 支持 URL 查询参数 `courseId` + `courseName` 从首页直接跳转到指定课程
+- 修复渲染崩溃：访问 `courseDetail.courseName` 时因 `courseDetail=null` 报错
+- 删除未实现的"返回课程列表"按钮，精简细节视图
+- 适配后端 `Result` 响应结构（`code: 200`, `resultData` 字段）
 
-### 2. 首页课程广场重建（home.vue）
+### 3. 路由注册 `router/index.js`
 
-- 轮播图下方新增**课程广场**区域
-- 调用后端 `/study/class/findList` 接口获取班级列表（含关联课程名和教师名）
-- 按课程名称分组展示班级卡片
-- 每张卡片显示：班级名、教师、学年学期、容量
-- 卡片悬停有上浮阴影动效
+- 添加 `/courses` 路由，映射到 `Courses.vue`
 
-### 3. 路由清理（router/index.js）
+### 4. 首页跳转改造 `home.vue`
 
-- 删除 `CoursePlaza` 组件及对应路由注册
-- 清理所有不再使用的 import
+- 从字符串路径跳转改为命名路由跳转
+- 携带 `courseId` 和 `courseName` 参数
 
-### 4. 删除无用页面文件
+### 5. 清理废弃文件
 
-- `StudentGroups.vue` — 群组模块
-- `CoursePlaza.vue` — 独立课程广场页面
-
-### 5. 容器组件精简（StudentContainWeb.vue）
-
-- 移除评论和动画等冗余标记
-- 只保留 Header + Aside + router-view 核心结构
-
-### 6. API 模块抽取
-
-- 新建 `frontend/src/api/studentweb/studentClass.js`
-- 封装 `getAllClasses()` 统一调用 `/study/class/findList`
-- 避免在 Vue 组件中硬编码 API 路径
-
-### 7. 修复数据读取BUG
-
-- 后端 Result 类的数据字段为 `resultData`，前端初始写成 `res.data` 导致列表为空
-- 修正为 `res.data.resultData`，确保后端class表数据能正确展示
+- 删除 `StudentCourses.vue`、`StudentGroups.vue`、`StudentInbox.vue`、`StudentNotes.vue` 等未使用的视图组件
+- 删除对应的 API 文件（`notes.js`、`inbox.js` 等）
 
 ## 涉及文件
 
 | 文件 | 操作 |
 |------|------|
-| `frontend/src/views/studentweb/aside/StudentAside.vue` | 重构 |
-| `frontend/src/views/studentweb/contain/home.vue` | 重构 |
-| `frontend/src/views/studentweb/contain/StudentContainWeb.vue` | 精简 |
-| `frontend/src/router/index.js` | 清理路由 |
-| `frontend/src/api/studentweb/studentClass.js` | 新建 |
-| `frontend/src/views/studentweb/courses/StudentCourses.vue` | 修复硬编码API路径 |
+| `frontend/src/views/studentweb/aside/StudentAside.vue` | 重写 - 精简菜单 |
+| `frontend/src/views/studentweb/courses/Courses.vue` | 新建 - 课程列表/详情组件 |
+| `frontend/src/router/index.js` | 修改 - 注册 Courses 路由 |
+| `frontend/src/views/studentweb/contain/home.vue` | 修改 - 跳转适配命名路由 |
+| `frontend/src/views/studentweb/contain/StudentContainWeb.vue` | 修改 - 移除旧视图引用 |
+| `frontend/src/api/studentweb/courses.js` | 新建 - 课程 API |
+| `frontend/src/views/studentweb/courses/StudentCourses.vue` | 删除 |
 | `frontend/src/views/studentweb/groups/StudentGroups.vue` | 删除 |
-| `frontend/src/views/studentweb/courses/CoursePlaza.vue` | 删除 |
+| `frontend/src/views/studentweb/inbox/StudentInbox.vue` | 删除 |
+| `frontend/src/views/studentweb/notes/StudentNotes.vue` | 删除 |
+| `frontend/src/api/studentweb/notes.js` | 删除 |
+| `frontend/src/api/studentweb/inbox.js` | 删除 |

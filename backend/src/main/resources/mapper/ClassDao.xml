@@ -11,6 +11,8 @@
         <result property="courseId" column="course_id"/>
         <result property="academicYear" column="academic_year"/>
         <result property="semester" column="semester"/>
+        <result property="startTime" column="start_time"/>
+        <result property="endTime" column="end_time"/>
         <result property="maxStudents" column="max_students"/>
         <result property="createTime" column="create_time"/>
     </resultMap>
@@ -22,9 +24,12 @@
         c.course_id AS courseId,
         c.academic_year AS academicYear,
         c.semester AS semester,
+        DATE_FORMAT(c.start_time ,'%Y-%m-%d %H:%i:%s') AS startTime,
+        DATE_FORMAT(c.end_time ,'%Y-%m-%d %H:%i:%s') AS endTime,
         c.max_students AS maxStudents,
         DATE_FORMAT(c.create_time ,'%Y-%m-%d %H:%i:%s') AS createTime,
-        co.course_name AS courseName
+        co.course_name AS courseName,
+        co.description AS courseDescription
     </sql>
 
     <select id="queryCount" resultType="java.lang.Integer">
@@ -78,6 +83,9 @@
         LEFT JOIN `user` u ON u.id = c.user_id
         LEFT JOIN `course` co ON co.id = c.course_id
         <where>
+            <if test="id != null">
+                AND c.id = #{id}
+            </if>
             <if test="userId != null">
                 AND c.user_id = #{userId}
             </if>

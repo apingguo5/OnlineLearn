@@ -12,70 +12,70 @@
             </el-carousel-item>
         </el-carousel>
 
-        <!-- 课程广场：按课程名称分组展示班级 -->
+        <!-- 课程广场：展示所有课程卡片 -->
         <div class="course-plaza">
             <h2 class="section-title">📚 课程广场</h2>
-            <div v-if="courseGroups.length === 0" class="empty-tip">
+            <div v-if="courses.length === 0" class="empty-tip">
                 暂无课程数据
             </div>
-            <div v-for="(group, index) in courseGroups" :key="index" class="course-group">
-                <h3 class="course-title">{{ group.courseName }}</h3>
-                <el-row :gutter="20">
-                    <el-col :span="6" v-for="cls in group.classes" :key="cls.id" class="class-card-col">
-                        <el-card shadow="hover" class="class-card" @click.native="goToCourse(cls)">
-                            <div class="class-card-header">
-                                <i class="el-icon-school"></i>
-                                <span class="class-name">{{ cls.className }}</span>
-                            </div>
-                            <div class="class-card-body">
-                                <p><i class="el-icon-user"></i> 教师：{{ cls.userName }}</p>
-                                <p><i class="el-icon-date"></i> {{ cls.academicYear }} / {{ cls.semester === 1 ? '第一学期' : '第二学期' }}</p>
-                                <p><i class="el-icon-s-grid"></i> 容量：{{ cls.maxStudents || '不限' }} 人</p>
-                            </div>
-                        </el-card>
-                    </el-col>
-                </el-row>
-            </div>
+            <el-row :gutter="20">
+                <el-col :span="6" v-for="course in courses" :key="course.id" class="course-card-col">
+                    <el-card shadow="hover" class="course-card" @click.native="goToCourse(course)">
+                        <div class="card-cover">
+                            <img
+                                :src="course.coverUrl || 'https://via.placeholder.com/300x160?text=No+Image'"
+                                :alt="course.courseName || course.course_name"
+                            />
+                        </div>
+                        <div class="card-body">
+                            <h3 class="card-title">{{ course.courseName || course.course_name }}</h3>
+                            <p class="card-desc">{{ course.description || course.courseDescription || course.course_description || '暂无描述' }}</p>
+                        </div>
+                    </el-card>
+                </el-col>
+            </el-row>
         </div>
     </div>
 </template>
 
 <script>
-import { getAllClasses } from "@/api/studentweb/studentClass";
+import { getAllCourses } from "@/api/studentweb/courses";
 
 export default {
     name: "home",
     data() {
         return {
-            courseGroups: []
+            courses: []
         }
     },
     created() {
-        this.fetchClasses();
+        this.fetchCourses();
     },
     methods: {
-        fetchClasses() {
-            getAllClasses({}).then(res => {
-                const list = res.data.resultData || [];
-                const map = {};
-                list.forEach(item => {
-                    const key = item.courseName || '未分类';
-                    if (!map[key]) {
-                        map[key] = [];
-                    }
-                    map[key].push(item);
-                });
-                this.courseGroups = Object.keys(map).map(courseName => ({
-                    courseName,
-                    classes: map[courseName]
-                }));
+        fetchCourses() {
+            getAllCourses().then(res => {
+                // 后端 Result 结构: { resultData: [...], code: 200 }
+                if (res && res.data && res.data.code === 200 && Array.isArray(res.data.resultData)) {
+                    this.courses = res.data.resultData;
+                } else if (res && res.data && res.data.code === 200 && Array.isArray(res.data.data)) {
+                    this.courses = res.data.data;
+                } else if (res && Array.isArray(res)) {
+                    this.courses = res;
+                } else if (res && res.data && Array.isArray(res.data)) {
+                    this.courses = res.data;
+                } else {
+                    console.warn('课程数据格式异常:', res);
+                    this.courses = [];
+                }
             }).catch(() => {
-                this.courseGroups = [];
+                this.courses = [];
             });
         },
-        goToCourse(cls) {
-            // 跳转到课程详情页（如果已实现）
-            this.$router.push('/studentcourses');
+        goToCourse(course) {
+            this.$router.push({
+                name: 'Courses',
+                query: { courseId: course.id, courseName: course.courseName || course.course_name }
+            });
         }
     }
 }
@@ -98,51 +98,50 @@ export default {
     padding: 40px 0;
     font-size: 16px;
 }
-.course-group {
-    margin-bottom: 32px;
-}
-.course-title {
-    font-size: 18px;
-    color: #085e03;
-    margin-bottom: 12px;
-    padding-left: 10px;
-    border-left: 4px solid #085e03;
-}
-.class-card-col {
+.course-card-col {
     margin-bottom: 20px;
 }
-.class-card {
+.course-card {
     cursor: pointer;
     transition: all 0.3s;
     border-radius: 8px;
+    overflow: hidden;
 }
-.class-card:hover {
+.course-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 6px 20px rgba(8, 94, 3, 0.15);
 }
-.class-card-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+.card-cover {
+    width: 100%;
+    height: 140px;
+    overflow: hidden;
+}
+.card-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.card-body {
+    padding: 12px;
+}
+.card-title {
     font-size: 16px;
-    font-weight: bold;
-    color: #085e03;
-    margin-bottom: 12px;
-}
-.class-card-header .el-icon-school {
-    font-size: 24px;
-}
-.class-name {
-    white-space: nowrap;
+    color: #303133;
+    font-weight: 600;
+    margin: 0 0 8px 0;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
 }
-.class-card-body p {
+.card-desc {
     font-size: 13px;
     color: #606266;
-    line-height: 1.8;
-}
-.class-card-body i {
-    margin-right: 4px;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin: 0;
+    min-height: 39px;
 }
 </style>

@@ -7,3 +7,10 @@ import { post } from "../request";
 export function getAllClasses(data) {
     return post('/study/class/findList', data)
 }
+
+/**
+ * 获取学生已加入的课程列表（通过 userId 过滤）
+ */
+export function getStudentClasses(data) {
+    return post('/study/class/findList', data)
+}
