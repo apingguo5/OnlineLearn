@@ -26,6 +26,10 @@ public class ClassVo {
 	 */
 	private Integer userId;
 	/**
+	 * 课程ID
+	 */
+	private Integer courseId;
+	/**
 	 * 班级创建时间
 	 */
 	private Date createTime;
@@ -78,6 +82,14 @@ public class ClassVo {
 
 	public void setUserId(Integer userId) {
 		this.userId = userId;
+	}
+
+	public Integer getCourseId() {
+		return courseId;
+	}
+
+	public void setCourseId(Integer courseId) {
+		this.courseId = courseId;
 	}
 
 	public Date getCreateTime() {

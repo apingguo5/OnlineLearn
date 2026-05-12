@@ -24,8 +24,6 @@
         c.course_id AS courseId,
         c.academic_year AS academicYear,
         c.semester AS semester,
-        DATE_FORMAT(c.start_time ,'%Y-%m-%d %H:%i:%s') AS startTime,
-        DATE_FORMAT(c.end_time ,'%Y-%m-%d %H:%i:%s') AS endTime,
         c.max_students AS maxStudents,
         DATE_FORMAT(c.create_time ,'%Y-%m-%d %H:%i:%s') AS createTime,
         co.course_name AS courseName,
@@ -88,6 +86,9 @@
             </if>
             <if test="userId != null">
                 AND c.user_id = #{userId}
+            </if>
+            <if test="courseId != null">
+                AND c.course_id = #{courseId}
             </if>
         </where>
     </select>

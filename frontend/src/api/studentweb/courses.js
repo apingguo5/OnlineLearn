@@ -23,3 +23,11 @@ export function getCoursePage(data) {
 export function getCourseById(id) {
     return get(`/study/subject/info/${id}`)
 }
+
+/**
+ * 根据课程ID查询关联的班级列表
+ * 调用后端 /study/class/byCourse/{courseId}
+ */
+export function getClassesByCourseId(courseId) {
+    return get(`/study/class/byCourse/${courseId}`)
+}

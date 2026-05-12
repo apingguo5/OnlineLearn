@@ -14,6 +14,7 @@ import com.rabbiter.ol.service.UserClassService;
 import com.rabbiter.ol.vo.ClassVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -52,6 +53,17 @@ public class ClassController {
     public Result findList(@RequestBody ClassVo classVo) {
         List<HashMap> page = classService.findList(classVo);
         return Result.success(page);
+    }
+
+    /**
+     * 根据课程ID查询班级列表
+     */
+    @GetMapping("/byCourse/{courseId}")
+    public Result findByCourseId(@PathVariable("courseId") Integer courseId) {
+        ClassVo classVo = new ClassVo();
+        classVo.setCourseId(courseId);
+        List<HashMap> list = classService.findList(classVo);
+        return Result.success(list);
     }
 
 

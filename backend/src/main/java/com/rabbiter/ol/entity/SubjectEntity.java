@@ -1,6 +1,7 @@
 package com.rabbiter.ol.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
@@ -23,30 +24,37 @@ public class SubjectEntity implements Serializable {
 	/**
 	 * 课程名称
 	 */
+	@TableField("course_name")
 	private String courseName;
 	/**
 	 * 课程描述
 	 */
+	@TableField("description")
 	private String description;
 	/**
 	 * 课程创建者
 	 */
+	@TableField("creator_id")
 	private Integer creatorId;
 	/**
 	 * 课程封面图URL
 	 */
+	@TableField("cover_url")
 	private String coverUrl;
 	/**
 	 * 课程状态（1: 启用, 2: 停用, 3: 草稿）
 	 */
+	@TableField("status")
 	private Integer status;
 	/**
 	 * 创建时间
 	 */
+	@TableField("create_time")
 	private Date createTime;
 	/**
 	 * 最后更新时间
 	 */
+	@TableField("update_time")
 	private Date updateTime;
 
 	public Integer getId() {
