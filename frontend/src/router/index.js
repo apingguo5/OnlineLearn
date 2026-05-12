@@ -12,12 +12,9 @@ import CourseManagement from '../views/coursemanagement/CourseManagement.vue'
 import PersonalInfo from '../views/personalInfo/PersonalInfo.vue'
 import NoticeManagement from '../views/noticemanagement/NoticeManagement.vue'
 import StudentContainWeb from '../views/studentweb/contain/StudentContainWeb.vue'
-import CheckHomeWork from '../views/studentweb/homeworkmanagement/checkhomework/CheckHomeWork.vue'
-import NoHomeWork from '../views/studentweb/homeworkmanagement/checkhomework/NoHomeWork.vue'
 import AskAndAnswer from '../views/studentweb/askandanswer/AskAndAnswer.vue'
 import StudentPractice from '../views/studentweb/practice/StudentPractice.vue'
 import EssentiaInfo from '../views/studentweb/essentialinformation/EssentiaInfo.vue'
-import StudentManagement from '../views/studentweb/studentmanagement/StudentManagement.vue'
 import AdminManagement from '../views/admin/AdminManagement.vue'
 import MarkDown from '../views/studentweb/markdown/MarkDown.vue'
 import DetaliCourse from '../views/studentweb/askandanswer/DetaliCourse.vue'
@@ -32,11 +29,10 @@ import TestManagement from '../views/admin/testmanagement/TestManagement.vue'
 import KnowledgePoints from '../views/admin/knowledgepoints/KnowledgePoints.vue'
 import AdminPersonalInfo from '../views/admin/personalInfo/PersonalInfo.vue'
 import TeacherPersonalInfo from '../views/admin/personalInfo/PersonalInfo.vue'
-import ApplicantHistory from '../views/studentweb/studentmanagement/ApplicantHistory.vue'
 import TeacherApplicant from '../views/teacherapplicant/TeacherApplicant.vue'
 import DetailOnlineWeb from '../views/studentweb/onlinelearn/DetailOnlineWeb.vue'
+import teacherVideo from '../views/studentweb/onlinelearn/DetailOnlineWeb.vue'
 import PracticeDetail from '../views/studentweb/practice/practiceDetail/PracticeDetail.vue'
-import MarkDownNotHomeWork from '../views/studentweb/homeworkmanagement/MarkDownNotHomeWork.vue'
 import HomeworkDetail from '../views/admin/adminhomework/HomeworkDetail.vue'
 import TestHomeWork from '../views/admin/testmanagement/TestHomeWork.vue'
 import KnowDetail from '../views/admin/knowledgepoints/KnowDetail.vue'
@@ -46,13 +42,11 @@ import DetailMark from '../views/scoremanagement/DetailMark.vue'
 import NotHomework from '../views/scoremanagement/NotHomework.vue'
 import PDetail from '../views/personalInfo/PDetail.vue'
 import Video from '../views/video/Video.vue'
-import teacherVideo from '../views/studentweb/onlinelearn/DetailOnlineWeb.vue'
 import DoHomeWork from '../views/classmanagement/DoHomeWork.vue'
 import NotHomeWork from '../views/classmanagement/NotHomeWork.vue'
 import pDetail from '../views/studentweb/practice/practiceDetail/pDetail.vue'
 import ClassManagementAdmin from '../views/admin/classmanagement/ClassManagement.vue'
 import Subject from '../views/admin/subject/Subject.vue'
-import Point from '../views/studentweb/point/Point.vue'
 import WatchTime from '../views/studentweb/watchtime/WatchTime.vue'
 import TeacherAskAndAnswer from '../views/container/askandanswer/TeacherAskAndAnswer.vue'
 import TeacherDashboard from '../views/teacher/TeacherDashboard.vue'
@@ -90,14 +84,14 @@ const routes = [
         name: 'StudentDetail',
         component: StudentDetail,
         meta: {
-            requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+            requireAuth: true,
         },
     }, {
         path: '/pDetail',
         name: 'pDetail',
         component: pDetail,
         meta: {
-            requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+            requireAuth: true,
         },
     },
     {
@@ -113,14 +107,14 @@ const routes = [
         name: 'Detail',
         component: Detail,
         meta: {
-            requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+            requireAuth: true,
         },
     }, {
         path: '/detailmark',
         name: 'DetailMark',
         component: DetailMark,
         meta: {
-            requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+            requireAuth: true,
         },
     },
     {
@@ -128,21 +122,21 @@ const routes = [
         name: 'DetailOnlineWeb',
         component: DetailOnlineWeb,
         meta: {
-            requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+            requireAuth: true,
         },
     }, {
         path: '/TestHomeWork',
         name: 'TestHomeWork',
         component: TestHomeWork,
         meta: {
-            requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+            requireAuth: true,
         },
     }, {
         path: '/KnowDetail',
         name: 'KnowDetail',
         component: KnowDetail,
         meta: {
-            requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+            requireAuth: true,
         },
     },
     {
@@ -150,14 +144,7 @@ const routes = [
         name: 'MarkDown',
         component: MarkDown,
         meta: {
-            requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
-        },
-    }, {
-        path: '/markdownnothomework',
-        name: 'MarkDownNotHomeWork',
-        component: MarkDownNotHomeWork,
-        meta: {
-            requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+            requireAuth: true,
         },
     },
     {
@@ -165,7 +152,7 @@ const routes = [
         name: 'HomeworkDetail',
         component: HomeworkDetail,
         meta: {
-            requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+            requireAuth: true,
         },
     },
     {
@@ -173,7 +160,7 @@ const routes = [
         name: 'DetaliCourse',
         component: DetaliCourse,
         meta: {
-            requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+            requireAuth: true,
         },
     },
     {
@@ -204,7 +191,7 @@ const routes = [
                 name: 'Subject',
                 component: Subject,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
             {
@@ -212,7 +199,7 @@ const routes = [
                 name: 'ClassManagementAdmin',
                 component: ClassManagementAdmin,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
             {
@@ -220,7 +207,7 @@ const routes = [
                 name: 'TeacherManagement',
                 component: TeacherManagement,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
             {
@@ -228,7 +215,7 @@ const routes = [
                 name: 'AdminHomeWork',
                 component: AdminHomeWork,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
             {
@@ -236,7 +223,7 @@ const routes = [
                 name: 'TestManagement',
                 component: TestManagement,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
             {
@@ -244,7 +231,7 @@ const routes = [
                 name: 'KnowledgePoints',
                 component: KnowledgePoints,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
             {
@@ -252,7 +239,7 @@ const routes = [
                 name: 'AdminPersonalInfo',
                 component: AdminPersonalInfo,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
         ]
@@ -262,7 +249,7 @@ const routes = [
         name: 'StudentContainWeb',
         component: StudentContainWeb,
         meta: {
-            requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+            requireAuth: true,
         },
         redirect: { name: "studenthome" },
         children: [
@@ -271,7 +258,7 @@ const routes = [
                 name: 'studenthome',
                 component: home,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
             {
@@ -303,7 +290,7 @@ const routes = [
                 name: 'home',
                 component: home,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
             {
@@ -311,24 +298,7 @@ const routes = [
                 name: 'PracticeDetail',
                 component: PracticeDetail,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
-                },
-            },
-
-            {
-                path: '/checkhomework',
-                name: 'CheckHomeWork',
-                component: CheckHomeWork,
-                meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
-                },
-            },
-            {
-                path: '/nohomework',
-                name: 'NoHomeWork',
-                component: NoHomeWork,
-                meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
             {
@@ -336,7 +306,7 @@ const routes = [
                 name: 'AskAndAnswer',
                 component: AskAndAnswer,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
             {
@@ -344,7 +314,7 @@ const routes = [
                 name: 'StudentPractice',
                 component: StudentPractice,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
             {
@@ -352,32 +322,7 @@ const routes = [
                 name: 'EssentiaInfo',
                 component: EssentiaInfo,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
-                },
-            },
-            {
-                path: '/studentmanagement',
-                name: 'StudentManagement',
-                component: StudentManagement,
-                meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
-                },
-            },
-            {
-                path: '/applicanthistory',
-                name: 'ApplicantHistory',
-                component: ApplicantHistory,
-                meta: {
                     requireAuth: true,
-                },
-            },
-
-            {
-                path: '/point',
-                name: 'Point',
-                component: Point,
-                meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
                 },
             },
             {
@@ -385,20 +330,17 @@ const routes = [
                 name: 'WatchTime',
                 component: WatchTime,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
-
-
         ]
     },
-
     {
         path: '/hometeacher',
         name: 'TeacherContainer',
         component: TeacherContainer,
         meta: {
-            requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+            requireAuth: true,
         },
         children: [
             {
@@ -406,7 +348,7 @@ const routes = [
                 name: 'TeacherHome',
                 component: TeacherHome,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
             {
@@ -414,16 +356,15 @@ const routes = [
                 name: 'StudentInfo',
                 component: StudentInfo,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
-
             {
                 path: '/dohomework',
                 name: 'DoHomeWork',
                 component: DoHomeWork,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
             {
@@ -431,7 +372,7 @@ const routes = [
                 name: 'NotHomeWork',
                 component: NotHomeWork,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
             {
@@ -439,7 +380,7 @@ const routes = [
                 name: 'TeacherPersonalInfo',
                 component: TeacherPersonalInfo,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
             {
@@ -447,7 +388,7 @@ const routes = [
                 name: 'Video',
                 component: Video,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
             {
@@ -455,7 +396,7 @@ const routes = [
                 name: 'teacherVideo',
                 component: teacherVideo,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
             {
@@ -463,7 +404,7 @@ const routes = [
                 name: 'ScoreManagment',
                 component: ScoreManagment,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
             {
@@ -471,7 +412,7 @@ const routes = [
                 name: 'ClassManagement',
                 component: ClassManagement,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
             {
@@ -479,7 +420,7 @@ const routes = [
                 name: 'SubjectManagement',
                 component: SubjectManagement,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
             {
@@ -487,7 +428,7 @@ const routes = [
                 name: 'CourseManagement',
                 component: CourseManagement,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
             {
@@ -495,7 +436,7 @@ const routes = [
                 name: 'NoticeManagement',
                 component: NoticeManagement,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
             {
@@ -503,7 +444,7 @@ const routes = [
                 name: 'PersonalInfo',
                 component: PersonalInfo,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
             {
@@ -511,7 +452,7 @@ const routes = [
                 name: 'TeacherApplicant',
                 component: TeacherApplicant,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
             {
@@ -519,7 +460,7 @@ const routes = [
                 name: 'TeacherAskAndAnswer',
                 component: TeacherAskAndAnswer,
                 meta: {
-                    requireAuth: true,  // 添加该字段，表示进入这个路由是需要登录的
+                    requireAuth: true,
                 },
             },
             {
@@ -580,11 +521,7 @@ const routes = [
             },
         ]
     },
-
-
 ]
-
-
 
 import Cookies from "js-cookie";
 
@@ -593,15 +530,14 @@ const router = new VueRouter({
 })
 
 router.beforeEach((to, from, next) => {
-
-    if (to.meta.requireAuth) {  // 判断该路由是否需要登录权限
-        if (Cookies.get("userId")) {  // 通过vuex state获取当前的token是否存在
+    if (to.meta.requireAuth) {
+        if (Cookies.get("userId")) {
             next();
         }
         else {
             next({
                 path: '/login',
-                query: { redirect: to.fullPath }  // 将跳转的路由path作为参数，登录成功后跳转到该路由
+                query: { redirect: to.fullPath }
             })
         }
     }

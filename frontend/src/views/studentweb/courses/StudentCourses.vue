@@ -1,8 +1,8 @@
 <template>
     <div>
         <div class="page-header">
-            <h2><i class="el-icon-reading"></i> 所有课程</h2>
-            <p>按班级分组显示您所学的全部课程</p>
+            <h2><i class="el-icon-reading"></i> 我的课程</h2>
+            <p>您在当前班级学习中所有课程</p>
         </div>
 
         <div v-for="group in classGroups" :key="group.classId" class="class-group">
@@ -50,14 +50,11 @@ export default {
     },
     methods: {
         loadCourses() {
-            // 这里需要调用API获取按班级分组的课程数据
-            // 暂时从已有的在线课程接口获取数据
             this.$axios.get('/video/list', {
                 params: { userId: Cookies.get('userId') }
             }).then(resp => {
                 if (resp.data.code === 200) {
                     const videos = resp.data.resultData || []
-                    // 按班级分组
                     const groups = {}
                     videos.forEach(v => {
                         const key = v.classId || 'default'
