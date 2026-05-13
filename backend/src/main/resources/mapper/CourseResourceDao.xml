@@ -4,19 +4,57 @@
 <mapper namespace="com.rabbiter.ol.dao.CourseResourceDao">
     <resultMap id="baseMap" type="com.rabbiter.ol.entity.CourseResourceEntity">
         <id column="id" property="id" />
-        <result column="subject_id" property="subjectId" />
+        <result column="course_id" property="courseId" />
         <result column="resource_name" property="resourceName" />
         <result column="resource_type" property="resourceType" />
         <result column="file_url" property="fileUrl" />
+        <result column="storage_bucket" property="storageBucket" />
+        <result column="object_key" property="objectKey" />
+        <result column="file_hash" property="fileHash" />
         <result column="file_size" property="fileSize" />
-        <result column="description" property="description" />
-        <result column="creator" property="creator" />
+        <result column="duration" property="duration" />
+        <result column="chapter_id" property="chapterId" />
+        <result column="sort_order" property="sortOrder" />
+        <result column="uploader_id" property="uploaderId" />
+        <result column="is_public" property="isPublic" />
         <result column="create_time" property="createTime" />
         <result column="update_time" property="updateTime" />
     </resultMap>
 
     <sql id="baseColumns">
-        id, subject_id, resource_name, resource_type, file_url, file_size, description, creator, create_time, update_time
+        id, course_id, resource_name, resource_type, file_url, storage_bucket, object_key,
+        file_hash, file_size, duration, chapter_id, sort_order, uploader_id, is_public, create_time
     </sql>
 
+    <!-- 根据 chapter_id 查询资源列表，按 sort_order 排序 -->
+    <select id="listByChapterId" resultMap="baseMap">
+        SELECT <include refid="baseColumns" />
+        FROM course_resource
+        WHERE chapter_id = #{chapterId}
+        ORDER BY sort_order ASC, id ASC
+    </select>
+
+    <!-- 根据 course_id 查询资源列表 -->
+    <select id="listByCourseId" resultMap="baseMap">
+        SELECT <include refid="baseColumns" />
+        FROM course_resource
+        WHERE course_id = #{courseId}
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 获取章节内的最大排序值 -->
+    <select id="getMaxSortOrder" resultType="java.lang.Integer">
+        SELECT COALESCE(MAX(sort_order), -1) FROM course_resource WHERE chapter_id = #{chapterId}
+    </select>
+
+    <!-- 更新排序 -->
+    <update id="updateSortOrder">
+        UPDATE course_resource SET sort_order = #{sortOrder}, update_time = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <!-- 检查文件路径是否已存在 -->
+    <select id="existsByFilePath" resultType="boolean">
+        SELECT COUNT(1) > 0 FROM course_resource WHERE file_url = #{filePath}
+    </select>
 </mapper>

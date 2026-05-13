@@ -38,9 +38,6 @@ public class CourseChapterServiceImpl extends ServiceImpl<CourseChapterDao, Cour
             for (CourseChapterEntity chapter : chapters) {
                 chapter.setCreateTime(now);
                 chapter.setUpdateTime(now);
-                if (chapter.getPublishStatus() == null) {
-                    chapter.setPublishStatus(0);
-                }
             }
             this.saveBatch(chapters);
         }
@@ -91,7 +88,6 @@ public class CourseChapterServiceImpl extends ServiceImpl<CourseChapterDao, Cour
             chapter.setClassId(targetClassId);
             chapter.setCreateTime(now);
             chapter.setUpdateTime(now);
-            chapter.setPublishStatus(0);
         }
         this.saveBatch(sourceChapters);
         return sourceChapters;

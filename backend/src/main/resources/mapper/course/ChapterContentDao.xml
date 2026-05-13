@@ -23,13 +23,15 @@
             c.sort_order AS sortOrder,
             c.create_time AS createTime,
             CASE
-                WHEN c.content_type = 1 THEN v.topic
+                WHEN c.content_type = 1 THEN cr1.resource_name
                 WHEN c.content_type = 2 THEN kp.title
+                WHEN c.content_type = 3 THEN cr3.resource_name
                 ELSE ''
             END AS refTitle
         FROM chapter_content c
-        LEFT JOIN videos v ON c.content_type = 1 AND c.ref_id = v.id
+        LEFT JOIN course_resource cr1 ON c.content_type = 1 AND c.ref_id = cr1.id
         LEFT JOIN knowledge_point kp ON c.content_type = 2 AND c.ref_id = kp.id
+        LEFT JOIN course_resource cr3 ON c.content_type = 3 AND c.ref_id = cr3.id
         WHERE c.chapter_id = #{chapterId}
         ORDER BY c.sort_order ASC, c.id ASC
     </select>

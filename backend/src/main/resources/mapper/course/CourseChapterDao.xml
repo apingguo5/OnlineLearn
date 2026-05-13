@@ -11,7 +11,6 @@
         <result property="description" column="description"/>
         <result property="parentId" column="parent_id"/>
         <result property="sortOrder" column="sort_order"/>
-        <result property="publishStatus" column="publish_status"/>
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>
     </resultMap>
@@ -24,7 +23,6 @@
             cc.description,
             cc.parent_id AS parentId,
             cc.sort_order AS sortOrder,
-            cc.publish_status AS publishStatus,
             cc.create_time AS createTime,
             cc.update_time AS updateTime,
             0 AS resourceCount
@@ -41,7 +39,6 @@
             cc.description,
             cc.parent_id AS parentId,
             cc.sort_order AS sortOrder,
-            cc.publish_status AS publishStatus,
             cc.create_time AS createTime,
             cc.update_time AS updateTime,
             0 AS resourceCount

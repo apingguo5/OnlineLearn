@@ -32,9 +32,6 @@ public class CourseChapterEntity implements Serializable {
 
     private Integer sortOrder;
 
-    /** 发布状态: 0未配置 1已配置 2已发布 */
-    private Integer publishStatus;
-
     private Date createTime;
 
     /** 更新时间 */
@@ -60,9 +57,6 @@ public class CourseChapterEntity implements Serializable {
 
     public Integer getSortOrder() { return sortOrder; }
     public void setSortOrder(Integer sortOrder) { this.sortOrder = sortOrder; }
-
-    public Integer getPublishStatus() { return publishStatus; }
-    public void setPublishStatus(Integer publishStatus) { this.publishStatus = publishStatus; }
 
     public Date getCreateTime() { return createTime; }
     public void setCreateTime(Date createTime) { this.createTime = createTime; }

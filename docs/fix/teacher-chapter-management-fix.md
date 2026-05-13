@@ -70,10 +70,27 @@
 2. **树形结构**：章节支持父子层级，通过 `parent_id` 字段实现
 3. **有序展示**：通过 `sort_order` 字段控制章节排序
 4. **幂等迁移**：迁移脚本支持重复执行，不会破坏已有数据
+5. **移除冗余字段**：`publish_status` 字段被移除，原因：
+   - `course_chapter` 表的 `publish_status` 与现有 `class` 表的 `status` 字段功能重叠（班级发布状态已控制课程可见性）
+   - 章节粒度发布控制会增加系统复杂度，但当前 MVP 阶段不需要此功能
+   - 未来如需章节粒度发布控制，应单独设计发布机制，而非简单依赖一个 `publish_status` 布尔字段
+6. **`chapterType` 的演变**：从最初的设计来看，`chapterType` 字段(`0`=普通章节, `1`=考试)保留在实体类中，但在当前的前端实现中被省略。将来需要考试功能时可以扩展使用。
+
+## 涉及文件（更新）
+
+| 文件 | 操作 | 说明 |
+|------|------|------|
+| `backend/database/migration_20260512_chapter_fix.sql` | 修改 | `publish_status` 默认值改为 1，后续迁移可移除该列 |
+| `backend/src/main/java/com/rabbiter/ol/entity/course/CourseChapterEntity.java` | 修改 | 移除 `publishStatus` 字段 |
+| `backend/src/main/java/com/rabbiter/ol/controller/CourseChapterController.java` | 修改 | 移除发布状态检查逻辑 |
+| `backend/src/main/java/com/rabbiter/ol/service/impl/course/CourseChapterServiceImpl.java` | 修改 | 移除 `publishStatus` 默认值设置 |
+| `backend/src/main/resources/mapper/course/CourseChapterDao.xml` | 修改 | 从查询结果中移除 `publish_status` 列 |
+| `frontend/src/views/teacher/TeacherCourseManagement.vue` | 修改 | 移除发布状态显示和切换按钮 |
+| `frontend/src/api/teacher/teacherApi.js` | 修改 | 更新 JSDoc 注释 |
 
 ## 后续规划
 
 - [ ] 章节内容编辑（视频、阅读材料关联）
 - [ ] 章节排序拖拽功能
 - [ ] 章节批量操作（批量删除、批量设置类型）
-- [ ] 发布状态管理（未配置 → 已配置 → 已发布）
+- [ ] 章节成绩/考试功能（利用 `chapterType = 1`）

@@ -7,10 +7,13 @@ import com.rabbiter.ol.entity.course.ChapterContentEntity;
 import com.rabbiter.ol.service.course.CourseChapterService;
 import com.rabbiter.ol.service.course.ChapterContentService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import com.rabbiter.ol.service.VideosService;
 import com.rabbiter.ol.service.KnowledgePointService;
+import com.rabbiter.ol.service.CourseResourceService;
+import com.rabbiter.ol.entity.CourseResourceEntity;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -35,6 +38,12 @@ public class CourseChapterController {
 
     @Autowired
     private KnowledgePointService knowledgePointService;
+
+    @Autowired
+    private CourseResourceService courseResourceService;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     /**
      * 获取班级的章节列表
@@ -88,7 +97,6 @@ public class CourseChapterController {
         if (parentIdObj != null) {
             entity.setParentId(((Number) parentIdObj).intValue());
         }
-        entity.setPublishStatus(0);
         entity.setCreateTime(new Date());
         entity.setUpdateTime(new Date());
         courseChapterService.save(entity);
@@ -98,7 +106,6 @@ public class CourseChapterController {
         result.put("chapterName", entity.getChapterName());
         result.put("sortOrder", entity.getSortOrder());
         result.put("parentId", entity.getParentId());
-        result.put("publishStatus", entity.getPublishStatus());
         result.put("resourceCount", 0);
         return Result.success(result);
     }
@@ -125,14 +132,11 @@ public class CourseChapterController {
         String description = (String) params.get("description");
         Integer sortOrder = params.get("sortOrder") != null ? ((Number) params.get("sortOrder")).intValue() : null;
         Integer parentId = params.get("parentId") != null ? ((Number) params.get("parentId")).intValue() : null;
-        Integer publishStatus = params.get("publishStatus") != null ? ((Number) params.get("publishStatus")).intValue() : null;
-
         if (chapterName != null) entity.setChapterName(chapterName.trim());
         if (chapterType != null) entity.setChapterType(chapterType);
         if (description != null) entity.setDescription(description);
         if (sortOrder != null) entity.setSortOrder(sortOrder);
         if (parentId != null) entity.setParentId(parentId);
-        if (publishStatus != null) entity.setPublishStatus(publishStatus);
         entity.setUpdateTime(new Date());
 
         courseChapterService.updateById(entity);
@@ -205,7 +209,6 @@ public class CourseChapterController {
         copy.setDescription(source.getDescription());
         copy.setParentId(source.getParentId());
         copy.setSortOrder(source.getSortOrder() + 1);
-        copy.setPublishStatus(0);
         copy.setCreateTime(new Date());
         copy.setUpdateTime(new Date());
         courseChapterService.save(copy);
@@ -247,6 +250,65 @@ public class CourseChapterController {
             }
         }
         return Result.successCode();
+    }
+
+    /**
+     * 添加本地路径资源（测试用）
+     * 将本地文件路径保存到 course_resource 表，并关联到章节
+     */
+    @RequestMapping("/addLocalResource")
+    public Result addLocalResource(@RequestBody Map<String, Object> params) {
+        Object chapterIdObj = params.get("chapterId");
+        String resourceName = (String) params.get("resourceName");
+        String localPath = (String) params.get("localPath");
+
+        if (chapterIdObj == null) {
+            return Result.failure("参数错误：缺少章节ID");
+        }
+        if (localPath == null || localPath.trim().isEmpty()) {
+            return Result.failure("参数错误：本地路径不能为空");
+        }
+
+        if (resourceName == null || resourceName.trim().isEmpty()) {
+            // 从本地路径提取文件名作为资源名称
+            String path = localPath.trim();
+            int lastSep = Math.max(path.lastIndexOf('\\'), path.lastIndexOf('/'));
+            resourceName = lastSep >= 0 ? path.substring(lastSep + 1) : "本地资源";
+        }
+
+        Integer chapterId = ((Number) chapterIdObj).intValue();
+
+        // 获取章节所属课程ID（通过class表JOIN，因为course_chapter只有class_id字段）
+        Integer courseId = courseResourceService.getCourseIdByChapterId(chapterId);
+
+        // 1. 保存到 course_resource 表
+        CourseResourceEntity resource = new CourseResourceEntity();
+        resource.setCourseId(courseId);
+        resource.setResourceName(resourceName.trim());
+        resource.setResourceType(5); // 其他类型
+        resource.setFileUrl(localPath.trim());
+        resource.setChapterId(chapterId);
+        resource.setIsPublic(0);
+        resource.setCreateTime(new Date());
+        courseResourceService.save(resource);
+
+        // 2. 添加到 chapter_content 表（方便章节管理展示）
+        int maxSort = chapterContentService.count(new QueryWrapper<ChapterContentEntity>().eq("chapter_id", chapterId));
+        ChapterContentEntity content = new ChapterContentEntity();
+        content.setChapterId(chapterId);
+        content.setContentType(3); // 本地路径类型
+        content.setContentTitle(resourceName.trim());
+        content.setRefId(resource.getId());
+        content.setSortOrder(maxSort);
+        content.setCreateTime(new Date());
+        chapterContentService.save(content);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("resourceId", resource.getId());
+        result.put("resourceName", resourceName.trim());
+        result.put("fileUrl", localPath.trim());
+        result.put("contentId", content.getId());
+        return Result.success(result);
     }
 
     /**

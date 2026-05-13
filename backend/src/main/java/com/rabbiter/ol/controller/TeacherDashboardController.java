@@ -209,7 +209,7 @@ public class TeacherDashboardController {
 
             // 保存资源记录
             CourseResourceEntity resource = new CourseResourceEntity();
-            resource.setSubjectId(subjectId);
+            resource.setCourseId(subjectId);
             resource.setResourceName(originalFileName);
             resource.setFileUrl("/file/resourceFile/" + fileName);
             resource.setFileSize(file.getSize());
@@ -238,7 +238,7 @@ public class TeacherDashboardController {
         try {
             Integer subjectId = Integer.valueOf(params.get("subjectId").toString());
             List<CourseResourceEntity> list = courseResourceService.lambdaQuery()
-                    .eq(CourseResourceEntity::getSubjectId, subjectId)
+                    .eq(CourseResourceEntity::getCourseId, subjectId)
                     .orderByDesc(CourseResourceEntity::getId)
                     .list();
 

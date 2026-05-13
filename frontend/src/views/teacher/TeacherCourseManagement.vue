@@ -65,9 +65,6 @@
                 <i class="el-icon-document-copy" v-else></i>
                 <span class="node-name" :class="{ 'is-leaf': data.parentId }">{{ data.chapterName }}</span>
                 <el-tag size="mini" type="info" v-if="data.resourceCount > 0">{{ data.resourceCount }} 资源</el-tag>
-                <el-tag size="mini" :type="data.publishStatus === 1 ? 'success' : 'warning'">
-                  {{ data.publishStatus === 1 ? '已发布' : '未发布' }}
-                </el-tag>
               </span>
               <span class="node-actions">
                 <el-button
@@ -119,16 +116,6 @@
               <el-form-item label="章节名称">
                 <el-input v-model="selectedChapter.chapterName" :disabled="true"></el-input>
               </el-form-item>
-              <el-form-item label="发布状态">
-                <el-switch
-                  v-model="selectedChapter.publishStatus"
-                  :active-value="1"
-                  :inactive-value="0"
-                  @change="togglePublishStatus(selectedChapter)"
-                  active-text="已发布"
-                  inactive-text="未发布">
-                </el-switch>
-              </el-form-item>
             </el-form>
 
             <!-- 章节资源列表 -->
@@ -145,8 +132,8 @@
                 </el-table-column>
                 <el-table-column label="类型" width="100">
                   <template slot-scope="{ row }">
-                    <el-tag :type="row.contentType === 1 ? 'primary' : 'success'" size="mini">
-                      {{ row.contentType === 1 ? '视频' : '阅读' }}
+                    <el-tag :type="row.contentType === 1 ? 'primary' : (row.contentType === 3 ? 'warning' : 'success')" size="mini">
+                      {{ row.contentType === 1 ? '视频' : (row.contentType === 3 ? '本地' : '阅读') }}
                     </el-tag>
                   </template>
                 </el-table-column>
@@ -196,10 +183,12 @@
           <el-radio-group v-model="resourceForm.contentType">
             <el-radio :label="1">视频</el-radio>
             <el-radio :label="2">文字阅读</el-radio>
+            <el-radio :label="3">本地路径（测试）</el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item :label="resourceForm.contentType === 1 ? '视频' : '阅读材料'" required>
+        <el-form-item :label="resourceForm.contentType === 1 ? '视频' : (resourceForm.contentType === 2 ? '阅读材料' : '本地路径')" required>
           <el-select
+            v-if="resourceForm.contentType !== 3"
             v-model="resourceForm.contentData"
             filterable
             remote
@@ -215,6 +204,12 @@
               <span>{{ item.title || item.topic }}</span>
             </el-option>
           </el-select>
+          <el-input
+            v-else
+            v-model="resourceForm.localPath"
+            placeholder="请输入本地文件路径，例如：D:\课件\第一章\教学大纲.docx"
+            style="width: 100%">
+          </el-input>
         </el-form-item>
       </el-form>
       <span slot="footer">
@@ -234,7 +229,8 @@ import {
   deleteChapter,
   getChapterContents,
   addContent,
-  deleteContent
+  deleteContent,
+  addLocalResource
 } from '@/api/teacher/teacherApi'
 import { get, post } from '@/api/request'
 
@@ -321,7 +317,8 @@ export default {
       resourceDialogVisible: false,
       resourceForm: {
         contentType: 1,
-        contentData: null
+        contentData: null,
+        localPath: ''
       },
       resourceOptions: [],
       resourceSearchLoading: false,
@@ -585,28 +582,10 @@ export default {
     },
 
     /**
-     * 切换发布状态
-     */
-    async togglePublishStatus(chapter) {
-      try {
-        await updateChapter({
-          id: chapter.id,
-          publishStatus: chapter.publishStatus
-        })
-        this.$message.success(
-          chapter.publishStatus === 1 ? '章节已发布' : '章节已取消发布'
-        )
-      } catch (e) {
-        console.error('更新发布状态失败:', e)
-        this.$message.error('更新发布状态失败')
-      }
-    },
-
-    /**
      * 显示添加资源对话框
      */
     showAddResourceDialog() {
-      this.resourceForm = { contentType: 1, contentData: null }
+      this.resourceForm = { contentType: 1, contentData: null, localPath: '' }
       this.resourceOptions = []
       this.resourceDialogVisible = true
       // 初始搜索
@@ -655,12 +634,42 @@ export default {
      * 保存资源关联
      */
     async saveResource() {
-      if (!this.resourceForm.contentData) {
-        this.$message.warning('请选择资源')
-        return
-      }
       if (!this.selectedChapter) {
         this.$message.warning('请先选择章节')
+        return
+      }
+      // 本地路径模式
+      if (this.resourceForm.contentType === 3) {
+        if (!this.resourceForm.localPath || !this.resourceForm.localPath.trim()) {
+          this.$message.warning('请输入本地路径')
+          return
+        }
+        try {
+          const res = await addLocalResource({
+            chapterId: this.selectedChapter.id,
+            courseId: this.courseId,
+            localPath: this.resourceForm.localPath.trim()
+          })
+          const data = extractData(res)
+          if (data) {
+            this.$message.success('本地资源添加成功')
+          } else if (res.data && res.data.code === 200) {
+            this.$message.success('本地资源添加成功')
+          } else {
+            this.$message.error('本地资源添加失败')
+          }
+          this.resourceDialogVisible = false
+          await this.loadResources()
+          await this.loadChapters()
+        } catch (e) {
+          console.error('添加本地资源失败:', e)
+          this.$message.error('添加本地资源失败')
+        }
+        return
+      }
+      // 视频/阅读材料模式
+      if (!this.resourceForm.contentData) {
+        this.$message.warning('请选择资源')
         return
       }
       try {

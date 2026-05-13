@@ -8,7 +8,7 @@ ALTER TABLE `course_chapter`
   -- 添加缺失的列（允许 NULL，有默认值，避免影响已有数据）
   ADD COLUMN `chapter_type` varchar(50) DEFAULT NULL COMMENT '章节类型: video/quiz/reading' AFTER `chapter_name`,
   ADD COLUMN `description` text DEFAULT NULL COMMENT '章节简介' AFTER `chapter_type`,
-  ADD COLUMN `publish_status` int UNSIGNED DEFAULT 0 COMMENT '发布状态: 0未配置 1已配置 2已发布' AFTER `parent_id`,
+  ADD COLUMN `publish_status` int UNSIGNED DEFAULT 1 COMMENT '发布状态（保留字段，默认已发布）' AFTER `parent_id`,
   ADD COLUMN `update_time` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间' AFTER `create_time`;
 
 -- 2. 重命名 course_id -> class_id（章节是按班级组织的）

@@ -67,7 +67,7 @@ export function getChapterTree(params) {
 
 /**
  * 创建章节
- * @param {Object} params - { courseId, parentId?, title, type, content?, sort?, publishStatus? }
+ * @param {Object} params - { classId, chapterName, description?, parentId? }
  */
 export function createChapter(params) {
   return post(`/study/teacher/course/addChapter`, params)
@@ -75,7 +75,7 @@ export function createChapter(params) {
 
 /**
  * 更新章节
- * @param {Object} params - { id, chapterName?, chapterType?, description?, sortOrder?, parentId?, publishStatus?, content? }
+ * @param {Object} params - { id, chapterName?, description? }
  */
 export function updateChapter(params) {
   return post(`/study/teacher/course/updateChapter`, params)
@@ -111,6 +111,14 @@ export function copyChapter(params) {
  */
 export function batchUpdateChapters(chapters) {
   return post(`/study/teacher/course/batchUpdateChapters`, { chapters })
+}
+
+/**
+ * 添加本地路径资源（测试用）
+ * @param {Object} params - { chapterId, courseId, resourceName, localPath }
+ */
+export function addLocalResource(params) {
+  return post(`/study/teacher/course/addLocalResource`, params)
 }
 
 // ========== 章节内容管理 ==========
@@ -274,6 +282,89 @@ export function batchAddStudents(params) {
  */
 export function getStudentLearningStatus(params) {
   return post(`/study/userClass/findList`, params)
+}
+
+// ========== 课程资源管理（course_resource 表） ==========
+
+/**
+ * 根据章节ID获取资源列表
+ * @param {Object} params - { chapterId }
+ * POST /study/teacher/course/resource/listByChapter
+ */
+export function getResourcesByChapter(params) {
+  return post(`/study/teacher/course/resource/listByChapter`, params)
+}
+
+/**
+ * 根据课程ID获取资源列表
+ * @param {Object} params - { courseId }
+ * POST /study/teacher/course/resource/listByCourse
+ */
+export function getResourcesByCourse(params) {
+  return post(`/study/teacher/course/resource/listByCourse`, params)
+}
+
+/**
+ * 添加本地路径资源（测试用）
+ * @param {Object} params - { chapterId, resourceName, localPath, resourceType?, uploaderId? }
+ * POST /study/teacher/course/resource/addLocal
+ */
+export function addLocalResourceToDb(params) {
+  return post(`/study/teacher/course/resource/addLocal`, params)
+}
+
+/**
+ * 添加资源（通用）
+ * @param {Object} params - { courseId, resourceName, resourceType, fileUrl, chapterId?, ... }
+ * POST /study/teacher/course/resource/add
+ */
+export function addCourseResource(params) {
+  return post(`/study/teacher/course/resource/add`, params)
+}
+
+/**
+ * 更新资源
+ * @param {Object} params - { id, resourceName?, resourceType?, fileUrl?, ... }
+ * POST /study/teacher/course/resource/update
+ */
+export function updateCourseResource(params) {
+  return post(`/study/teacher/course/resource/update`, params)
+}
+
+/**
+ * 删除资源
+ * @param {Object} params - { id }
+ * POST /study/teacher/course/resource/delete
+ */
+export function deleteCourseResourceById(params) {
+  return post(`/study/teacher/course/resource/delete`, params)
+}
+
+/**
+ * 批量删除资源
+ * @param {Object} params - { ids: [1,2,3] }
+ * POST /study/teacher/course/resource/batchDelete
+ */
+export function batchDeleteCourseResources(params) {
+  return post(`/study/teacher/course/resource/batchDelete`, params)
+}
+
+/**
+ * 资源排序
+ * @param {Object} params - { ids: [3,1,2] }
+ * POST /study/teacher/course/resource/sort
+ */
+export function sortCourseResources(params) {
+  return post(`/study/teacher/course/resource/sort`, params)
+}
+
+/**
+ * 检索资源
+ * @param {Object} params - { courseId?, chapterId?, resourceType? }
+ * POST /study/teacher/course/resource/search
+ */
+export function searchCourseResources(params) {
+  return post(`/study/teacher/course/resource/search`, params)
 }
 
 // 默认导出（向后兼容）
