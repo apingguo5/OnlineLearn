@@ -67,3 +67,21 @@ export function unenrollClass(data) {
 export function getEnrolledCourses(userId) {
     return get(`/study/userClass/enrolledCourses/${userId}`)
 }
+
+/**
+ * 获取课程的学习章节列表（树形结构）
+ * 调用后端 POST /study/student/course/learningChapters
+ * @param {Object} data - { classId }
+ */
+export function getLearningChapters(data) {
+    return post('/study/student/course/learningChapters', data)
+}
+
+/**
+ * 获取章节内容列表（含视频/阅读等资源详情）
+ * 调用后端 POST /study/student/course/chapterContents
+ * @param {Object} data - { chapterId }
+ */
+export function getChapterContents(data) {
+    return post('/study/student/course/chapterContents', data)
+}

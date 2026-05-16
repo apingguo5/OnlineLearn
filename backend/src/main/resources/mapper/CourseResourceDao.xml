@@ -57,4 +57,15 @@
     <select id="existsByFilePath" resultType="boolean">
         SELECT COUNT(1) > 0 FROM course_resource WHERE file_url = #{filePath}
     </select>
+
+    <!-- 根据多个章节ID查询资源列表（用于父章节递归聚合） -->
+    <select id="listByChapterIds" resultMap="baseMap">
+        SELECT <include refid="baseColumns" />
+        FROM course_resource
+        WHERE chapter_id IN
+        <foreach item="chapterId" collection="chapterIds" open="(" separator="," close=")">
+            #{chapterId}
+        </foreach>
+        ORDER BY sort_order ASC, id ASC
+    </select>
 </mapper>

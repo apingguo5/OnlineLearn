@@ -315,6 +315,14 @@ const routes = [
                     requireAuth: true,
                 },
             },
+            {
+                path: '/course-learning',
+                name: 'CourseLearning',
+                component: () => import('../views/studentweb/courses/CourseLearning.vue'),
+                meta: {
+                    requireAuth: true,
+                },
+            },
         ]
     },
     {

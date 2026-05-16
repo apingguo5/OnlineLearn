@@ -23,6 +23,11 @@ module.exports = {
                 target: 'http://localhost:9251/',
                 changOrigin: true
             },
+            // 课程资源文件代理：/courses/** → 后端9251 → 本地courses目录
+            '/courses': {
+                target: 'http://localhost:9251/',
+                changOrigin: true
+            },
         },
     }
 };

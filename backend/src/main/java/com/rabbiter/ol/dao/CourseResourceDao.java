@@ -34,4 +34,9 @@ public interface CourseResourceDao extends BaseMapper<CourseResourceEntity> {
      * 检查文件路径是否已存在
      */
     boolean existsByFilePath(@Param("filePath") String filePath);
+
+    /**
+     * 根据多个章节ID查询资源列表（用于父章节递归聚合）
+     */
+    List<CourseResourceEntity> listByChapterIds(@Param("chapterIds") List<Integer> chapterIds);
 }
