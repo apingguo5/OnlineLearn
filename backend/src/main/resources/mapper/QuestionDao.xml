@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.rabbiter.ol.dao.QuestionDao">
+
+    <resultMap id="baseMap" type="com.rabbiter.ol.entity.QuestionEntity">
+        <id column="id" property="id" />
+        <result column="question_type" property="questionType" />
+        <result column="stem" property="stem" />
+        <result column="options" property="options" />
+        <result column="answer" property="answer" />
+        <result column="analysis" property="analysis" />
+        <result column="score" property="score" />
+        <result column="difficulty" property="difficulty" />
+        <result column="creator_id" property="creatorId" />
+        <result column="course_id" property="courseId" />
+        <result column="chapter_id" property="chapterId" />
+        <result column="status" property="status" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+    </resultMap>
+
+    <sql id="baseColumns">
+        id, question_type, stem, options, answer, analysis, score, difficulty,
+        creator_id, course_id, chapter_id, status, create_time, update_time
+    </sql>
+
+    <select id="queryCount" resultType="java.lang.Integer">
+        SELECT COUNT(1) FROM question
+        <where>
+            <if test="questionType != null">
+                AND question_type = #{questionType}
+            </if>
+            <if test="stem != null and stem.trim() != ''">
+                AND stem LIKE CONCAT('%', #{stem}, '%')
+            </if>
+            <if test="courseId != null">
+                AND course_id = #{courseId}
+            </if>
+            <if test="chapterId != null">
+                AND chapter_id = #{chapterId}
+            </if>
+            <if test="creatorId != null">
+                AND creator_id = #{creatorId}
+            </if>
+        </where>
+    </select>
+
+    <select id="queryData" resultType="java.util.HashMap">
+        SELECT q.*, c.course_name as courseName
+        FROM question q
+        LEFT JOIN course c ON q.course_id = c.id
+        <where>
+            <if test="questionType != null">
+                AND q.question_type = #{questionType}
+            </if>
+            <if test="stem != null and stem.trim() != ''">
+                AND q.stem LIKE CONCAT('%', #{stem}, '%')
+            </if>
+            <if test="courseId != null">
+                AND q.course_id = #{courseId}
+            </if>
+            <if test="chapterId != null">
+                AND q.chapter_id = #{chapterId}
+            </if>
+            <if test="creatorId != null">
+                AND q.creator_id = #{creatorId}
+            </if>
+        </where>
+        ORDER BY q.create_time DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+</mapper>

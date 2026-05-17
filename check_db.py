@@ -1,7 +1,35 @@
-import subprocess
-result = subprocess.run([
-    'mysql', '-h', '192.168.1.38', '-u', 'newuser', '-pyourpassword',
-    '-e', "SELECT id, resource_name, file_url FROM online_learn.course_resource WHERE file_url LIKE '%.webm%' LIMIT 10"
-], capture_output=True, text=True)
-print('STDOUT:', result.stdout)
-print('STDERR:', result.stderr)
+import sys
+# 检查 course 表中是否有数据
+try:
+    import pymysql
+    conn = pymysql.connect(host='192.168.1.38', user='newuser', password='yourpassword', database='online_learn')
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, course_name, creator_id, status FROM online_learn.course LIMIT 20")
+    rows = cursor.fetchall()
+    print(f"Found {len(rows)} courses:")
+    for row in rows:
+        print(f"  id={row[0]}, name={row[1]}, creator_id={row[2]}, status={row[3]}")
+    cursor.execute("SELECT COUNT(*) FROM online_learn.course")
+    total = cursor.fetchone()[0]
+    print(f"Total courses: {total}")
+    cursor.close()
+    conn.close()
+except ImportError:
+    print("pymysql not installed, trying mysql-connector...")
+    try:
+        import mysql.connector
+        conn = mysql.connector.connect(host='192.168.1.38', user='newuser', password='yourpassword', database='online_learn')
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, course_name, creator_id, status FROM online_learn.course LIMIT 20")
+        rows = cursor.fetchall()
+        print(f"Found {len(rows)} courses:")
+        for row in rows:
+            print(f"  id={row[0]}, name={row[1]}, creator_id={row[2]}, status={row[3]}")
+        cursor.execute("SELECT COUNT(*) FROM online_learn.course")
+        total = cursor.fetchone()[0]
+        print(f"Total courses: {total}")
+        cursor.close()
+        conn.close()
+    except ImportError:
+        print("Neither pymysql nor mysql-connector is installed. Cannot check database.")
+        print("Install with: pip install pymysql")

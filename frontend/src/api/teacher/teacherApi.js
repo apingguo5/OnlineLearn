@@ -200,7 +200,7 @@ export function getQuestions(params) {
  * @param {Object} params - { title, type, options?, answer?, classId?, courseId? }
  */
 export function createQuestion(params) {
-  return post(`/study/teacher/course/addQuestion`, params)
+  return post(`/study/exam/question/save`, params)
 }
 
 // ========== 班级与学生管理 ==========

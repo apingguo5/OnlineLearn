@@ -23,6 +23,11 @@
                 <span slot="title">作业习题</span>
             </el-menu-item>
 
+            <el-menu-item index="/studentexam">
+                <i class="el-icon-tickets"></i>
+                <span slot="title">考试中心</span>
+            </el-menu-item>
+
             <el-menu-item index="/askandanswer">
                 <i class="el-icon-chat-dot-round"></i>
                 <span slot="title">问答社区</span>

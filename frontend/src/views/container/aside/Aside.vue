@@ -23,10 +23,28 @@
                 </el-menu-item>
 
                 <!-- ========== 4. 作业与考试 ========== -->
-                <el-menu-item index="/teacherassessment">
-                    <i class="el-icon-edit-outline" style="font-size: 22px;color: white;"></i>
-                    <span slot="title" style="font-size: 16px;"> 作业与考试</span>
-                </el-menu-item>
+                <el-submenu index="/teacherassessment">
+                    <template slot="title">
+                        <i class="el-icon-edit-outline" style="font-size: 22px;color: white;"></i>
+                        <span slot="title" style="font-size: 16px;"> 作业与考试</span>
+                    </template>
+                    <el-menu-item index="/teacherassessment">
+                        <i class="el-icon-document"></i>
+                        <span slot="title"> 作业管理</span>
+                    </el-menu-item>
+                    <el-menu-item index="/teacherquestionbank">
+                        <i class="el-icon-collection-tag"></i>
+                        <span slot="title"> 题库管理</span>
+                    </el-menu-item>
+                    <el-menu-item index="/teacherexampaper">
+                        <i class="el-icon-tickets"></i>
+                        <span slot="title"> 试卷管理</span>
+                    </el-menu-item>
+                    <el-menu-item index="/teachergrading">
+                        <i class="el-icon-reading"></i>
+                        <span slot="title"> 批改管理</span>
+                    </el-menu-item>
+                </el-submenu>
 
                 <!-- ========== 5. 成绩与报表 ========== -->
                 <el-menu-item index="/teachergradebook">

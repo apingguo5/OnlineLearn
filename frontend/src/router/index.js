@@ -54,6 +54,9 @@ import TeacherClassManagement from '../views/teacher/TeacherClassManagement.vue'
 import TeacherAssessment from '../views/teacher/TeacherAssessment.vue'
 import TeacherGradebook from '../views/teacher/TeacherGradebook.vue'
 import TeacherCommunication from '../views/teacher/TeacherCommunication.vue'
+import TeacherQuestionBank from '../views/teacher/TeacherQuestionBank.vue'
+import TeacherExamPaper from '../views/teacher/TeacherExamPaper.vue'
+import TeacherGrading from '../views/teacher/TeacherGrading.vue'
 import TestComponent from '../views/test/TestComponent.vue'
 import SimpleTest from '../views/test/SimpleTest.vue'
 Vue.use(VueRouter)
@@ -323,6 +326,22 @@ const routes = [
                     requireAuth: true,
                 },
             },
+            {
+                path: '/studentexam',
+                name: 'StudentExam',
+                component: () => import('../views/studentweb/exam/StudentExam.vue'),
+                meta: {
+                    requireAuth: true,
+                },
+            },
+            {
+                path: '/exam-result',
+                name: 'ExamResult',
+                component: () => import('../views/studentweb/exam/ExamResult.vue'),
+                meta: {
+                    requireAuth: true,
+                },
+            },
         ]
     },
     {
@@ -505,6 +524,30 @@ const routes = [
                 path: '/teachercommunication',
                 name: 'TeacherCommunication',
                 component: TeacherCommunication,
+                meta: {
+                    requireAuth: true,
+                },
+            },
+            {
+                path: '/teacherquestionbank',
+                name: 'TeacherQuestionBank',
+                component: TeacherQuestionBank,
+                meta: {
+                    requireAuth: true,
+                },
+            },
+            {
+                path: '/teacherexampaper',
+                name: 'TeacherExamPaper',
+                component: TeacherExamPaper,
+                meta: {
+                    requireAuth: true,
+                },
+            },
+            {
+                path: '/teachergrading',
+                name: 'TeacherGrading',
+                component: TeacherGrading,
                 meta: {
                     requireAuth: true,
                 },

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.rabbiter.ol.dao.StudentAnswerRecordDao">
+
+    <resultMap id="baseMap" type="com.rabbiter.ol.entity.StudentAnswerRecordEntity">
+        <id column="id" property="id" />
+        <result column="paper_id" property="paperId" />
+        <result column="question_id" property="questionId" />
+        <result column="student_id" property="studentId" />
+        <result column="answer" property="answer" />
+        <result column="status" property="status" />
+        <result column="score" property="score" />
+        <result column="review_status" property="reviewStatus" />
+        <result column="reviewer_id" property="reviewerId" />
+        <result column="remark" property="remark" />
+        <result column="review_time" property="reviewTime" />
+        <result column="submit_time" property="submitTime" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+    </resultMap>
+
+    <sql id="baseColumns">
+        id, paper_id, question_id, student_id, answer, status, score,
+        review_status, reviewer_id, remark, review_time, submit_time, create_time, update_time
+    </sql>
+
+    <select id="queryCount" resultType="java.lang.Integer">
+        SELECT COUNT(1) FROM student_answer_record
+        <where>
+            <if test="paperId != null">
+                AND paper_id = #{paperId}
+            </if>
+            <if test="studentId != null">
+                AND student_id = #{studentId}
+            </if>
+            <if test="reviewStatus != null">
+                AND review_status = #{reviewStatus}
+            </if>
+        </where>
+    </select>
+
+    <select id="queryData" resultType="java.util.HashMap">
+        SELECT sar.*, q.question_type as questionType, q.stem, q.options, q.answer as correctAnswer, q.analysis
+        FROM student_answer_record sar
+        LEFT JOIN question q ON sar.question_id = q.id
+        <where>
+            <if test="paperId != null">
+                AND sar.paper_id = #{paperId}
+            </if>
+            <if test="studentId != null">
+                AND sar.student_id = #{studentId}
+            </if>
+            <if test="reviewStatus != null">
+                AND sar.review_status = #{reviewStatus}
+            </if>
+        </where>
+        ORDER BY sar.create_time DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="getPaperStudentList" resultType="java.util.HashMap">
+        SELECT sar.*, su.user_name as studentName, su.real_name as realName,
+               q.question_type as questionType, q.stem, q.options, q.answer as correctAnswer, q.score as questionScore, q.analysis
+        FROM student_answer_record sar
+        LEFT JOIN sys_user su ON sar.student_id = su.user_id
+        LEFT JOIN question q ON sar.question_id = q.id
+        WHERE sar.paper_id = #{paperId}
+        ORDER BY sar.student_id, sar.id
+    </select>
+
+    <select id="getStudentDetail" resultType="java.util.HashMap">
+        SELECT sar.*, su.user_name as studentName, su.real_name as realName,
+               q.question_type as questionType, q.stem, q.options, q.answer as correctAnswer, q.score as questionScore, q.analysis
+        FROM student_answer_record sar
+        LEFT JOIN sys_user su ON sar.student_id = su.user_id
+        LEFT JOIN question q ON sar.question_id = q.id
+        WHERE sar.paper_id = #{paperId}
+          AND sar.student_id = #{studentId}
+        ORDER BY sar.id
+    </select>
+</mapper>

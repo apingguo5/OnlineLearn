@@ -16,7 +16,7 @@ DROP TABLE IF EXISTS `user`;
 CREATE TABLE `user` (
   `id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '用户主键',
   `account` varchar(255) DEFAULT '' COMMENT '登录账号',
-  `password` varchar(255) NOT NULL COMMENT '用户密码（必须使用BCrypt等强哈希算法加密后存储，切勿明文，无默认值）',
+  `password` varchar(255) NOT NULL COMMENT '用户密码（必须使用BCrypt等强哈希算法加密后存储）',
   `user_name` varchar(255) DEFAULT NULL COMMENT '用户昵称/真实姓名',
   `phone` varchar(20) DEFAULT NULL COMMENT '电话号码',
   `sex` tinyint UNSIGNED DEFAULT NULL COMMENT '性别（0：男；1：女）',
@@ -39,7 +39,7 @@ CREATE TABLE `user_role` (
   CONSTRAINT `fk_user_role_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户角色关联表';
 
--- 4. 课程表 (`course`) - 核心表 (已简化，仅保留必要字段)
+-- 4. 课程表 (`course`)
 DROP TABLE IF EXISTS `course`;
 CREATE TABLE `course` (
   `id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '课程ID',
@@ -108,7 +108,7 @@ CREATE TABLE `applicant` (
   CONSTRAINT `fk_applicant_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='入班申请表';
 
--- 8. 课程章节表 (`course_chapter`) - 用于组织资源
+-- 8. 课程章节表 (`course_chapter`)
 DROP TABLE IF EXISTS `course_chapter`;
 CREATE TABLE `course_chapter` (
   `id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '章节ID',
@@ -127,17 +127,17 @@ CREATE TABLE `course_chapter` (
   CONSTRAINT `fk_chapter_creator` FOREIGN KEY (`creator_id`) REFERENCES `user` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='课程章节表';
 
--- 9. 课程资源表 (`course_resource`) - 统一管理所有课程资源 (视频、文档等)
+-- 9. 课程资源表 (`course_resource`)
 DROP TABLE IF EXISTS `course_resource`;
 CREATE TABLE `course_resource` (
   `id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '资源ID',
   `course_id` int UNSIGNED NOT NULL COMMENT '所属课程ID',
   `resource_name` varchar(255) NOT NULL COMMENT '资源名称',
   `resource_type` tinyint UNSIGNED NOT NULL COMMENT '资源类型（1: 视频, 2: PDF文档, 3: PPT, 4: 习题集, 5: 其他）',
-  `file_url` varchar(500) DEFAULT NULL COMMENT '文件访问URL（对象存储路径）',
+  `file_url` varchar(500) DEFAULT NULL COMMENT '文件访问URL',
   `storage_bucket` varchar(255) DEFAULT NULL COMMENT '存储桶名称',
-  `object_key` varchar(500) DEFAULT NULL COMMENT '对象键（文件路径）',
-  `file_hash` varchar(64) DEFAULT NULL COMMENT '文件哈希值（用于去重、校验）',
+  `object_key` varchar(500) DEFAULT NULL COMMENT '对象键',
+  `file_hash` varchar(64) DEFAULT NULL COMMENT '文件哈希值',
   `file_size` bigint UNSIGNED DEFAULT NULL COMMENT '文件大小（字节）',
   `duration` int UNSIGNED DEFAULT NULL COMMENT '视频/音频时长（秒）',
   `chapter_id` int UNSIGNED DEFAULT NULL COMMENT '所属章节ID',
@@ -158,67 +158,29 @@ CREATE TABLE `course_resource` (
   CONSTRAINT `fk_resource_uploader` FOREIGN KEY (`uploader_id`) REFERENCES `user` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='课程资源表';
 
--- 10. 问答表 (`ask_questions`) - 修改：`video_id` 关联至 `course_resource.id`
+-- 10. 问答表 (`ask_questions`)
 DROP TABLE IF EXISTS `ask_questions`;
 CREATE TABLE `ask_questions` (
   `id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '问题ID',
   `sender` int UNSIGNED DEFAULT NULL COMMENT '发送人ID',
   `content` text COMMENT '内容',
   `recipient` int UNSIGNED DEFAULT NULL COMMENT '接收人ID',
-  `resource_id` int UNSIGNED DEFAULT NULL COMMENT '课程资源ID', -- 字段名和注释已更新
+  `resource_id` int UNSIGNED DEFAULT NULL COMMENT '课程资源ID',
   `reply` text COMMENT '回复内容',
   `status` tinyint UNSIGNED NOT NULL DEFAULT 2 COMMENT '状态（1：已回复；2：未回复）',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '时间',
   PRIMARY KEY (`id`),
   KEY `idx_sender` (`sender`),
   KEY `idx_recipient` (`recipient`),
-  KEY `idx_resource_id` (`resource_id`), -- 索引名已更新
+  KEY `idx_resource_id` (`resource_id`),
   KEY `idx_status` (`status`),
   KEY `idx_create_time` (`create_time`),
   CONSTRAINT `fk_ask_questions_recipient` FOREIGN KEY (`recipient`) REFERENCES `user` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_ask_questions_sender` FOREIGN KEY (`sender`) REFERENCES `user` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `fk_ask_questions_resource` FOREIGN KEY (`resource_id`) REFERENCES `course_resource` (`id`) ON DELETE SET NULL -- 外键已更新
+  CONSTRAINT `fk_ask_questions_resource` FOREIGN KEY (`resource_id`) REFERENCES `course_resource` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='问答表';
 
--- 11. 练习题库表 (`exercises`)
-DROP TABLE IF EXISTS `exercises`;
-CREATE TABLE `exercises` (
-  `id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '练习题ID',
-  `title` varchar(255) DEFAULT NULL COMMENT '标题',
-  `content` text COMMENT '题目',
-  `answer` text COMMENT '参考答案',
-  `creator` int UNSIGNED DEFAULT NULL COMMENT '创建人',
-  `class_id` int UNSIGNED DEFAULT NULL COMMENT '所属班级ID',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  PRIMARY KEY (`id`),
-  KEY `idx_creator` (`creator`),
-  KEY `idx_class_id` (`class_id`),
-  KEY `idx_create_time` (`create_time`),
-  CONSTRAINT `fk_exercises_class` FOREIGN KEY (`class_id`) REFERENCES `class` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_exercises_creator` FOREIGN KEY (`creator`) REFERENCES `user` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='练习题库表';
-
--- 12. 作业表 (`homework`)
-DROP TABLE IF EXISTS `homework`;
-CREATE TABLE `homework` (
-  `id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '作业ID',
-  `title` varchar(255) DEFAULT NULL COMMENT '标题',
-  `content` text COMMENT '题目',
-  `answer` text COMMENT '参考答案',
-  `creator` int UNSIGNED DEFAULT NULL COMMENT '创建人',
-  `class_id` int UNSIGNED DEFAULT NULL COMMENT '所属班级ID',
-  `commit_time` date DEFAULT NULL COMMENT '提交截止时间',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  PRIMARY KEY (`id`),
-  KEY `idx_creator` (`creator`),
-  KEY `idx_class_id` (`class_id`),
-  KEY `idx_commit_time` (`commit_time`),
-  KEY `idx_create_time` (`create_time`),
-  CONSTRAINT `fk_homework_class` FOREIGN KEY (`class_id`) REFERENCES `class` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_homework_creator` FOREIGN KEY (`creator`) REFERENCES `user` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='作业表';
-
--- 13. 知识点表 (`knowledge_point`)
+-- 11. 知识点表 (`knowledge_point`)
 DROP TABLE IF EXISTS `knowledge_point`;
 CREATE TABLE `knowledge_point` (
   `id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '知识点ID',
@@ -235,59 +197,129 @@ CREATE TABLE `knowledge_point` (
   CONSTRAINT `fk_knowledge_point_creator` FOREIGN KEY (`creator`) REFERENCES `user` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='知识点表';
 
--- 14. 用户练习记录表 (`user_do_exercise`)
-DROP TABLE IF EXISTS `user_do_exercise`;
-CREATE TABLE `user_do_exercise` (
-  `id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '练习题回答ID',
-  `user_id` int UNSIGNED DEFAULT NULL COMMENT '回答人ID',
-  `exercise_id` int UNSIGNED DEFAULT NULL COMMENT '练习题ID',
-  `reply` text COMMENT '答案',
-  `score` decimal(5,2) DEFAULT NULL COMMENT '分数(支持小数, 如 99.5)',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_user_exercise` (`user_id`, `exercise_id`),
-  KEY `idx_exercise_id` (`exercise_id`),
-  KEY `idx_create_time` (`create_time`),
-  CONSTRAINT `fk_user_do_exercise_exercise` FOREIGN KEY (`exercise_id`) REFERENCES `exercises` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_user_do_exercise_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户练习记录表';
-
--- 15. 用户作业记录表 (`user_do_homework`)
-DROP TABLE IF EXISTS `user_do_homework`;
-CREATE TABLE `user_do_homework` (
-  `id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '作业回答ID',
-  `user_id` int UNSIGNED DEFAULT NULL COMMENT '回答人ID',
-  `homework_id` int UNSIGNED DEFAULT NULL COMMENT '作业ID',
-  `reply` text COMMENT '答案',
-  `completion_time` datetime DEFAULT NULL COMMENT '完成时间',
-  `submit_mode` tinyint UNSIGNED DEFAULT 0 COMMENT '提交模式（0-正常,1-补交）',
-  `score` decimal(5,2) DEFAULT 0.00 COMMENT '得分(支持小数)',
-  `remark` varchar(255) DEFAULT NULL COMMENT '评语',
-  `update_time` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间(批改/修改时自动更新)',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_user_homework` (`user_id`, `homework_id`),
-  KEY `idx_homework_id` (`homework_id`),
-  KEY `idx_completion_time` (`completion_time`),
-  CONSTRAINT `fk_user_do_homework_homework` FOREIGN KEY (`homework_id`) REFERENCES `homework` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_user_do_homework_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户作业记录表';
-
--- 16. 视频观看记录表 (`video_watch_record`) - 修改：`video_id` 关联至 `course_resource.id`
+-- 12. 视频观看记录表 (`video_watch_record`)
 DROP TABLE IF EXISTS `video_watch_record`;
 CREATE TABLE `video_watch_record` (
   `id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '记录ID',
   `user_id` int UNSIGNED NOT NULL COMMENT '用户ID',
-  `resource_id` int UNSIGNED NOT NULL COMMENT '课程资源ID', -- 字段名和注释已更新
+  `resource_id` int UNSIGNED NOT NULL COMMENT '课程资源ID',
   `watch_seconds` int NOT NULL DEFAULT 0 COMMENT '已观看秒数',
   `total_seconds` int DEFAULT NULL COMMENT '视频总时长(秒)',
   `is_finished` tinyint UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否看完(0-未看完,1-已看完)',
   `last_watch_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后观看时间',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '首次观看时间',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `idx_user_video` (`user_id`, `resource_id`), -- 索引名语义已更新
-  KEY `idx_resource_id` (`resource_id`), -- 索引名已更新
+  UNIQUE KEY `idx_user_video` (`user_id`, `resource_id`),
+  KEY `idx_resource_id` (`resource_id`),
   KEY `idx_is_finished` (`is_finished`),
   KEY `idx_last_watch_time` (`last_watch_time`),
   CONSTRAINT `fk_watch_record_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_watch_record_resource` FOREIGN KEY (`resource_id`) REFERENCES `course_resource` (`id`) ON DELETE CASCADE -- 外键已更新
+  CONSTRAINT `fk_watch_record_resource` FOREIGN KEY (`resource_id`) REFERENCES `course_resource` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='资源观看记录表';
+
+-- ========== 新增：试卷与题库体系（替换原有的 exercises / homework / user_do_exercise / user_do_homework） ==========
+
+-- 13. 试卷表 (`exam_paper`)
+DROP TABLE IF EXISTS `exam_paper`;
+CREATE TABLE `exam_paper` (
+  `id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '试卷ID',
+  `title` varchar(255) NOT NULL COMMENT '试卷标题',
+  `description` text COMMENT '试卷说明',
+  `paper_type` tinyint UNSIGNED NOT NULL DEFAULT 0 COMMENT '类型（0：作业，1：考试）',
+  `course_id` int UNSIGNED NOT NULL COMMENT '所属课程ID',
+  `chapter_id` int UNSIGNED DEFAULT NULL COMMENT '所属章节ID',
+  `class_id` int UNSIGNED DEFAULT NULL COMMENT '发布班级ID（null表示课程内所有班级）',
+  `creator_id` int UNSIGNED NOT NULL COMMENT '创建教师ID',
+  `duration` int UNSIGNED DEFAULT NULL COMMENT '限时分钟数（null表示不限时）',
+  `total_score` decimal(5,1) NOT NULL DEFAULT 100.0 COMMENT '试卷总分',
+  `status` tinyint UNSIGNED NOT NULL DEFAULT 0 COMMENT '状态（0-草稿, 1-已发布, 2-已结束）',
+  `publish_time` datetime DEFAULT NULL COMMENT '发布时间',
+  `end_time` datetime DEFAULT NULL COMMENT '截止时间',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '最后修改时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_paper_type` (`paper_type`),
+  KEY `idx_course_id` (`course_id`),
+  KEY `idx_chapter_id` (`chapter_id`),
+  KEY `idx_class_id` (`class_id`),
+  KEY `idx_creator_id` (`creator_id`),
+  KEY `idx_status` (`status`),
+  CONSTRAINT `fk_paper_course` FOREIGN KEY (`course_id`) REFERENCES `course` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_paper_chapter` FOREIGN KEY (`chapter_id`) REFERENCES `course_chapter` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_paper_class` FOREIGN KEY (`class_id`) REFERENCES `class` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_paper_creator` FOREIGN KEY (`creator_id`) REFERENCES `user` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='试卷表';
+
+-- 14. 题目表 (`question`)
+DROP TABLE IF EXISTS `question`;
+CREATE TABLE `question` (
+  `id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '题目ID',
+  `question_type` tinyint UNSIGNED NOT NULL COMMENT '题型（1-单选, 2-多选, 3-判断, 4-填空, 5-文字）',
+  `stem` text NOT NULL COMMENT '题干',
+  `options` json DEFAULT NULL COMMENT '选项（JSON数组）',
+  `answer` text COMMENT '正确答案',
+  `analysis` text COMMENT '题目解析',
+  `score` decimal(5,1) NOT NULL DEFAULT 0.0 COMMENT '默认分值',
+  `difficulty` tinyint UNSIGNED DEFAULT 1 COMMENT '难度（1-简单, 2-中等, 3-困难）',
+  `creator_id` int UNSIGNED DEFAULT NULL COMMENT '创建教师ID',
+  `course_id` int UNSIGNED DEFAULT NULL COMMENT '所属课程ID',
+  `chapter_id` int UNSIGNED DEFAULT NULL COMMENT '所属章节ID',
+  `status` tinyint UNSIGNED NOT NULL DEFAULT 1 COMMENT '状态（0-禁用, 1-启用）',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '最后修改时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_question_type` (`question_type`),
+  KEY `idx_creator_id` (`creator_id`),
+  KEY `idx_course_id` (`course_id`),
+  KEY `idx_chapter_id` (`chapter_id`),
+  KEY `idx_difficulty` (`difficulty`),
+  CONSTRAINT `fk_question_creator` FOREIGN KEY (`creator_id`) REFERENCES `user` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_question_course` FOREIGN KEY (`course_id`) REFERENCES `course` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_question_chapter` FOREIGN KEY (`chapter_id`) REFERENCES `course_chapter` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='题目表（题库）';
+
+-- 15. 试卷题目关联表 (`exam_paper_question`)
+DROP TABLE IF EXISTS `exam_paper_question`;
+CREATE TABLE `exam_paper_question` (
+  `id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '关联ID',
+  `paper_id` int UNSIGNED NOT NULL COMMENT '试卷ID',
+  `question_id` int UNSIGNED NOT NULL COMMENT '题目ID',
+  `sort_order` int UNSIGNED NOT NULL DEFAULT 0 COMMENT '题目序号',
+  `score` decimal(5,1) DEFAULT NULL COMMENT '该题在本试卷中的分值',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_paper_question` (`paper_id`, `question_id`),
+  KEY `idx_question_id` (`question_id`),
+  KEY `idx_sort_order` (`paper_id`, `sort_order`),
+  CONSTRAINT `fk_paper_question_paper` FOREIGN KEY (`paper_id`) REFERENCES `exam_paper` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_paper_question_question` FOREIGN KEY (`question_id`) REFERENCES `question` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='试卷题目关联表';
+
+-- 16. 学生答题记录表 (`student_answer_record`)
+DROP TABLE IF EXISTS `student_answer_record`;
+CREATE TABLE `student_answer_record` (
+  `id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '记录ID',
+  `paper_id` int UNSIGNED NOT NULL COMMENT '试卷ID',
+  `question_id` int UNSIGNED NOT NULL COMMENT '题目ID',
+  `student_id` int UNSIGNED NOT NULL COMMENT '学生ID',
+  `answer` text COMMENT '学生答案',
+  `status` tinyint UNSIGNED NOT NULL DEFAULT 0 COMMENT '状态（0-未开始, 1-暂存, 2-已提交）',
+  `score` decimal(5,1) DEFAULT NULL COMMENT '得分',
+  `review_status` tinyint UNSIGNED NOT NULL DEFAULT 0 COMMENT '批改状态（0-待批改, 1-已批改）',
+  `reviewer_id` int UNSIGNED DEFAULT NULL COMMENT '批改教师ID',
+  `remark` varchar(500) DEFAULT NULL COMMENT '教师评语',
+  `review_time` datetime DEFAULT NULL COMMENT '批改时间',
+  `submit_time` datetime DEFAULT NULL COMMENT '提交时间',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '首次创建时间',
+  `update_time` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '最后修改时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_student_paper_question` (`student_id`, `paper_id`, `question_id`),
+  KEY `idx_paper_id` (`paper_id`),
+  KEY `idx_question_id` (`question_id`),
+  KEY `idx_status` (`status`),
+  KEY `idx_review_status` (`review_status`),
+  KEY `idx_reviewer_id` (`reviewer_id`),
+  CONSTRAINT `fk_answer_paper` FOREIGN KEY (`paper_id`) REFERENCES `exam_paper` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_answer_question` FOREIGN KEY (`question_id`) REFERENCES `question` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_answer_student` FOREIGN KEY (`student_id`) REFERENCES `user` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_answer_reviewer` FOREIGN KEY (`reviewer_id`) REFERENCES `user` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='学生答题记录表';

@@ -120,7 +120,7 @@
                 </el-form-item>
                 <el-form-item label="所属课程">
                     <el-select v-model="questionForm.subjectId" placeholder="请选择" style="width:100%">
-                        <el-option v-for="c in subjectList" :key="c.id" :label="c.subjectName" :value="c.id"></el-option>
+                        <el-option v-for="c in subjectList" :key="c.id" :label="c.courseName" :value="c.id"></el-option>
                     </el-select>
                 </el-form-item>
                 <el-form-item label="题目内容">
@@ -271,8 +271,8 @@ export default {
         },
         async loadSubjects() {
             try {
-                const res = await teacherApi.getSubjects()
-                this.subjectList = (res.data && res.data.list) ? res.data.list : []
+                const res = await teacherApi.getCourses()
+                this.subjectList = (res.data && res.data.data && res.data.data.list) ? res.data.data.list : []
             } catch (e) {}
         },
         async loadClasses() {
@@ -302,7 +302,18 @@ export default {
             } catch (e) { this.pendingGrading = [] }
         },
         saveQuestion() {
-            teacherApi.addQuestion(this.questionForm).then(() => {
+            // 字段映射：前端表单字段 → 后端 QuestionVo 字段
+            const typeMap = { single: 1, multiple: 2, fill: 3, subjective: 4 }
+            const params = {
+                questionType: typeMap[this.questionForm.type] || 1,
+                courseId: this.questionForm.subjectId,
+                stem: this.questionForm.content,
+                options: JSON.stringify(this.questionForm.options || []),
+                answer: this.questionForm.answer,
+                difficulty: this.questionForm.difficulty,
+                creatorId: this.$store ? this.$store.state.userId : undefined
+            }
+            teacherApi.createQuestion(params).then(() => {
                 this.$message.success('保存成功')
                 this.showAddQuestion = false
                 this.questionForm = { type: 'single', subjectId: null, content: '', options: ['', '', '', ''], answer: '', difficulty: 3 }
