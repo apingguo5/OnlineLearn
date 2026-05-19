@@ -17,6 +17,12 @@ import mavonEditor from 'mavon-editor'
 import 'mavon-editor/dist/css/index.css'
 Vue.use(mavonEditor)
 Vue.use(global)
+
+import { post } from './api/request'
+import Cookies from 'js-cookie'
+Vue.prototype.$post = post
+Vue.prototype.$cookies = Cookies
+
 Vue.config.productionTip = false
 
 new Vue({

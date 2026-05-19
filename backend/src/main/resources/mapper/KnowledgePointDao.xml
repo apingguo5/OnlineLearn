@@ -3,7 +3,6 @@
 
 <mapper namespace="com.rabbiter.ol.dao.KnowledgePointDao">
 
-	<!-- 可根据自己的需求，是否要使用 -->
     <resultMap type="com.rabbiter.ol.entity.KnowledgePointEntity" id="knowledgePointMap">
         <result property="id" column="id"/>
         <result property="title" column="title"/>
@@ -23,14 +22,8 @@
     </sql>
 
     <select id="queryCount" resultType="java.lang.Integer">
-        SELECT
-        COUNT(*) AS total
-        FROM
-        knowledge_point kp
-        LEFT JOIN class c ON c.id = kp.class_id
-        LEFT JOIN `user` u ON u.id = kp.creator
-        LEFT JOIN user_subject us ON u.id = us.user_id
-        LEFT JOIN `subject` s ON s.id = us.subject_id
+        SELECT COUNT(*) AS total
+        FROM knowledge_point kp
         <where>
             <if test="roleId == 2">
                 AND kp.creator = #{userId}
@@ -45,14 +38,12 @@
         SELECT
         c.class_name AS className,
         u.user_name AS userName,
-        s.subject_name AS subjectName,
+        co.course_name AS courseName,
         <include refid="baseQuery"></include>
-        FROM
-        knowledge_point kp
+        FROM knowledge_point kp
         LEFT JOIN class c ON c.id = kp.class_id
+        LEFT JOIN course co ON co.id = c.course_id
         LEFT JOIN `user` u ON u.id = kp.creator
-        LEFT JOIN user_subject us ON u.id = us.user_id
-        LEFT JOIN `subject` s ON s.id = us.subject_id
         <where>
             <if test="roleId == 2">
                 AND kp.creator = #{userId}
@@ -64,6 +55,5 @@
         ORDER BY kp.id DESC
         LIMIT #{page},#{pageSize}
     </select>
-
 
 </mapper>

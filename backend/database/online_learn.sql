@@ -256,7 +256,7 @@ CREATE TABLE `question` (
   `id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '题目ID',
   `question_type` tinyint UNSIGNED NOT NULL COMMENT '题型（1-单选, 2-多选, 3-判断, 4-填空, 5-文字）',
   `stem` text NOT NULL COMMENT '题干',
-  `options` json DEFAULT NULL COMMENT '选项（JSON数组）',
+  `options` text DEFAULT NULL COMMENT '选项（JSON数组）',
   `answer` text COMMENT '正确答案',
   `analysis` text COMMENT '题目解析',
   `score` decimal(5,1) NOT NULL DEFAULT 0.0 COMMENT '默认分值',

@@ -3,7 +3,6 @@
 
 <mapper namespace="com.rabbiter.ol.dao.UserDao">
 
-    <!-- 可根据自己的需求，是否要使用 -->
     <resultMap type="com.rabbiter.ol.entity.UserEntity" id="userMap">
         <result property="id" column="id"/>
         <result property="account" column="account"/>
@@ -28,10 +27,8 @@
     </sql>
 
     <select id="queryCount" resultType="java.lang.Integer">
-        SELECT
-        COUNT(*) AS total
-        FROM
-        `user` u
+        SELECT COUNT(*) AS total
+        FROM `user` u
         LEFT JOIN user_role ur ON u.id = ur.user_id
         <where>
             <if test="roleId != null">
@@ -45,17 +42,15 @@
         c.id AS classId,
         c.class_name AS className,
         u1.user_name AS charger,
-        s.subject_name AS subjectName,
-        s.id AS subjectId,
+        co.course_name AS courseName,
+        co.id AS courseId,
         <include refid="baseQuery"></include>
-        FROM
-        `user` u
+        FROM `user` u
         LEFT JOIN user_role ur ON u.id = ur.user_id
         LEFT JOIN user_class uc ON u.id = uc.user_id
         LEFT JOIN class c ON c.id = uc.class_id
+        LEFT JOIN course co ON co.id = c.course_id
         LEFT JOIN `user` u1 ON c.user_id = u1.id
-        LEFT JOIN user_subject us ON us.user_id = u.id
-        LEFT JOIN `subject` s ON us.subject_id = s.id
         <where>
             <if test="roleId != null">
                 AND ur.role_id = #{roleId}
@@ -65,7 +60,6 @@
         LIMIT #{page},#{pageSize}
     </select>
 
-
     <select id="login" resultType="java.util.HashMap">
         SELECT
         u.id AS userId,
@@ -73,145 +67,14 @@
         u.password AS password,
         ur.role_id AS roleId,
         uc.class_id AS classId
-        FROM
-        `user` u
+        FROM `user` u
         LEFT JOIN user_role ur ON u.id = ur.user_id
         LEFT JOIN user_class uc ON u.id = uc.user_id
         <where>
             <if test="account != null">
-                AND u.account = #{account}
-            </if>
-        </where>
-        LIMIT 1
-    </select>
-
-
-    <select id="findNotDoWorkCount" resultType="java.lang.Integer">
-        SELECT
-        COUNT(*) AS total
-        FROM
-        `user` u
-        LEFT JOIN user_class uc ON uc.user_id = u.id
-        LEFT JOIN user_role ur ON ur.user_id = u.id
-        <where>
-            ur.role_id = 3
-            <if test="classId != null">
-                AND uc.class_id = #{classId}
-            </if>
-            <if test="exerciseId != null">
-                AND u.id NOT IN (
-                SELECT
-                ude.user_id
-                FROM
-                user_do_exercise ude
-                WHERE
-                ude.exercise_id = #{exerciseId})
+                u.account = #{account}
             </if>
         </where>
     </select>
-
-    <select id="findNotDoWorkData" resultType="java.util.HashMap">
-        SELECT
-        <include refid="baseQuery"></include>
-        FROM
-        `user` u
-        LEFT JOIN user_class uc ON uc.user_id = u.id
-        LEFT JOIN user_role ur ON ur.user_id = u.id
-        <where>
-            ur.role_id = 3
-            <if test="classId != null">
-                AND uc.class_id = #{classId}
-            </if>
-            <if test="exerciseId != null">
-                AND u.id NOT IN (
-                SELECT
-                ude.user_id
-                FROM
-                user_do_exercise ude
-                WHERE
-                ude.exercise_id = #{exerciseId})
-            </if>
-        </where>
-    </select>
-    <select id="findNotDoHomeworkCount" resultType="java.lang.Integer">
-        SELECT
-        COUNT(*) AS total
-        FROM
-        `user` u
-        LEFT JOIN user_class uc ON uc.user_id = u.id
-        LEFT JOIN user_role ur ON ur.user_id = u.id
-        <where>
-            ur.role_id = 3
-            <if test="classId != null">
-                AND uc.class_id = #{classId}
-            </if>
-            <if test="homeworkId != null">
-                AND u.id NOT IN (
-                SELECT
-                udh.user_id
-                FROM
-                user_do_homework udh
-                WHERE
-                udh.homework_id = #{homeworkId})
-            </if>
-        </where>
-    </select>
-    <select id="findNotDoHomeworkData" resultType="java.util.HashMap">
-        SELECT
-        <include refid="baseQuery"></include>
-        FROM
-        `user` u
-        LEFT JOIN user_class uc ON uc.user_id = u.id
-        LEFT JOIN user_role ur ON ur.user_id = u.id
-        <where>
-            ur.role_id = 3
-            <if test="classId != null">
-                AND uc.class_id = #{classId}
-            </if>
-            <if test="homeworkId != null">
-                AND u.id NOT IN (
-                SELECT
-                udh.user_id
-                FROM
-                user_do_homework udh
-                WHERE
-                udh.homework_id = #{homeworkId})
-            </if>
-        </where>
-    </select>
-
-    <select id="findList" resultType="java.util.HashMap">
-        SELECT
-        <include refid="baseQuery"></include>
-        FROM
-        `user` u
-        LEFT JOIN user_class uc ON uc.user_id = u.id
-        LEFT JOIN user_role ur ON ur.user_id = u.id
-        <where>
-            <if test="roleId != null">
-                ur.role_id = #{roleId}
---                 AND u.id NOT IN (SELECT IFNULL(c.user_id,-1) FROM class c)
-            </if>
-        </where>
-    </select>
-
-    <select id="findUserInfo" resultType="java.util.HashMap">
-        SELECT
-        c.id AS classId,
-        c.class_name AS className,
-        <include refid="baseQuery"></include>
-        FROM
-        `user` u
-        INNER JOIN user_class uc ON u.id = uc.user_id
-        INNER JOIN class c ON c.id = uc.class_id
-        <where>
-            <if test="id != null">
-                u.id = #{id}
-            </if>
-            AND uc.class_id = 8
-        </where>
-        LIMIT 1
-    </select>
-
 
 </mapper>

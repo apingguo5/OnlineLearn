@@ -31,6 +31,11 @@ public class CourseChapterServiceImpl extends ServiceImpl<CourseChapterDao, Cour
     }
 
     @Override
+    public List<HashMap> getChaptersByCourseId(Integer courseId) {
+        return courseChapterDao.queryListByCourseId(courseId);
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public void batchSave(List<CourseChapterEntity> chapters) {
         if (chapters != null && !chapters.isEmpty()) {

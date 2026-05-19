@@ -25,6 +25,7 @@ public class ExamPaperVo {
     // page params
     private Integer page;
     private Integer pageSize;
+    private Integer offset;
 
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
@@ -73,4 +74,14 @@ public class ExamPaperVo {
 
     public Integer getPageSize() { return pageSize; }
     public void setPageSize(Integer pageSize) { this.pageSize = pageSize; }
+
+    /**
+     * 兼容前端传参 limit -> pageSize
+     */
+    public void setLimit(Integer limit) {
+        this.pageSize = limit;
+    }
+
+    public Integer getOffset() { return offset; }
+    public void setOffset(Integer offset) { this.offset = offset; }
 }

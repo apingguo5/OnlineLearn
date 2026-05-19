@@ -3,7 +3,6 @@
 
 <mapper namespace="com.rabbiter.ol.dao.UserDoExerciseDao">
 
-    <!-- 可根据自己的需求，是否要使用 -->
     <resultMap type="com.rabbiter.ol.entity.UserDoExerciseEntity" id="userDoExerciseMap">
         <result property="id" column="id"/>
         <result property="userId" column="user_id"/>
@@ -21,14 +20,9 @@
     </sql>
 
     <select id="queryCount" resultType="java.lang.Integer">
-        SELECT
-        COUNT(*) AS total
-        FROM
-        user_do_exercise ude
+        SELECT COUNT(*) AS total
+        FROM user_do_exercise ude
         LEFT JOIN exercises e ON ude.exercise_id = e.id
-        LEFT JOIN `user` u ON e.creator = u.id
-        LEFT JOIN user_subject us ON u.id = us.user_id
-        LEFT JOIN `subject` s ON s.id = us.subject_id
         <where>
             <if test="userId != null">
                 AND ude.user_id = #{userId}
@@ -48,16 +42,15 @@
         e.answer,
         u.user_name AS userName,
         u1.user_name AS replies,
-        s.subject_name AS subjectName,
+        co.course_name AS courseName,
         ude.score As score,
         <include refid="baseQuery"></include>
-        FROM
-        user_do_exercise ude
+        FROM user_do_exercise ude
         LEFT JOIN exercises e ON ude.exercise_id = e.id
         LEFT JOIN `user` u ON e.creator = u.id
         LEFT JOIN `user` u1 ON ude.user_id = u1.id
-        LEFT JOIN user_subject us ON u.id = us.user_id
-        LEFT JOIN `subject` s ON s.id = us.subject_id
+        LEFT JOIN class c ON c.id = e.class_id
+        LEFT JOIN course co ON co.id = c.course_id
         <where>
             <if test="userId != null">
                 AND ude.user_id = #{userId}
@@ -72,6 +65,5 @@
         ORDER BY ude.id DESC
         LIMIT #{page},#{pageSize}
     </select>
-
 
 </mapper>

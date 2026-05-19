@@ -194,7 +194,8 @@ export default {
       if (!courseId) { this.chapterList = []; return }
       try {
         const res = await this.$post('/study/teacher/course/chapters', { courseId })
-        this.chapterList = (res.data && res.data.list) ? res.data.list : []
+        const resultData = res.data && res.data.resultData
+        this.chapterList = Array.isArray(resultData) ? resultData : []
       } catch (e) { this.chapterList = [] }
     },
     async loadPapers() {
@@ -202,8 +203,9 @@ export default {
       try {
         const params = { page: this.page, limit: this.limit, courseId: this.filter.courseId || undefined, status: this.filter.status || undefined }
         const res = await getPaperList(params)
-        this.paperList = (res.data && res.data.data) ? res.data.data : []
-        this.total = (res.data && res.data.total) ? res.data.total : 0
+        const resultData = res.data && res.data.resultData
+        this.paperList = (resultData && resultData.data) ? resultData.data : []
+        this.total = (resultData && resultData.total) ? resultData.total : 0
       } catch (e) { this.paperList = []; this.total = 0 }
       this.loading = false
     },
@@ -214,7 +216,8 @@ export default {
       try {
         const params = { page: 1, limit: 999, courseId: this.paperForm.courseId, questionType: this.qsFilter.type || undefined }
         const res = await getQuestionList(params)
-        this.availableQuestions = (res.data && res.data.data) ? res.data.data : []
+        const resultData = res.data && res.data.resultData
+        this.availableQuestions = (resultData && resultData.data) ? resultData.data : []
       } catch (e) { this.availableQuestions = [] }
       this.qsLoading = false
     },
@@ -227,7 +230,7 @@ export default {
     async previewPaper(row) {
       try {
         const res = await getPaperDetail(row.id)
-        this.previewData = res.data || row
+        this.previewData = (res.data && res.data.resultData) ? res.data.resultData : row
         if (!this.previewData.questions) this.previewData.questions = []
         this.showPreviewDialog = true
       } catch (e) {
@@ -256,7 +259,7 @@ export default {
       try {
         const params = {
           ...this.paperForm,
-          questionIds: this.selectedQuestionIds.join(',')
+          questionIds: this.selectedQuestionIds
         }
         if (this.isEditPaper) {
           params.id = this.editPaperId

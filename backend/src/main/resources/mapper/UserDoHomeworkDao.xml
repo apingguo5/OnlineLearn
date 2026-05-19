@@ -3,7 +3,6 @@
 
 <mapper namespace="com.rabbiter.ol.dao.UserDoHomeworkDao">
 
-	<!-- 可根据自己的需求，是否要使用 -->
     <resultMap type="com.rabbiter.ol.entity.UserDoHomeworkEntity" id="userDoHomeworkMap">
         <result property="id" column="id"/>
         <result property="userId" column="user_id"/>
@@ -25,15 +24,10 @@
     </sql>
 
     <select id="queryCount" resultType="java.lang.Integer">
-        SELECT
-        COUNT(*) AS total
-        FROM
-        user_do_homework udh
+        SELECT COUNT(*) AS total
+        FROM user_do_homework udh
         LEFT JOIN `user` u1 ON u1.id = udh.user_id
         LEFT JOIN homework h ON h.id = udh.homework_id
-        LEFT JOIN `user` u ON u.id = h.creator
-        LEFT JOIN user_subject us ON u.id = us.user_id
-        LEFT JOIN `subject` s ON s.id = us.subject_id
         <where>
             <if test="userId != null">
                 AND udh.user_id = #{userId}
@@ -50,16 +44,15 @@
         h.answer,
         u.user_name AS userName,
         u1.user_name AS studentName,
-        s.subject_name AS subjectName,
+        co.course_name AS courseName,
         h.class_id as classId,
         <include refid="baseQuery"></include>
-        FROM
-        user_do_homework udh
+        FROM user_do_homework udh
         LEFT JOIN `user` u1 ON u1.id = udh.user_id
         LEFT JOIN homework h ON h.id = udh.homework_id
         LEFT JOIN `user` u ON u.id = h.creator
-        LEFT JOIN user_subject us ON u.id = us.user_id
-        LEFT JOIN `subject` s ON s.id = us.subject_id
+        LEFT JOIN class c ON c.id = h.class_id
+        LEFT JOIN course co ON co.id = c.course_id
         <where>
             <if test="userId != null">
                 AND udh.user_id = #{userId}
@@ -78,6 +71,5 @@
             score = #{score},
             remark = #{remark}
         where user_id = #{userId} and homework_id = #{homeworkId}
-
     </update>
 </mapper>

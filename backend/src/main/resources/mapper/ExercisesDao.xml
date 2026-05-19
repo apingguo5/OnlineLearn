@@ -3,7 +3,6 @@
 
 <mapper namespace="com.rabbiter.ol.dao.ExercisesDao">
 
-    <!-- 可根据自己的需求，是否要使用 -->
     <resultMap type="com.rabbiter.ol.entity.ExercisesEntity" id="exercisesMap">
         <result property="id" column="id"/>
         <result property="content" column="content"/>
@@ -25,14 +24,8 @@
     </sql>
 
     <select id="queryCount" resultType="java.lang.Integer">
-        SELECT
-        COUNT(*) AS total
-        FROM
-        exercises e
-        LEFT JOIN class c ON c.id = e.class_id
-        LEFT JOIN `user` u ON u.id = e.creator
-        LEFT JOIN user_subject us ON u.id = us.user_id
-        LEFT JOIN `subject` s ON s.id = us.subject_id
+        SELECT COUNT(*) AS total
+        FROM exercises e
         <where>
             <if test="roleId == 2">
                 AND e.creator = #{userId}
@@ -47,14 +40,12 @@
         SELECT
         c.class_name AS className,
         u.user_name AS userName,
-        s.subject_name AS subjectName,
+        co.course_name AS courseName,
         <include refid="baseQuery"></include>
-        FROM
-        exercises e
+        FROM exercises e
         LEFT JOIN class c ON c.id = e.class_id
+        LEFT JOIN course co ON co.id = c.course_id
         LEFT JOIN `user` u ON u.id = e.creator
-        LEFT JOIN user_subject us ON u.id = us.user_id
-        LEFT JOIN `subject` s ON s.id = us.subject_id
         <where>
             <if test="roleId == 2">
                 AND e.creator = #{userId}
@@ -67,16 +58,9 @@
         LIMIT #{page},#{pageSize}
     </select>
 
-
     <select id="findNotDoExercisesCount" resultType="java.lang.Integer">
-        SELECT
-        COUNT(*) AS total
-        FROM
-        exercises e
-        LEFT JOIN class c ON c.id = e.class_id
-        LEFT JOIN `user` u ON u.id = e.creator
-        LEFT JOIN user_subject us ON u.id = us.user_id
-        LEFT JOIN `subject` s ON s.id = us.subject_id
+        SELECT COUNT(*) AS total
+        FROM exercises e
         LEFT JOIN user_do_exercise ude ON e.id = ude.exercise_id
         <where>
             <if test="classId != null">
@@ -92,14 +76,12 @@
         SELECT
         c.class_name AS className,
         u.user_name AS userName,
-        s.subject_name AS subjectName,
+        co.course_name AS courseName,
         <include refid="baseQuery"></include>
-        FROM
-        exercises e
+        FROM exercises e
         LEFT JOIN class c ON c.id = e.class_id
+        LEFT JOIN course co ON co.id = c.course_id
         LEFT JOIN `user` u ON u.id = e.creator
-        LEFT JOIN user_subject us ON u.id = us.user_id
-        LEFT JOIN `subject` s ON s.id = us.subject_id
         LEFT JOIN user_do_exercise ude ON e.id = ude.exercise_id
         <where>
             <if test="classId != null">

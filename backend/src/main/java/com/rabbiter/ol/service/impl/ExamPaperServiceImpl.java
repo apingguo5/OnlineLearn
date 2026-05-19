@@ -34,6 +34,9 @@ public class ExamPaperServiceImpl extends ServiceImpl<ExamPaperDao, ExamPaperEnt
 
     @Override
     public Map<String, Object> queryPage(ExamPaperVo examPaperVo) {
+        if (examPaperVo.getPage() != null && examPaperVo.getPageSize() != null) {
+            examPaperVo.setOffset((examPaperVo.getPage() - 1) * examPaperVo.getPageSize());
+        }
         Integer total = examPaperDao.queryCount(examPaperVo);
         List<HashMap<String, Object>> data = examPaperDao.queryData(examPaperVo);
         Map<String, Object> result = new HashMap<>();
@@ -129,6 +132,9 @@ public class ExamPaperServiceImpl extends ServiceImpl<ExamPaperDao, ExamPaperEnt
     @Override
     public Map<String, Object> getStudentPapers(ExamPaperVo examPaperVo) {
         // 查询已发布且对于该班级/课程可见的试卷
+        if (examPaperVo.getPage() != null && examPaperVo.getPageSize() != null) {
+            examPaperVo.setOffset((examPaperVo.getPage() - 1) * examPaperVo.getPageSize());
+        }
         examPaperVo.setStatus(1); // 只查已发布的
         Integer total = examPaperDao.queryCount(examPaperVo);
         List<HashMap<String, Object>> data = examPaperDao.queryData(examPaperVo);

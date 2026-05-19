@@ -3,7 +3,6 @@
 
 <mapper namespace="com.rabbiter.ol.dao.VideoTotalDao">
 
-	<!-- 可根据自己的需求，是否要使用 -->
     <resultMap type="com.rabbiter.ol.entity.VideoTotalEntity" id="videoTotalMap">
         <result property="id" column="id"/>
         <result property="topic" column="topic"/>
@@ -21,19 +20,11 @@
     </sql>
 
     <select id="queryCount" resultType="java.lang.Integer">
-        SELECT
-        COUNT(*) AS total
-        FROM
-        video_total vt
-        LEFT JOIN `user` u ON u.id = vt.user_id
-        LEFT JOIN user_subject us ON u.id = us.user_id
-        LEFT JOIN `subject` s ON s.id = us.subject_id
+        SELECT COUNT(*) AS total
+        FROM video_total vt
         <where>
-            <if test="subjectId != null">
-                AND s.id = #{subjectId}
-            </if>
             <if test="roleId == 3">
-                AND uc.class_id = #{classId}
+                AND vt.user_id IN (SELECT u.id FROM `user` u LEFT JOIN user_class uc ON u.id = uc.user_id WHERE uc.class_id = #{classId})
             </if>
             <if test="roleId == 2">
                 AND vt.user_id = #{userId}
@@ -44,28 +35,23 @@
     <select id="queryData" resultType="java.util.HashMap">
         SELECT
         u.user_name AS userName,
-        s.subject_name AS subjectName,
+        co.course_name AS courseName,
         <include refid="baseQuery"></include>
-        FROM
-        video_total vt
+        FROM video_total vt
         LEFT JOIN `user` u ON u.id = vt.user_id
-        LEFT JOIN user_subject us ON u.id = us.user_id
-        LEFT JOIN `subject` s ON s.id = us.subject_id
         LEFT JOIN user_class uc ON uc.user_id = vt.user_id
+        LEFT JOIN class c ON c.id = uc.class_id
+        LEFT JOIN course co ON co.id = c.course_id
         <where>
-            <if test="subjectId != null">
-                AND s.id = #{subjectId}
-            </if>
             <if test="classId != null">
                 AND uc.class_id = #{classId}
             </if>
             <if test="roleId == 2">
-                AND vt.user_id = #{userId} GROUP BY vt.id
+                AND vt.user_id = #{userId}
             </if>
         </where>
         ORDER BY vt.id DESC
         LIMIT #{page},#{pageSize}
     </select>
-
 
 </mapper>

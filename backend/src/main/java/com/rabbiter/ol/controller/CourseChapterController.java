@@ -47,16 +47,22 @@ public class CourseChapterController {
 
     /**
      * 获取班级的章节列表
+     * 支持按 classId 或 courseId 查询
      */
     @RequestMapping("/chapters")
     public Result getChapters(@RequestBody Map<String, Object> params) {
         Object classIdObj = params.get("classId");
-        if (classIdObj == null) {
-            return Result.failure("班级ID不能为空");
+        Object courseIdObj = params.get("courseId");
+        if (classIdObj != null) {
+            Integer classId = ((Number) classIdObj).intValue();
+            List<HashMap> chapters = courseChapterService.getChaptersByClassId(classId);
+            return Result.success(chapters);
+        } else if (courseIdObj != null) {
+            Integer courseId = ((Number) courseIdObj).intValue();
+            List<HashMap> chapters = courseChapterService.getChaptersByCourseId(courseId);
+            return Result.success(chapters);
         }
-        Integer classId = ((Number) classIdObj).intValue();
-        List<HashMap> chapters = courseChapterService.getChaptersByClassId(classId);
-        return Result.success(chapters);
+        return Result.failure("参数错误：请提供 classId 或 courseId");
     }
 
     /**

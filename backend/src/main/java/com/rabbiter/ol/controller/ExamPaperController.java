@@ -36,8 +36,8 @@ public class ExamPaperController {
     }
 
     @PostMapping("/delete")
-    public Result delete(@RequestParam Integer id) {
-        examPaperService.removeById(id);
+    public Result delete(@RequestBody ExamPaperVo examPaperVo) {
+        examPaperService.removeById(examPaperVo.getId());
         return Result.successCode();
     }
 
@@ -61,8 +61,8 @@ public class ExamPaperController {
      * 发布试卷
      */
     @PostMapping("/publish")
-    public Result publish(@RequestParam Integer id) {
-        examPaperService.publishPaper(id);
+    public Result publish(@RequestBody ExamPaperVo examPaperVo) {
+        examPaperService.publishPaper(examPaperVo.getId());
         return Result.successCode();
     }
 

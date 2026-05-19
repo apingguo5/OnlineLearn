@@ -31,6 +31,24 @@
         ORDER BY cc.sort_order ASC, cc.id ASC
     </select>
 
+    <select id="queryListByCourseId" resultType="java.util.HashMap">
+        SELECT
+            cc.id,
+            cc.chapter_name AS chapterName,
+            cc.chapter_type AS chapterType,
+            cc.description,
+            cc.class_id AS classId,
+            cc.parent_id AS parentId,
+            cc.sort_order AS sortOrder,
+            cc.create_time AS createTime,
+            cc.update_time AS updateTime,
+            0 AS resourceCount
+        FROM course_chapter cc
+        JOIN class cl ON cc.class_id = cl.id
+        WHERE cl.course_id = #{courseId}
+        ORDER BY cc.sort_order ASC, cc.id ASC
+    </select>
+
     <select id="queryTreeByClassId" resultType="java.util.HashMap">
         SELECT
             cc.id,

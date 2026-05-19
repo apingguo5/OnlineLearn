@@ -89,6 +89,10 @@ public class StudentAnswerRecordServiceImpl extends ServiceImpl<StudentAnswerRec
 
     @Override
     public Map<String, Object> queryPage(StudentAnswerRecordVo studentAnswerRecordVo) {
+        // 计算 offset 分页参数
+        if (studentAnswerRecordVo.getPage() != null && studentAnswerRecordVo.getPageSize() != null) {
+            studentAnswerRecordVo.setOffset((studentAnswerRecordVo.getPage() - 1) * studentAnswerRecordVo.getPageSize());
+        }
         Integer total = studentAnswerRecordDao.queryCount(studentAnswerRecordVo);
         List<HashMap<String, Object>> data = studentAnswerRecordDao.queryData(studentAnswerRecordVo);
         Map<String, Object> result = new HashMap<>();

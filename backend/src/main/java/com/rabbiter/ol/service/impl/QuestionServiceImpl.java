@@ -27,6 +27,10 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionDao, QuestionEntity
 
     @Override
     public Map<String, Object> queryPage(QuestionVo questionVo) {
+        // 修复：计算 offset 分页参数
+        if (questionVo.getPage() != null && questionVo.getPageSize() != null) {
+            questionVo.setOffset((questionVo.getPage() - 1) * questionVo.getPageSize());
+        }
         Integer total = questionDao.queryCount(questionVo);
         List<HashMap<String, Object>> data = questionDao.queryData(questionVo);
         Map<String, Object> result = new HashMap<>();

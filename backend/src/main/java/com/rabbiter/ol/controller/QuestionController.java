@@ -36,8 +36,8 @@ public class QuestionController {
     }
 
     @PostMapping("/delete")
-    public Result delete(@RequestParam Integer id) {
-        questionService.deleteQuestion(id);
+    public Result delete(@RequestBody QuestionVo questionVo) {
+        questionService.deleteQuestion(questionVo.getId());
         return Result.successCode();
     }
 

@@ -12,6 +12,8 @@ public interface CourseChapterService extends IService<CourseChapterEntity> {
 
     List<HashMap> getChapterTreeByClassId(Integer classId);
 
+    List<HashMap> getChaptersByCourseId(Integer courseId);
+
     void batchSave(List<CourseChapterEntity> chapters);
 
     void batchUpdate(List<CourseChapterEntity> chapters);

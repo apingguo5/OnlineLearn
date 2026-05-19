@@ -367,6 +367,35 @@ export function searchCourseResources(params) {
   return post(`/study/teacher/course/resource/search`, params)
 }
 
+// ========== 作业/任务管理 ==========
+
+/**
+ * 获取已发布任务列表
+ * @param {Object} params - { page?, pageSize? }
+ * POST /study/homework/list
+ */
+export function getPublishedTasks(params) {
+  return post(`/study/homework/list`, params)
+}
+
+/**
+ * 发布任务（创建作业）
+ * @param {Object} params - { title, type, classId, paperId?, deadline }
+ * POST /study/homework/save
+ */
+export function publishTask(params) {
+  return post(`/study/homework/save`, params)
+}
+
+/**
+ * 删除任务
+ * @param {Object} params - { id }
+ * POST /study/homework/delete
+ */
+export function deleteTask(params) {
+  return post(`/study/homework/delete`, params)
+}
+
 // 默认导出（向后兼容）
 export default {
   getMyCourses,
@@ -400,5 +429,18 @@ export default {
   getClassStudents,
   removeStudent,
   batchAddStudents,
-  getStudentLearningStatus
+  getStudentLearningStatus,
+  getResourcesByChapter,
+  getResourcesByCourse,
+  addLocalResourceToDb,
+  addCourseResource,
+  updateCourseResource,
+  deleteCourseResourceById,
+  batchDeleteCourseResources,
+  sortCourseResources,
+  searchCourseResources,
+  // 作业/任务管理
+  getPublishedTasks,
+  publishTask,
+  deleteTask
 }

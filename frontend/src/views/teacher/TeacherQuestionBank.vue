@@ -88,6 +88,7 @@
               <el-button type="danger" icon="el-icon-delete" circle size="mini" @click="form.options.splice(idx, 1)" v-if="form.options.length > 2" />
             </div>
             <el-button size="mini" icon="el-icon-plus" @click="addOption" v-if="form.options.length < 6">添加选项</el-button>
+            <span class="opt-hint">至少填写2个选项，建议填写4个</span>
           </div>
         </el-form-item>
         <el-form-item label="答案" required>
@@ -98,14 +99,23 @@
             </el-radio-group>
           </template>
           <template v-else-if="form.questionType === 'single'">
-            <el-select v-model="form.answer" placeholder="选择正确答案" style="width:100%">
-              <el-option v-for="o in form.options" :key="o.label" :label="o.label" :value="o.label" />
-            </el-select>
+            <div class="answer-options">
+              <el-radio-group v-model="form.answer">
+                <el-radio v-for="o in form.options" :key="o.label" :label="o.label" class="answer-radio">
+                  <span class="answer-opt-text">{{ o.label }}. {{ o.text || '(空)' }}</span>
+                </el-radio>
+              </el-radio-group>
+            </div>
           </template>
           <template v-else-if="form.questionType === 'multiple'">
-            <el-checkbox-group v-model="form.answer">
-              <el-checkbox v-for="o in form.options" :key="o.label" :label="o.label">{{ o.text }}</el-checkbox>
-            </el-checkbox-group>
+            <div class="answer-options">
+              <el-checkbox-group v-model="form.answer">
+                <el-checkbox v-for="o in form.options" :key="o.label" :label="o.label" class="answer-checkbox">
+                  <span class="answer-opt-text">{{ o.label }}. {{ o.text || '(空)' }}</span>
+                </el-checkbox>
+              </el-checkbox-group>
+              <div class="answer-hint">请勾选所有正确答案，可多选</div>
+            </div>
           </template>
           <el-input v-else v-model="form.answer" type="textarea" :rows="2" placeholder="请输入答案" style="width:100%" />
         </el-form-item>
@@ -127,7 +137,9 @@
 <script>
 import { getCourses } from '@/api/teacher/teacherApi'
 
-const TYPE_MAP = { single: '单选题', multiple: '多选题', judge: '判断题', fill: '填空题', essay: '主观题' }
+const TYPE_MAP = { 1: '单选题', 2: '多选题', 3: '判断题', 4: '填空题', 5: '主观题' }
+const TYPE_REVERSE = { single: 1, multiple: 2, judge: 3, fill: 4, essay: 5 }
+const LABELS = 'ABCDEFGH'
 
 export default {
   name: 'TeacherQuestionBank',
@@ -141,60 +153,88 @@ export default {
       showCreateDialog: false,
       isEdit: false,
       editId: null,
-      form: {
-        courseId: '', questionType: '', stem: '', options: [
-          { label: 'A', text: '' }, { label: 'B', text: '' }
-        ],
-        answer: '', score: 5, analysis: ''
-      },
+      form: this.getDefaultForm(),
       saving: false
     }
   },
   created() { this.loadCourses(); this.loadQuestions() },
   methods: {
+    // 将数字题型转为字符串前端标识，或直接返回已有字符串
+    numToType(n) { const map = { 1:'single', 2:'multiple', 3:'judge', 4:'fill', 5:'essay' }; return map[n] || n },
     typeLabel(t) { return TYPE_MAP[t] || t },
-    typeTag(t) { return { single: 'primary', multiple: 'success', judge: 'warning', fill: 'info', essay: '' }[t] || '' },
+    typeTag(t) {
+      // t 可能是数字（来自后端）或字符串（来自前端表单）
+      const str = typeof t === 'number' ? this.numToType(t) : t
+      return { single: 'primary', multiple: 'success', judge: 'warning', fill: 'info', essay: '' }[str] || ''
+    },
+    getDefaultForm() {
+      return {
+        courseId: '', questionType: '', stem: '',
+        options: [
+          { label: 'A', text: '' },
+          { label: 'B', text: '' },
+          { label: 'C', text: '' },
+          { label: 'D', text: '' }
+        ],
+        answer: '',
+        score: 5,
+        analysis: ''
+      }
+    },
     async loadCourses() {
       try {
         const res = await getCourses()
-        // getCourses 调 GET /study/teacher/dashboard/subjects
-        // 返回格式: { code: 0, data: { list: [ ... ] } }
         this.courseList = (res.data && res.data.data && res.data.data.list) ? res.data.data.list : []
       } catch (e) { this.courseList = [] }
     },
     async loadQuestions() {
       this.loading = true
       try {
-        const params = { page: this.page, limit: this.limit, courseId: this.filter.courseId || undefined, questionType: this.filter.questionType || undefined }
+        const params = { page: this.page, limit: this.limit, courseId: this.filter.courseId || undefined }
+        if (this.filter.questionType) {
+          params.questionType = TYPE_REVERSE[this.filter.questionType] || this.filter.questionType
+        }
         const res = await this.$post('/study/exam/question/list', params)
-        this.questionList = (res.data && res.data.data) ? res.data.data : []
-        this.total = (res.data && res.data.total) ? res.data.total : 0
+        const resultData = res.data && res.data.resultData
+        this.questionList = (resultData && resultData.data) ? resultData.data : []
+        this.total = (resultData && resultData.total) ? resultData.total : 0
       } catch (e) { this.questionList = []; this.total = 0 }
       this.loading = false
     },
     addOption() {
-      const labels = 'ABCDEF'
       if (this.form.options.length < 6) {
-        this.form.options.push({ label: labels[this.form.options.length], text: '' })
+        this.form.options.push({ label: LABELS[this.form.options.length], text: '' })
       }
     },
     resetForm() {
-      this.form = {
-        courseId: '', questionType: '', stem: '', options: [
-          { label: 'A', text: '' }, { label: 'B', text: '' }
-        ],
-        answer: '', score: 5, analysis: ''
-      }
+      this.form = this.getDefaultForm()
       this.isEdit = false; this.editId = null
     },
     editQuestion(row) {
       this.isEdit = true; this.editId = row.id
+      // 解析选项
+      let parsedOptions = []
+      if (row.options) {
+        parsedOptions = typeof row.options === 'string' ? JSON.parse(row.options) : row.options
+      } else {
+        parsedOptions = [
+          { label: 'A', text: '' },
+          { label: 'B', text: '' }
+        ]
+      }
+      // 后端返回的数字题型转为前端字符串标识
+      const typeStr = typeof row.questionType === 'number' ? this.numToType(row.questionType) : (row.questionType || '')
+      // 解析答案：多选题答案需拆分为数组
+      let parsedAnswer = row.answer || ''
+      if (typeStr === 'multiple' && typeof parsedAnswer === 'string') {
+        parsedAnswer = parsedAnswer ? parsedAnswer.split(',').map(s => s.trim()).filter(Boolean) : []
+      }
       this.form = {
         courseId: row.courseId || '',
-        questionType: row.questionType || '',
+        questionType: typeStr,
         stem: row.stem || '',
-        options: row.options ? (typeof row.options === 'string' ? JSON.parse(row.options) : row.options) : [{ label: 'A', text: '' }, { label: 'B', text: '' }],
-        answer: row.answer || '',
+        options: parsedOptions,
+        answer: parsedAnswer,
         score: row.score || 5,
         analysis: row.analysis || ''
       }
@@ -207,12 +247,22 @@ export default {
       if ((this.form.questionType === 'single' || this.form.questionType === 'multiple') && !this.form.options.some(o => o.text)) {
         this.$message.warning('请填写选项内容'); return
       }
-      if (!this.form.answer) { this.$message.warning('请填写答案'); return }
+      if ((this.form.questionType === 'single' || this.form.questionType === 'multiple') && this.form.options.filter(o => o.text).length < 2) {
+        this.$message.warning('至少需要填写2个有内容的选项'); return
+      }
+      // 验证答案
+      if (this.form.questionType === 'multiple' && (!Array.isArray(this.form.answer) || this.form.answer.length === 0)) {
+        this.$message.warning('请勾选正确答案'); return
+      }
+      if (this.form.questionType !== 'multiple' && !this.form.answer) {
+        this.$message.warning('请填写答案'); return
+      }
       this.saving = true
       try {
         const params = {
-          courseId: this.form.courseId,
-          questionType: this.form.questionType,
+          courseId: parseInt(this.form.courseId, 10),
+          // 前端字符串题型转为后端期望的数字
+          questionType: TYPE_REVERSE[this.form.questionType] || this.form.questionType,
           stem: this.form.stem,
           options: JSON.stringify(this.form.options),
           answer: Array.isArray(this.form.answer) ? this.form.answer.join(',') : this.form.answer,
@@ -224,7 +274,7 @@ export default {
           await this.$post('/study/exam/question/update', params)
           this.$message.success('更新成功')
         } else {
-          params.userId = this.$cookies.get('userId')
+          params.creatorId = parseInt(this.$cookies.get('userId') || '0')
           await this.$post('/study/exam/question/save', params)
           this.$message.success('录入成功')
         }
@@ -240,7 +290,21 @@ export default {
     }
   },
   watch: {
-    'filter.courseId'() { this.loadQuestions() }
+    'filter.courseId'() { this.loadQuestions() },
+    // 选择题型变化时重置答案字段类型（多选题需用数组）
+    'form.questionType'(type) {
+      if (type === 'multiple') {
+        // 多选题答案必须为数组
+        if (!Array.isArray(this.form.answer)) {
+          this.form.answer = []
+        }
+      } else if (type === 'single' || type === 'judge') {
+        // 单选/判断题答案重置为空字符串
+        this.form.answer = ''
+      } else if (type === 'fill' || type === 'essay') {
+        this.form.answer = ''
+      }
+    }
   }
 }
 </script>
@@ -255,4 +319,9 @@ export default {
 .options-editor { }
 .option-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .opt-label { font-weight: bold; width: 20px; }
+.opt-hint { margin-left: 12px; font-size: 12px; color: #909399; }
+.answer-options { padding: 4px 0; }
+.answer-radio, .answer-checkbox { display: flex; align-items: center; margin-bottom: 6px; }
+.answer-opt-text { margin-left: 4px; font-size: 14px; color: #303133; }
+.answer-hint { margin-top: 6px; font-size: 12px; color: #909399; }
 </style>

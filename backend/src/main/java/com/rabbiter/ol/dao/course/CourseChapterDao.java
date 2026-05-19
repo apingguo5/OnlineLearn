@@ -16,6 +16,8 @@ public interface CourseChapterDao extends BaseMapper<CourseChapterEntity> {
 
     List<HashMap> queryTreeByClassId(Integer classId);
 
+    List<HashMap> queryListByCourseId(Integer courseId);
+
     /**
      * 根据章节ID获取课程ID（通过class表JOIN）
      */
