@@ -21,5 +21,10 @@ public interface UserDoHomeworkDao extends BaseMapper<UserDoHomeworkEntity> {
     Integer queryCount(UserDoHomeworkVo userDoHomeworkVo);
 
     List<HashMap> queryData(UserDoHomeworkVo userDoHomeworkVo);
-    Boolean updateModeByUserId(String userId, String homeworkId,String score,String remark);
+
+    Boolean updateModeByUserId(String userId, String homeworkId, String score, String remark);
+
+    List<HashMap> queryByHomeworkId(Integer homeworkId);
+
+    Boolean updateGrade(Integer recordId, String mode, String score, String remark);
 }

@@ -13,7 +13,6 @@ import PersonalInfo from '../views/personalInfo/PersonalInfo.vue'
 import NoticeManagement from '../views/noticemanagement/NoticeManagement.vue'
 import StudentContainWeb from '../views/studentweb/contain/StudentContainWeb.vue'
 import AskAndAnswer from '../views/studentweb/askandanswer/AskAndAnswer.vue'
-import StudentPractice from '../views/studentweb/practice/StudentPractice.vue'
 import EssentiaInfo from '../views/studentweb/essentialinformation/EssentiaInfo.vue'
 import AdminManagement from '../views/admin/AdminManagement.vue'
 import MarkDown from '../views/studentweb/markdown/MarkDown.vue'
@@ -294,9 +293,17 @@ const routes = [
                 },
             },
             {
-                path: '/studentpractice',
-                name: 'StudentPractice',
-                component: StudentPractice,
+                path: '/studenthomeworkexam',
+                name: 'StudentHomeworkExam',
+                component: () => import('../views/studentweb/homeworkexam/StudentHomeworkExam.vue'),
+                meta: {
+                    requireAuth: true,
+                },
+            },
+            {
+                path: '/studenthomeworkanswer',
+                name: 'StudentHomeworkAnswer',
+                component: () => import('../views/studentweb/homeworkexam/StudentHomeworkAnswer.vue'),
                 meta: {
                     requireAuth: true,
                 },

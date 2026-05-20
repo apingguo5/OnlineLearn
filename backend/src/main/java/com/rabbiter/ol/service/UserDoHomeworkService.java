@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.rabbiter.ol.entity.UserDoHomeworkEntity;
 import com.rabbiter.ol.vo.UserDoHomeworkVo;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -21,5 +23,8 @@ public interface UserDoHomeworkService extends IService<UserDoHomeworkEntity> {
 
     Boolean updateModeByUserId(String userId, String homeworkId,String score,String remark);
 
+    List<HashMap> queryByHomeworkId(Integer homeworkId);
+
+    Boolean updateGrade(Integer recordId, String mode, String score, String remark);
 }
 

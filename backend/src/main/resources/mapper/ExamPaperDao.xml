@@ -35,6 +35,9 @@
             <if test="courseId != null">
                 AND course_id = #{courseId}
             </if>
+            <if test="classId != null">
+                AND class_id = #{classId}
+            </if>
             <if test="chapterId != null">
                 AND chapter_id = #{chapterId}
             </if>
@@ -57,6 +60,9 @@
             </if>
             <if test="courseId != null">
                 AND ep.course_id = #{courseId}
+            </if>
+            <if test="classId != null">
+                AND ep.class_id = #{classId}
             </if>
             <if test="chapterId != null">
                 AND ep.chapter_id = #{chapterId}

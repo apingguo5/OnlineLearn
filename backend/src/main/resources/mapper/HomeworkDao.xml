@@ -70,31 +70,27 @@
         LEFT JOIN class c ON c.id = h.class_id
         LEFT JOIN course co ON co.id = c.course_id
         LEFT JOIN `user` u ON u.id = h.creator
-        LEFT JOIN user_do_homework udh ON h.id = udh.homework_id
+        LEFT JOIN user_do_homework udh ON h.id = udh.homework_id AND udh.user_id = #{userId}
         <where>
-            <if test="userId != null">
-                AND udh.user_id IS NULL
-            </if>
-            <if test="roleId == 3">
-                AND h.class_id = #{classId}
-            </if>
-        </where>
-    </select>
-
-    <select id="findNotDoHomeworkCount" resultType="java.lang.Integer">
-        SELECT COUNT(*) AS total
-        FROM homework h
-        LEFT JOIN user_do_homework udh ON h.id = udh.homework_id
-        <where>
-            <if test="userId != null">
-                AND udh.user_id IS NULL
-            </if>
-            <if test="roleId == 3">
+            AND (udh.id IS NULL OR udh.mode = '2')
+            <if test="classId != null">
                 AND h.class_id = #{classId}
             </if>
         </where>
         ORDER BY h.id DESC
         LIMIT #{page},#{pageSize}
+    </select>
+
+    <select id="findNotDoHomeworkCount" resultType="java.lang.Integer">
+        SELECT COUNT(*) AS total
+        FROM homework h
+        LEFT JOIN user_do_homework udh ON h.id = udh.homework_id AND udh.user_id = #{userId}
+        <where>
+            AND (udh.id IS NULL OR udh.mode = '2')
+            <if test="classId != null">
+                AND h.class_id = #{classId}
+            </if>
+        </where>
     </select>
 
 </mapper>

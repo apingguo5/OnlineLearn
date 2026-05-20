@@ -18,14 +18,9 @@
                 <span slot="title">正在学习</span>
             </el-menu-item>
 
-            <el-menu-item index="/studentpractice">
+            <el-menu-item index="/studenthomeworkexam">
                 <i class="el-icon-edit-outline"></i>
-                <span slot="title">作业习题</span>
-            </el-menu-item>
-
-            <el-menu-item index="/studentexam">
-                <i class="el-icon-tickets"></i>
-                <span slot="title">考试中心</span>
+                <span slot="title">作业考试</span>
             </el-menu-item>
 
             <el-menu-item index="/askandanswer">

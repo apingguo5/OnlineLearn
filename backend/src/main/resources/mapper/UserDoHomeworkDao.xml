@@ -72,4 +72,37 @@
             remark = #{remark}
         where user_id = #{userId} and homework_id = #{homeworkId}
     </update>
+
+    <!-- 教师端：按homework_id查询所有提交记录（批改用） -->
+    <select id="queryByHomeworkId" resultType="java.util.HashMap">
+        SELECT
+        u.user_name AS studentName,
+        u.id AS userId,
+        udh.id AS recordId,
+        h.title AS homeworkTitle,
+        co.course_name AS courseName,
+        c.class_name AS className,
+        udh.reply,
+        udh.reply AS content,
+        udh.mode,
+        udh.score,
+        udh.remark,
+        DATE_FORMAT(udh.completion_time, '%Y-%m-%d %H:%i:%s') AS completionTime
+        FROM user_do_homework udh
+        LEFT JOIN `user` u ON u.id = udh.user_id
+        LEFT JOIN homework h ON h.id = udh.homework_id
+        LEFT JOIN class c ON c.id = h.class_id
+        LEFT JOIN course co ON co.id = c.course_id
+        WHERE udh.homework_id = #{homeworkId}
+        ORDER BY udh.id DESC
+    </select>
+
+    <!-- 教师端：批改/打回作业 -->
+    <update id="updateGrade">
+        UPDATE user_do_homework
+        SET mode = #{mode},
+            score = #{score},
+            remark = #{remark}
+        WHERE id = #{recordId}
+    </update>
 </mapper>

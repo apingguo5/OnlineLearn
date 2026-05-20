@@ -36,4 +36,14 @@ public class UserDoHomeworkServiceImpl extends ServiceImpl<UserDoHomeworkDao, Us
     public Boolean updateModeByUserId(String userId, String homeworkId,String score,String remark) {
         return userDoHomeworkDao.updateModeByUserId(userId,homeworkId,score,remark);
     }
+
+    @Override
+    public List<HashMap> queryByHomeworkId(Integer homeworkId) {
+        return userDoHomeworkDao.queryByHomeworkId(homeworkId);
+    }
+
+    @Override
+    public Boolean updateGrade(Integer recordId, String mode, String score, String remark) {
+        return userDoHomeworkDao.updateGrade(recordId, mode, score, remark);
+    }
 }

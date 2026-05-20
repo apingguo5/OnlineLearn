@@ -3,6 +3,8 @@ package com.rabbiter.ol.controller;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Map;
+import java.util.HashMap;
+import java.util.List;
 
 
 import com.rabbiter.ol.common.Result;
@@ -87,6 +89,30 @@ public class UserDoHomeworkController {
     public Result delete(@RequestBody Integer[] ids) {
         userDoHomeworkService.removeByIds(Arrays.asList(ids));
 
+        return Result.successCode();
+    }
+
+    /**
+     * 教师端：按作业查询提交列表
+     */
+    @RequestMapping("/byHomework")
+    public Result byHomework(@RequestBody Map<String, Object> params) {
+        Integer homeworkId = Integer.valueOf(params.get("homeworkId").toString());
+        List<HashMap> list = userDoHomeworkService.queryByHomeworkId(homeworkId);
+        return Result.success(list);
+    }
+
+    /**
+     * 教师端：批改/打回作业
+     * mode: 1=已批改通过, 2=已打回
+     */
+    @RequestMapping("/grade")
+    public Result grade(@RequestBody Map<String, Object> params) {
+        Integer recordId = Integer.valueOf(params.get("recordId").toString());
+        String mode = params.get("mode").toString();
+        String score = params.containsKey("score") ? params.get("score").toString() : "0";
+        String remark = params.containsKey("remark") ? params.get("remark").toString() : "";
+        userDoHomeworkService.updateGrade(recordId, mode, score, remark);
         return Result.successCode();
     }
 
