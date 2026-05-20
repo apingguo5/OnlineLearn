@@ -62,9 +62,10 @@
                 <span v-else style="color:#909399">-</span>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="120" align="center">
+            <el-table-column label="操作" width="150" align="center">
               <template slot-scope="scope">
                 <el-button v-if="scope.row.mode === '2'" type="warning" size="mini" @click="redoHomework(scope.row)">重新答题</el-button>
+                <el-button v-else-if="scope.row.allowResubmit === 1 || scope.row.allowResubmit === true" type="primary" size="mini" @click="redoHomework(scope.row)">再次提交</el-button>
                 <el-button v-else type="text" size="mini" @click="viewDetail(scope.row)">查看</el-button>
               </template>
             </el-table-column>

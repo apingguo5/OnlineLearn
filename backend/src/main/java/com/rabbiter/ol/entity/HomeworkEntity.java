@@ -57,6 +57,11 @@ public class HomeworkEntity implements Serializable {
 	 */
 	private Date createTime;
 
+	/**
+	 * 是否允许再次提交：0-不允许，1-允许
+	 */
+	private Integer allowResubmit;
+
 	@TableField(exist = false)
 	private String userId;
 
@@ -154,5 +159,13 @@ public class HomeworkEntity implements Serializable {
 
 	public void setRemark(String remark) {
 		this.remark = remark;
+	}
+
+	public Integer getAllowResubmit() {
+		return allowResubmit;
+	}
+
+	public void setAllowResubmit(Integer allowResubmit) {
+		this.allowResubmit = allowResubmit;
 	}
 }

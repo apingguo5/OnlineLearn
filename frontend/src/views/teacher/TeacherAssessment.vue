@@ -1,11 +1,12 @@
 <template>
     <div class="teacher-assessment">
         <div class="page-header">
-            <h2><i class="el-icon-edit-outline"></i> 作业管理</h2>
+            <h2><i class="el-icon-edit-outline"></i> 作业与考试</h2>
             <div class="header-tabs">
                 <el-radio-group v-model="activeTab" size="medium">
                     <el-radio-button label="publish">发布任务</el-radio-button>
                     <el-radio-button label="paper">组卷管理</el-radio-button>
+                    <el-radio-button label="questionbank">题库管理</el-radio-button>
                 </el-radio-group>
             </div>
         </div>
@@ -36,7 +37,12 @@
                             <span>{{ scope.row.submittedCount || 0 }}/{{ scope.row.totalCount || 0 }}</span>
                         </template>
                     </el-table-column>
-                    <el-table-column label="操作" width="100" align="center">
+                    <el-table-column label="允许重交" width="90" align="center">
+                        <template slot-scope="scope">
+                            <el-switch v-model="scope.row.allowResubmit" @change="toggleResubmit(scope.row)" :active-value="1" :inactive-value="0" />
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="操作" width="120" align="center">
                         <template slot-scope="scope">
                             <el-button type="text" icon="el-icon-document" @click="viewTaskDetail(scope.row)">详情</el-button>
                             <el-button type="text" icon="el-icon-delete" style="color:#F56C6C" @click="deleteTask(scope.row)">删除</el-button>
@@ -260,13 +266,144 @@
                 </div>
             </div>
         </el-dialog>
+
+        <!-- ====== 题库管理 ====== -->
+        <div v-show="activeTab === 'questionbank'">
+            <!-- 筛选栏 -->
+            <el-card shadow="never" class="filter-card">
+                <el-form :inline="true" size="small">
+                    <el-form-item label="课程">
+                        <el-select v-model="qbFilter.courseId" placeholder="全部课程" clearable style="width:180px">
+                            <el-option v-for="c in courseList" :key="c.id" :label="c.courseName" :value="c.id" />
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="题型">
+                        <el-select v-model="qbFilter.questionType" placeholder="全部题型" clearable style="width:120px">
+                            <el-option label="单选题" value="single" />
+                            <el-option label="多选题" value="multiple" />
+                            <el-option label="判断题" value="judge" />
+                            <el-option label="填空题" value="fill" />
+                            <el-option label="主观题" value="essay" />
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button type="primary" @click="loadQuestions">查询</el-button>
+                        <el-button @click="qbFilter={courseId:'',questionType:''};loadQuestions()">重置</el-button>
+                    </el-form-item>
+                </el-form>
+            </el-card>
+
+            <!-- 题目列表 -->
+            <el-card shadow="never" class="main-card">
+                <div slot="header" class="card-header">
+                    <span>题库列表</span>
+                    <el-button type="primary" icon="el-icon-plus" size="small" @click="showQbDialog = true">录入题目</el-button>
+                </div>
+                <el-table :data="questionList" v-loading="qbLoading" stripe style="width:100%">
+                    <el-table-column prop="stem" label="题目" min-width="300" show-overflow-tooltip />
+                    <el-table-column label="题型" width="80" align="center">
+                        <template slot-scope="scope">
+                            <el-tag :type="typeTag(scope.row.questionType)" size="small">{{ typeLabel(scope.row.questionType) }}</el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="courseName" label="所属课程" min-width="130" />
+                    <el-table-column prop="score" label="分值" width="60" align="center" />
+                    <el-table-column prop="createTime" label="创建时间" width="170" align="center" />
+                    <el-table-column label="操作" width="200" align="center" fixed="right">
+                        <template slot-scope="scope">
+                            <el-button type="text" icon="el-icon-edit" @click="editQuestion(scope.row)">编辑</el-button>
+                            <el-button type="text" icon="el-icon-delete" style="color:#F56C6C" @click="deleteQuestion(scope.row)">删除</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+                <el-pagination
+                    @size-change="s=>{qbLimit=s;loadQuestions()}"
+                    @current-change="p=>{qbPage=p;loadQuestions()}"
+                    :current-page="qbPage"
+                    :page-sizes="[10, 20, 50]"
+                    :page-size="qbLimit"
+                    layout="total, sizes, prev, pager, next, jumper"
+                    :total="qbTotal"
+                    style="margin-top:16px;text-align:right"
+                />
+            </el-card>
+        </div>
+
+        <!-- 录入/编辑题目对话框 -->
+        <el-dialog :title="isQbEdit ? '编辑题目' : '录入题目'" :visible.sync="showQbDialog" width="700px" @closed="resetQbForm">
+            <el-form :model="qbForm" label-width="100px" size="small">
+                <el-form-item label="所属课程" required>
+                    <el-select v-model="qbForm.courseId" placeholder="请选择课程" style="width:100%">
+                        <el-option v-for="c in courseList" :key="c.id" :label="c.courseName" :value="c.id" />
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="题型" required>
+                    <el-select v-model="qbForm.questionType" placeholder="请选择题型" style="width:100%">
+                        <el-option label="单选题" value="single" />
+                        <el-option label="多选题" value="multiple" />
+                        <el-option label="判断题" value="judge" />
+                        <el-option label="填空题" value="fill" />
+                        <el-option label="主观题" value="essay" />
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="题目内容" required>
+                    <el-input type="textarea" v-model="qbForm.stem" :rows="3" placeholder="请输入题目内容" />
+                </el-form-item>
+                <el-form-item label="选项" v-if="qbForm.questionType === 'single' || qbForm.questionType === 'multiple'">
+                    <div class="options-editor">
+                        <div v-for="(opt, idx) in qbForm.options" :key="idx" class="option-row">
+                            <span class="opt-label">{{ opt.label }}.</span>
+                            <el-input v-model="opt.text" placeholder="选项内容" size="small" style="flex:1" />
+                            <el-button type="danger" icon="el-icon-delete" circle size="mini" @click="qbForm.options.splice(idx, 1)" v-if="qbForm.options.length > 2" />
+                        </div>
+                        <el-button size="mini" icon="el-icon-plus" @click="addQbOption" v-if="qbForm.options.length < 6">添加选项</el-button>
+                        <span class="opt-hint">至少填写2个选项，建议填写4个</span>
+                    </div>
+                </el-form-item>
+                <el-form-item label="答案" required>
+                    <template v-if="qbForm.questionType === 'judge'">
+                        <el-radio-group v-model="qbForm.answer">
+                            <el-radio label="true">对</el-radio>
+                            <el-radio label="false">错</el-radio>
+                        </el-radio-group>
+                    </template>
+                    <template v-else-if="qbForm.questionType === 'single'">
+                        <el-radio-group v-model="qbForm.answer">
+                            <el-radio v-for="(opt, idx) in qbForm.options" :key="idx" :label="String.fromCharCode(65 + idx)">{{ String.fromCharCode(65 + idx) }}</el-radio>
+                        </el-radio-group>
+                    </template>
+                    <template v-else-if="qbForm.questionType === 'multiple'">
+                        <el-checkbox-group v-model="qbAnswerList">
+                            <el-checkbox v-for="(opt, idx) in qbForm.options" :key="idx" :label="String.fromCharCode(65 + idx)">{{ String.fromCharCode(65 + idx) }}</el-checkbox>
+                        </el-checkbox-group>
+                    </template>
+                    <template v-else>
+                        <el-input type="textarea" v-model="qbForm.answer" :rows="2" placeholder="请输入答案" />
+                    </template>
+                </el-form-item>
+                <el-form-item label="分值" required>
+                    <el-input-number v-model="qbForm.score" :min="1" :max="100" />
+                </el-form-item>
+                <el-form-item label="答案解析">
+                    <el-input type="textarea" v-model="qbForm.analysis" :rows="2" placeholder="选填，请输入答案解析" />
+                </el-form-item>
+            </el-form>
+            <span slot="footer">
+                <el-button @click="showQbDialog = false">取消</el-button>
+                <el-button type="primary" @click="saveQuestion" :loading="qbSaving">保存</el-button>
+            </span>
+        </el-dialog>
     </div>
 </template>
 
 <script>
 import * as teacherApi from '@/api/teacher/teacherApi'
 import { getPaperList, createPaper, updatePaper, deletePaper, publishPaper, getPaperDetail } from '@/api/teacher/examApi'
-import { getQuestionList } from '@/api/teacher/examApi'
+import { getQuestionList, createQuestion, updateQuestion, deleteQuestion } from '@/api/teacher/examApi'
+
+// 题型映射：后端使用整数，前端使用字符串
+const TYPE_MAP = { 1: '单选题', 2: '多选题', 3: '判断题', 4: '填空题', 5: '主观题' }
+const TYPE_REVERSE = { single: 1, multiple: 2, judge: 3, fill: 4, essay: 5 }
 
 export default {
     name: "TeacherAssessment",
@@ -309,12 +446,32 @@ export default {
             // 作业详情
             showHomeworkDetailDialog: false,
             homeworkDetail: {},
-            detailLoading: false
+            detailLoading: false,
+            // 题库管理
+            qbLoading: false,
+            questionList: [],
+            qbTotal: 0, qbPage: 1, qbLimit: 10,
+            qbFilter: { courseId: '', questionType: '' },
+            showQbDialog: false,
+            isQbEdit: false,
+            editQbId: null,
+            qbSaving: false,
+            qbForm: {
+                questionType: '', stem: '', courseId: '', score: 5, analysis: '', options: []
+            },
+            qbAnswerList: []
         }
     },
     computed: {
         hasPaperQuestions() {
             return this.homeworkDetail.questions && this.homeworkDetail.questions.length > 0
+        }
+    },
+    watch: {
+        activeTab(val) {
+            if (val === 'questionbank' && this.questionList.length === 0) {
+                this.loadQuestions()
+            }
         }
     },
     created() {
@@ -335,12 +492,13 @@ export default {
             return 'homework'
         },
         typeLabel(type) {
-            const map = { single: '单选', multiple: '多选', judge: '判断', fill: '填空', essay: '主观' }
-            return map[type] || type
+            const str = typeof type === 'number' ? this.numToType(type) : type
+            return TYPE_MAP[type] || (str && TYPE_MAP[str]) || str || type
         },
         typeTag(type) {
+            const str = typeof type === 'number' ? this.numToType(type) : type
             const map = { single: 'primary', multiple: 'success', judge: 'warning', fill: 'info', essay: '' }
-            return map[type] || ''
+            return map[str] || ''
         },
         numToType(n) {
             const map = { 1: 'single', 2: 'multiple', 3: 'judge', 4: 'fill', 5: 'essay' }
@@ -478,6 +636,150 @@ export default {
                     this.loadTasks()
                 })).catch(() => {})
         },
+        // ====== 允许再次提交 ======
+        async toggleResubmit(row) {
+            try {
+                const res = await this.$post('/study/homework/save', {
+                    id: row.id,
+                    allowResubmit: row.allowResubmit
+                })
+                if (res.data && res.data.code === 200) {
+                    this.$message.success(row.allowResubmit === 1 ? '已允许再次提交' : '已禁止再次提交')
+                } else {
+                    // 回滚开关状态
+                    row.allowResubmit = row.allowResubmit === 1 ? 0 : 1
+                    this.$message.error('操作失败，请重试')
+                }
+            } catch (e) {
+                row.allowResubmit = row.allowResubmit === 1 ? 0 : 1
+                this.$message.error('操作失败，请重试')
+            }
+        },
+        // ====== 题库管理 ======
+        async loadQuestions() {
+            this.qbLoading = true
+            try {
+                const params = {
+                    page: this.qbPage,
+                    limit: this.qbLimit,
+                    courseId: this.qbFilter.courseId || undefined,
+                    questionType: this.qbFilter.questionType ? (TYPE_REVERSE[this.qbFilter.questionType] || this.qbFilter.questionType) : undefined
+                }
+                const res = await getQuestionList(params)
+                const resultData = res.data && res.data.resultData
+                this.questionList = (resultData && resultData.data) ? resultData.data : []
+                this.qbTotal = (resultData && resultData.total) ? resultData.total : 0
+            } catch (e) {
+                this.questionList = []
+                this.qbTotal = 0
+            }
+            this.qbLoading = false
+        },
+        editQuestion(row) {
+            this.isQbEdit = true
+            this.editQbId = row.id
+            // 将数字题型转换为字符串
+            const typeStr = typeof row.questionType === 'number' ? this.numToType(row.questionType) : (row.questionType || '')
+            this.qbForm = {
+                id: row.id,
+                questionType: typeStr,
+                stem: row.stem,
+                courseId: row.courseId,
+                score: row.score,
+                analysis: row.analysis || '',
+                options: []
+            }
+            try {
+                if (typeof row.options === 'string') {
+                    const opts = JSON.parse(row.options)
+                    this.qbForm.options = opts.map((o, i) => ({
+                        label: String.fromCharCode(65 + i),
+                        text: o.text || o
+                    }))
+                } else if (Array.isArray(row.options)) {
+                    this.qbForm.options = row.options.map((o, i) => ({
+                        label: String.fromCharCode(65 + i),
+                        text: o.text || o
+                    }))
+                }
+            } catch (e) {
+                this.qbForm.options = [{ label: 'A', text: '' }, { label: 'B', text: '' }]
+            }
+            if (typeStr === 'multiple') {
+                this.qbAnswerList = row.answer ? row.answer.split(',').map(a => a.trim()) : []
+            }
+            this.showQbDialog = true
+        },
+        async deleteQuestion(row) {
+            this.$confirm('确定删除该题目吗？', '提示', { type: 'warning' })
+                .then(async () => {
+                    try {
+                        await deleteQuestion(row.id)
+                        this.$message.success('删除成功')
+                        this.loadQuestions()
+                    } catch (e) {
+                        this.$message.error('删除失败')
+                    }
+                }).catch(() => {})
+        },
+        addQbOption() {
+            const labels = ['A', 'B', 'C', 'D', 'E', 'F']
+            if (this.qbForm.options.length < 6) {
+                this.qbForm.options.push({ label: labels[this.qbForm.options.length], text: '' })
+            }
+        },
+        resetQbForm() {
+            this.qbForm = {
+                questionType: '', stem: '', courseId: '', score: 5, analysis: '', options: []
+            }
+            this.qbAnswerList = []
+            this.isQbEdit = false
+            this.editQbId = null
+        },
+        async saveQuestion() {
+            if (!this.qbForm.courseId || !this.qbForm.questionType || !this.qbForm.stem || !this.qbForm.score) {
+                this.$message.warning('请填写完整信息')
+                return
+            }
+            // 处理多选题答案
+            if (this.qbForm.questionType === 'multiple') {
+                if (this.qbAnswerList.length === 0) {
+                    this.$message.warning('请至少选择一个正确答案')
+                    return
+                }
+                this.qbForm.answer = this.qbAnswerList.join(',')
+            }
+            // 检查答案
+            if (!this.qbForm.answer && this.qbForm.questionType !== 'essay') {
+                this.$message.warning('请填写答案')
+                return
+            }
+            this.qbSaving = true
+            try {
+                // 将选项数组转换为JSON字符串
+                const optionsJson = JSON.stringify(this.qbForm.options.map(o => ({ text: o.text })))
+                // 将题型字符串转换为整数
+                const questionTypeNum = TYPE_REVERSE[this.qbForm.questionType] || this.qbForm.questionType
+                const params = {
+                    ...this.qbForm,
+                    options: optionsJson,
+                    questionType: questionTypeNum,
+                    creatorId: this.$cookies.get('userId')
+                }
+                if (this.isQbEdit) {
+                    await updateQuestion(params)
+                    this.$message.success('更新成功')
+                } else {
+                    await createQuestion(params)
+                    this.$message.success('创建成功')
+                }
+                this.showQbDialog = false
+                this.loadQuestions()
+            } catch (e) {
+                this.$message.error('保存失败')
+            }
+            this.qbSaving = false
+        },
         // ===== 组卷管理 =====
         async loadChapters(courseId) {
             if (!courseId) { this.chapterList = []; return }
@@ -503,7 +805,7 @@ export default {
             if (!this.paperForm.courseId) { this.$message.warning('请先选择课程'); return }
             this.qsLoading = true
             try {
-                const params = { page: 1, limit: 999, courseId: this.paperForm.courseId, questionType: this.qsFilter.type || undefined }
+                const params = { page: 1, limit: 999, courseId: this.paperForm.courseId, questionType: this.qsFilter.type ? (TYPE_REVERSE[this.qsFilter.type] || this.qsFilter.type) : undefined }
                 const res = await getQuestionList(params)
                 const resultData = res.data && res.data.resultData
                 this.availableQuestions = (resultData && resultData.data) ? resultData.data : []
@@ -596,13 +898,18 @@ export default {
 }
 .page-header h2 { margin: 0; font-size: 22px; color: #303133; }
 .page-header h2 i { margin-right: 8px; color: #409EFF; }
-.main-card { border-radius: 8px; }
+.main-card { border-radius: 8px; margin-bottom: 16px; }
+.filter-card { margin-bottom: 16px; border-radius: 8px; }
 .card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 .card-header span { font-weight: 600; }
+.options-editor { border: 1px solid #e4e7ed; border-radius: 4px; padding: 12px; background: #fafafa; }
+.option-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.opt-label { font-weight: 500; color: #409EFF; min-width: 20px; }
+.opt-hint { font-size: 12px; color: #909399; margin-left: 8px; }
 .question-select-area { border: 1px solid #e4e7ed; border-radius: 4px; padding: 8px; }
 .qs-toolbar { margin-bottom: 8px; display: flex; gap: 8px; }
 .paper-preview h3 { margin: 0 0 8px; }

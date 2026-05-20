@@ -12,6 +12,7 @@
         <result property="classId" column="class_id"/>
         <result property="commitTime" column="commit_time"/>
         <result property="createTime" column="create_time"/>
+        <result property="allowResubmit" column="allow_resubmit"/>
     </resultMap>
 
     <sql id="baseQuery">
@@ -22,7 +23,8 @@
         h.creator,
         h.class_id AS classId,
         h.commit_time AS commitTime,
-        DATE_FORMAT(h.create_time ,'%Y-%m-%d %H:%i:%s') AS createTime
+        DATE_FORMAT(h.create_time ,'%Y-%m-%d %H:%i:%s') AS createTime,
+        h.allow_resubmit AS allowResubmit
     </sql>
 
     <select id="queryCount" resultType="java.lang.Integer">

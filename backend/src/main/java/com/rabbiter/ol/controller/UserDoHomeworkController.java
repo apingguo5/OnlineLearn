@@ -53,19 +53,40 @@ public class UserDoHomeworkController {
     }
 
     /**
-     * 保存
+     * 保存（支持学生再次提交）
      */
     @RequestMapping("/save")
     public Result save(@RequestBody UserDoHomeworkVo userDoHomeworkVo) {
-        UserDoHomeworkEntity userDoHomeworkEntity = new UserDoHomeworkEntity();
-        userDoHomeworkEntity.setHomeworkId(userDoHomeworkVo.getHomeworkId());
-        userDoHomeworkEntity.setReply(userDoHomeworkVo.getContent());
-        userDoHomeworkEntity.setUserId(userDoHomeworkVo.getUserId());
-        userDoHomeworkEntity.setMode("0");
-        userDoHomeworkEntity.setCompletionTime(new Date());
-        boolean save = userDoHomeworkService.save(userDoHomeworkEntity);
-        if (save){
-            return Result.successCode();
+        // 检查是否已经提交过
+        Map<String, Object> params = new HashMap<>();
+        params.put("homework_id", userDoHomeworkVo.getHomeworkId());
+        params.put("user_id", userDoHomeworkVo.getUserId());
+        List<UserDoHomeworkEntity> list = userDoHomeworkService.listByMap(params);
+        
+        if (list != null && list.size() > 0) {
+            // 已提交过，更新
+            UserDoHomeworkEntity existing = list.get(0);
+            existing.setReply(userDoHomeworkVo.getContent());
+            existing.setMode("0"); // 重置为待批改状态
+            existing.setCompletionTime(new Date());
+            existing.setScore(null); // 清空前次得分
+            existing.setRemark(null); // 清空前次评语
+            boolean b = userDoHomeworkService.updateById(existing);
+            if (b){
+                return Result.successCode();
+            }
+        } else {
+            // 首次提交
+            UserDoHomeworkEntity userDoHomeworkEntity = new UserDoHomeworkEntity();
+            userDoHomeworkEntity.setHomeworkId(userDoHomeworkVo.getHomeworkId());
+            userDoHomeworkEntity.setReply(userDoHomeworkVo.getContent());
+            userDoHomeworkEntity.setUserId(userDoHomeworkVo.getUserId());
+            userDoHomeworkEntity.setMode("0");
+            userDoHomeworkEntity.setCompletionTime(new Date());
+            boolean save = userDoHomeworkService.save(userDoHomeworkEntity);
+            if (save){
+                return Result.successCode();
+            }
         }
         return Result.failureCode();
     }

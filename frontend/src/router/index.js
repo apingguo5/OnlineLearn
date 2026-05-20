@@ -53,7 +53,7 @@ import TeacherClassManagement from '../views/teacher/TeacherClassManagement.vue'
 import TeacherAssessment from '../views/teacher/TeacherAssessment.vue'
 import TeacherGradebook from '../views/teacher/TeacherGradebook.vue'
 import TeacherCommunication from '../views/teacher/TeacherCommunication.vue'
-import TeacherQuestionBank from '../views/teacher/TeacherQuestionBank.vue'
+
 import TeacherGrading from '../views/teacher/TeacherGrading.vue'
 import TestComponent from '../views/test/TestComponent.vue'
 import SimpleTest from '../views/test/SimpleTest.vue'
@@ -534,14 +534,7 @@ const routes = [
                     requireAuth: true,
                 },
             },
-            {
-                path: '/teacherquestionbank',
-                name: 'TeacherQuestionBank',
-                component: TeacherQuestionBank,
-                meta: {
-                    requireAuth: true,
-                },
-            },
+
             {
                 path: '/teachergrading',
                 name: 'TeacherGrading',

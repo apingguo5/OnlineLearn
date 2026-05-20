@@ -42,6 +42,7 @@
         SELECT
         h.title,
         h.answer,
+        h.allow_resubmit AS allowResubmit,
         u.user_name AS userName,
         u1.user_name AS studentName,
         co.course_name AS courseName,
