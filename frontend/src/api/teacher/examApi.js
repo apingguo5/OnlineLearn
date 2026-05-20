@@ -131,7 +131,7 @@ export function publishPaper(id) {
  * POST /study/exam/paper/detail
  */
 export function getPaperDetail(paperId) {
-  return post('/study/exam/paper/detail', { paperId })
+  return post('/study/exam/paper/detail', { id: paperId })
 }
 
 /**

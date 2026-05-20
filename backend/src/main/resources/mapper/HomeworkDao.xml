@@ -43,11 +43,23 @@
         c.class_name AS className,
         u.user_name AS userName,
         co.course_name AS courseName,
-        <include refid="baseQuery"></include>
+        <include refid="baseQuery"></include>,
+        COALESCE(udh_submitted.submitted_count, 0) AS submittedCount,
+        COALESCE(uc_total.total_count, 0) AS totalCount
         FROM homework h
         LEFT JOIN class c ON c.id = h.class_id
         LEFT JOIN course co ON co.id = c.course_id
         LEFT JOIN `user` u ON u.id = h.creator
+        LEFT JOIN (
+            SELECT homework_id, COUNT(*) AS submitted_count
+            FROM user_do_homework
+            GROUP BY homework_id
+        ) udh_submitted ON h.id = udh_submitted.homework_id
+        LEFT JOIN (
+            SELECT class_id, COUNT(*) AS total_count
+            FROM user_class
+            GROUP BY class_id
+        ) uc_total ON h.class_id = uc_total.class_id
         <where>
             <if test="roleId == 2">
                 AND h.creator = #{userId}

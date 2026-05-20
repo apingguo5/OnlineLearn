@@ -201,6 +201,65 @@
                 </div>
             </div>
         </el-dialog>
+
+        <!-- 作业详情对话框 -->
+        <el-dialog :title="homeworkDetail.title" :visible.sync="showHomeworkDetailDialog" width="800px" v-loading="detailLoading">
+            <div class="homework-detail">
+                <div class="detail-meta">
+                    <el-tag :type="getTaskType(homeworkDetail.content) === 'exam' ? 'danger' : 'warning'" size="small">
+                        {{ getTaskType(homeworkDetail.content) === 'exam' ? '考试' : '作业' }}
+                    </el-tag>
+                    <span style="margin-left:12px;color:#606266">班级：{{ homeworkDetail.className }}</span>
+                    <span style="margin-left:12px;color:#606266">课程：{{ homeworkDetail.courseName }}</span>
+                    <span style="margin-left:12px;color:#606266">截止时间：{{ homeworkDetail.commitTime || homeworkDetail.createTime }}</span>
+                </div>
+                
+                <!-- 简单文本作业 -->
+                <div v-if="!hasPaperQuestions" class="simple-homework">
+                    <div class="hw-content">
+                        <h4>作业内容</h4>
+                        <p>{{ getHomeworkTextContent(homeworkDetail.content) }}</p>
+                    </div>
+                    <div v-if="homeworkDetail.answer" class="hw-answer">
+                        <h4>参考答案</h4>
+                        <p>{{ homeworkDetail.answer }}</p>
+                    </div>
+                </div>
+
+                <!-- 关联试卷的作业/考试 -->
+                <div v-else class="paper-homework">
+                    <div class="paper-questions">
+                        <div v-for="(q, idx) in homeworkDetail.questions" :key="idx" class="pq-item">
+                            <div class="pq-header">
+                                <strong>{{ idx + 1 }}.</strong>
+                                <el-tag :type="typeTag(q.questionType)" size="mini" style="margin:0 8px">{{ typeLabel(q.questionType) }}</el-tag>
+                                <span class="pq-score">({{ q.score }}分)</span>
+                            </div>
+                            <div class="pq-stem">{{ q.stem }}</div>
+                            
+                            <!-- 选项 -->
+                            <div v-if="q.questionType === 'single' || q.questionType === 'multiple'" class="pq-options">
+                                <div v-for="(opt, oi) in parsedOptions(q)" :key="oi" class="pq-option">
+                                    {{ String.fromCharCode(65 + oi) }}. {{ opt }}
+                                </div>
+                            </div>
+
+                            <!-- 答案和解析 -->
+                            <div class="pq-answer">
+                                <div class="answer-item">
+                                    <span class="answer-label">正确答案：</span>
+                                    <span class="answer-value">{{ formatAnswer(q) }}</span>
+                                </div>
+                                <div v-if="q.analysis" class="answer-item">
+                                    <span class="answer-label">解析：</span>
+                                    <span class="answer-value">{{ q.analysis }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </el-dialog>
     </div>
 </template>
 
@@ -246,7 +305,16 @@ export default {
             qsLoading: false,
             availableQuestions: [],
             selectedQuestionIds: [],
-            previewData: { questions: [] }
+            previewData: { questions: [] },
+            // 作业详情
+            showHomeworkDetailDialog: false,
+            homeworkDetail: {},
+            detailLoading: false
+        }
+    },
+    computed: {
+        hasPaperQuestions() {
+            return this.homeworkDetail.questions && this.homeworkDetail.questions.length > 0
         }
     },
     created() {
@@ -273,6 +341,10 @@ export default {
         typeTag(type) {
             const map = { single: 'primary', multiple: 'success', judge: 'warning', fill: 'info', essay: '' }
             return map[type] || ''
+        },
+        numToType(n) {
+            const map = { 1: 'single', 2: 'multiple', 3: 'judge', 4: 'fill', 5: 'essay' }
+            return map[n] || n
         },
         async loadSubjects() {
             try {
@@ -330,8 +402,74 @@ export default {
                 this.loadTasks()
             }).catch(() => this.$message.error('发布失败'))
         },
-        viewTaskDetail(row) {
-            this.$router.push('/teachergrading')
+        async viewTaskDetail(row) {
+            this.showHomeworkDetailDialog = true
+            this.detailLoading = true
+            this.homeworkDetail = { ...row, questions: [] }
+            
+            try {
+                const content = row.content || ''
+                let contentData = null
+                try {
+                    contentData = JSON.parse(content)
+                } catch (e) {}
+
+                // 如果是考试类型或关联了试卷，加载试卷题目
+                if ((contentData && contentData.type === 'exam') || (content && content.indexOf('paperRef:') === 0)) {
+                    let paperId = null
+                    if (contentData && contentData.paperRef) {
+                        paperId = contentData.paperRef
+                    } else if (content.indexOf('paperRef:') === 0) {
+                        paperId = content.replace('paperRef:', '')
+                    }
+                    
+                    if (paperId) {
+                        const res = await getPaperDetail(paperId)
+                        const paper = (res.data && res.data.resultData) ? res.data.resultData : {}
+                        this.homeworkDetail.questions = (paper.questions || []).map(q => ({
+                            ...q,
+                            questionType: this.numToType(q.questionType)
+                        }))
+                    }
+                }
+            } catch (e) {
+                console.error('加载作业详情失败:', e)
+            }
+            
+            this.detailLoading = false
+        },
+        getHomeworkTextContent(content) {
+            if (!content) return ''
+            try {
+                const data = JSON.parse(content)
+                if (data && data.type === 'exam') return '（考试类型，请查看题目列表）'
+                if (data && data.paperRef) return '（关联试卷，请查看题目列表）'
+                return content
+            } catch (e) {
+                return content
+            }
+        },
+        parsedOptions(q) {
+            if (!q.options) return []
+            if (typeof q.options === 'string') {
+                try {
+                    const parsed = JSON.parse(q.options)
+                    return parsed.map(o => o.text || o)
+                } catch (e) {
+                    return q.options.split(',')
+                }
+            }
+            return Array.isArray(q.options) ? q.options.map(o => o.text || o) : []
+        },
+        formatAnswer(q) {
+            if (!q.answer) return '-'
+            if (q.questionType === 'single' || q.questionType === 'multiple') {
+                return q.answer.split(',').map(a => a.trim()).join('、')
+            }
+            if (q.questionType === 'judge') {
+                return q.answer === 'true' ? '正确' : '错误'
+            }
+            return q.answer
         },
         deleteTask(row) {
             this.$confirm('确定删除该任务吗？', '提示', { type: 'warning' })
@@ -474,4 +612,16 @@ export default {
 .pq-header { margin-bottom: 4px; }
 .pq-score { font-size: 12px; color: #909399; }
 .pq-stem { font-size: 14px; color: #303133; line-height: 1.5; }
+.pq-options { margin: 8px 0; padding-left: 20px; }
+.pq-option { margin: 4px 0; color: #606266; }
+.pq-answer { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e4e7ed; }
+.answer-item { margin: 4px 0; }
+.answer-label { color: #909399; font-size: 13px; }
+.answer-value { color: #67C23A; font-weight: 500; }
+.homework-detail .detail-meta { margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #e4e7ed; }
+.simple-homework h4 { margin: 0 0 8px; color: #303133; }
+.simple-homework p { color: #606266; line-height: 1.6; }
+.hw-answer { margin-top: 16px; padding-top: 12px; border-top: 1px dashed #e4e7ed; }
+.hw-answer h4 { margin: 0 0 8px; color: #303133; }
+.hw-answer p { color: #67C23A; line-height: 1.6; }
 </style>

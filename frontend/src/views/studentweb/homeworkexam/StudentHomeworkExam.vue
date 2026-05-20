@@ -95,6 +95,15 @@ export default {
     this.loadCompleted()
   },
   methods: {
+    getTaskType(content) {
+      if (!content) return 'homework'
+      try {
+        const data = JSON.parse(content)
+        if (data && data.type) return data.type
+      } catch (e) {}
+      if (typeof content === 'string' && content.indexOf('paperRef:') === 0) return 'exam'
+      return 'homework'
+    },
     async loadPending() {
       this.pendingLoading = true
       const userId = parseInt(Cookies.get('userId'))
@@ -114,7 +123,7 @@ export default {
         const examData = examRes.data && examRes.data.resultData
         const examList = (examData && examData.data) ? examData.data : []
         this.pendingList = [
-          ...hwList.map(i => ({ ...i, _type: 'homework' })),
+          ...hwList.map(i => ({ ...i, _type: this.getTaskType(i.content) })),
           ...examList.map(i => ({ ...i, _type: 'exam' }))
         ]
       } catch (e) { this.pendingList = [] }
@@ -143,11 +152,29 @@ export default {
       if (row._type === 'exam') {
         this.$router.push({ name: 'StudentExam', query: { paperId: row.id } })
       } else {
-        this.$router.push({ path: '/studenthomeworkanswer', query: { id: row.id, title: row.title, courseName: row.courseName, content: row.content || '' } })
+        this.$router.push({ 
+          path: '/studenthomeworkanswer', 
+          query: { 
+            id: row.id, 
+            title: row.title, 
+            courseName: row.courseName, 
+            content: row.content || '',
+            _type: row._type
+          } 
+        })
       }
     },
     redoHomework(row) {
-      this.$router.push({ path: '/studenthomeworkanswer', query: { id: row.homeworkId, title: row.title, courseName: row.courseName, content: '' } })
+      this.$router.push({ 
+        path: '/studenthomeworkanswer', 
+        query: { 
+          id: row.homeworkId, 
+          title: row.title, 
+          courseName: row.courseName, 
+          content: '',
+          _type: 'homework'
+        } 
+      })
     },
     viewDetail(row) {
       if (row._type === 'exam') {
