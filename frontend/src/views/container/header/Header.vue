@@ -17,7 +17,7 @@
                         <template slot="title">
                             <div class="demo-fit">
                                 <div class="block">
-                                    <i class="el-icon-user-solid" style="color: white;margin-right: 25px;font-size: 32px;"></i>
+                                    <i class="el-icon-user-solid" style="color: #8e99b0;margin-right: 25px;font-size: 32px;"></i>
 
                                 </div>
                             </div>
@@ -139,9 +139,8 @@ export default {
     line-height: 100%;
     padding: 0 15px 15px 0;
     font-weight: bold;
-    color: #ffffff;
+    color: #1a1a2e;
     position: absolute;
     font-size: 24px;
-
 }
 </style>

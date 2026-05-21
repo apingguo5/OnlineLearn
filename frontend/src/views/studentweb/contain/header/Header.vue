@@ -18,7 +18,7 @@
         </el-row>
 
         <div style="margin: 0 -20px 0 -20px;padding: 0;">
-            <el-menu :background-color="'#085e03'" :text-color="'white'" :active-text-color="'white'" :default-active="'1'"
+            <el-menu :background-color="'#ffffff'" :text-color="'#4a5568'" :active-text-color="'#4e6ef2'" :default-active="'1'"
                 class="el-menu-demo" :router="true" mode="horizontal" @select="handleSelect">
                 <div class="cn">
                     <div class="blockl">
@@ -26,19 +26,19 @@
                             <template slot="title">
                                 <div class="demo-fit">
                                     <div class="block">
-                                        <i style="font-size: 40px;color: #ffffff; margin-right: 30px;"
+                                        <i style="font-size: 40px;color: #8e99b0; margin-right: 30px;"
                                             class="el-icon-user-solid"></i>
                                     </div>
                                 </div>
                             </template>
                             <el-menu-item index="/essentiainfo">
-                                <i class="el-icon-user" style="color: white;font-size: 22px;"></i> 个人信息
+                                <i class="el-icon-user" style="color: #8e99b0;font-size: 22px;"></i> 个人信息
                             </el-menu-item>
                             <el-menu-item @click="change()">
-                                <i class="el-icon-lock" style="color: white;font-size: 22px;"></i> 修改密码
+                                <i class="el-icon-lock" style="color: #8e99b0;font-size: 22px;"></i> 修改密码
                             </el-menu-item>
                             <el-menu-item @click="logout()">
-                                <i class="el-icon-switch-button" style="color: white;font-size: 22px;"></i> 退出
+                                <i class="el-icon-switch-button" style="color: #8e99b0;font-size: 22px;"></i> 退出
                             </el-menu-item>
                         </el-submenu>
                     </div>
@@ -151,7 +151,7 @@ h1 {
     list-style: none;
     margin: 0;
     padding-left: 0;
-    background-color: #085e03;
+    background-color: #ffffff;
     display: flex;
     justify-content: flex-end;
 }

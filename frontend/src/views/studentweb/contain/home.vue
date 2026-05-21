@@ -90,7 +90,7 @@ export default {
     color: #303133;
     margin: 30px 0 20px;
     padding-bottom: 10px;
-    border-bottom: 2px solid #085e03;
+    border-bottom: 2px solid #4e6ef2;
 }
 .empty-tip {
     text-align: center;
@@ -109,7 +109,7 @@ export default {
 }
 .course-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 6px 20px rgba(8, 94, 3, 0.15);
+    box-shadow: 0 6px 20px rgba(78, 110, 242, 0.15);
 }
 .card-cover {
     width: 100%;

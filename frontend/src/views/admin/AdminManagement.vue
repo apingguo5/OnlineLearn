@@ -46,24 +46,25 @@ export default {
 .el-footer[data-v-9aae6930] {
     margin-left: -20px;
     margin-right: -20px;
-    background-color: #0b5013;
-    color: #333;
+    background-color: #ffffff;
+    color: #1a1a2e;
     text-align: center;
     line-height: 60px;
-
-    border-bottom: 1px solid #0b5013;
+    border-bottom: 1px solid #e8ecf1;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .el-aside {
-    background-color: #09720e;
-    color: #333;
+    background-color: #ffffff;
+    color: #1a1a2e;
     text-align: center;
     line-height: 200px;
+    border-right: 1px solid #eef0f4;
 }
 
 .aside[data-v-2c9fb0d2] {
     margin-top: 10px;
-    background-color: #14252f;
+    background-color: #ffffff;
 }
 
 .welcome {
@@ -72,8 +73,8 @@ export default {
 }
 
 .el-main {
-    background-color: rgba(233, 238, 243, 0.1);
-    color: #333;
+    background-color: #f5f7fa;
+    color: #1a1a2e;
     overflow-y: auto;
     height: 90vh;
 }

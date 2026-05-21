@@ -53,7 +53,7 @@
                         
                         <!-- 实时观看时长显示 -->
                         <div v-if="roleId == 3" style="margin-top: 10px; text-align: center;">
-                            <span style="color: #09720e; font-weight: bold;">累计观看时长：{{ displayWatchTime }} 秒</span>
+                            <span style="color: #4e6ef2; font-weight: bold;">累计观看时长：{{ displayWatchTime }} 秒</span>
                         </div>
 
                         <div style="margin: 20px 0;"></div>

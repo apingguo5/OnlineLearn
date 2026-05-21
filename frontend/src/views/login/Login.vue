@@ -300,8 +300,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #666;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #f0f2f5;
 }
 
 .login-wrapper {
@@ -309,25 +308,25 @@ export default {
   height: 580px;
   display: flex;
   background-color: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  border-radius: 20px;
+  box-shadow: 0 4px 40px rgba(0, 0, 0, 0.08);
   overflow: hidden;
 }
 
 /* ===================== 左侧装饰区域 ===================== */
 .login-left {
   width: 420px;
-  background: linear-gradient(135deg, #09720e 0%, #0a9e13 100%);
+  background: #f8fafc;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 40px;
   flex-shrink: 0;
+  border-right: 1px solid #eef0f4;
 }
 
 .left-content {
   text-align: center;
-  color: #fff;
 }
 
 .logo-area {
@@ -337,26 +336,26 @@ export default {
 .logo-icon {
   width: 80px;
   height: 80px;
-  background: rgba(255, 255, 255, 0.2);
+  background: #eef2ff;
   border-radius: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 20px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
 .logo-icon i {
   font-size: 40px;
-  color: #fff;
+  color: #4e6ef2;
 }
 
 .system-title {
   font-size: 22px;
-  font-weight: bold;
+  font-weight: 700;
   line-height: 1.5;
   margin: 0;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  color: #1a1a2e;
+  letter-spacing: 0.5px;
 }
 
 .system-desc {
@@ -366,14 +365,14 @@ export default {
 .system-desc p {
   font-size: 16px;
   font-weight: 600;
-  opacity: 0.95;
+  color: #4a5568;
   margin: 0;
 }
 
 .system-desc .desc-sub {
   font-size: 13px;
-  font-weight: normal;
-  opacity: 0.75;
+  font-weight: 400;
+  color: #8e99b0;
   margin-top: 8px;
 }
 
@@ -393,14 +392,14 @@ export default {
 
 .form-header {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 32px;
 }
 
 .role-icon-badge {
-  width: 60px;
-  height: 60px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 50%;
+  width: 56px;
+  height: 56px;
+  background: #f0f5ff;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -408,25 +407,26 @@ export default {
 }
 
 .role-icon-badge i {
-  font-size: 28px;
-  color: #fff;
+  font-size: 26px;
+  color: #4e6ef2;
 }
 
 .form-title {
   font-size: 24px;
   font-weight: 700;
-  color: #303133;
+  color: #1a1a2e;
   margin: 0 0 8px;
+  letter-spacing: 0.5px;
 }
 
 .form-subtitle {
   font-size: 14px;
-  color: #909399;
+  color: #8e99b0;
   margin: 0;
 }
 
 .login-form {
-  margin-top: 30px;
+  margin-top: 28px;
 }
 
 .login-form .el-input {
@@ -435,39 +435,42 @@ export default {
 
 .login-btn {
   width: 100%;
-  height: 44px;
+  height: 46px;
   font-size: 16px;
   font-weight: 600;
-  letter-spacing: 2px;
-  border-radius: 8px;
+  letter-spacing: 4px;
+  border-radius: 10px;
+  margin-top: 4px;
 }
 
 .register-link {
   text-align: center;
-  margin-top: 20px;
+  margin-top: 24px;
   font-size: 14px;
-  color: #909399;
+  color: #8e99b0;
 }
 
 .register-link a {
-  color: #09720e;
+  color: #4e6ef2;
   text-decoration: none;
   font-weight: 600;
   margin-left: 4px;
 }
 
 .register-link a:hover {
-  text-decoration: underline;
+  color: #3b5de7;
 }
 
 /* 覆盖elementui的按钮颜色 */
 .login-btn.el-button--primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-color: #667eea;
+  background: #4e6ef2;
+  border-color: #4e6ef2;
+  box-shadow: 0 2px 8px rgba(78, 110, 242, 0.25);
 }
 .login-btn.el-button--primary:hover {
-  opacity: 0.9;
-  border-color: #764ba2;
+  background: #3b5de7;
+  border-color: #3b5de7;
+  box-shadow: 0 4px 14px rgba(78, 110, 242, 0.35);
 }
 
 /* 全屏背景色覆盖 */

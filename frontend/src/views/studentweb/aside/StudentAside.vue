@@ -3,9 +3,9 @@
         <el-menu
             :default-active="activeMenu"
             class="el-menu-vertical-demo"
-            background-color="#324157"
-            text-color="#fff"
-            active-text-color="#ffd04b"
+            background-color="#ffffff"
+            text-color="#4a5568"
+            active-text-color="#4e6ef2"
             router
         >
             <el-menu-item index="/studenthome">
@@ -46,13 +46,21 @@ export default {
 .el-menu-vertical-demo {
     width: 200px;
     min-height: calc(100vh - 60px);
-    border-right: none;
+    border-right: 1px solid #eef0f4;
 }
 .el-menu-item {
     font-size: 14px;
+    color: #4a5568;
 }
 .el-menu-item i {
     font-size: 18px;
     margin-right: 5px;
+}
+.el-menu-item.is-active {
+    color: #4e6ef2 !important;
+    background-color: #f0f5ff !important;
+}
+.el-menu-item:hover {
+    background-color: #f5f7fa !important;
 }
 </style>

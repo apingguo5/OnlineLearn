@@ -387,7 +387,7 @@ export default {
 }
 
 .section-header h3 {
-    color: #09720e;
+    color: #4e6ef2;
     margin: 0;
     font-size: 20px;
 }
