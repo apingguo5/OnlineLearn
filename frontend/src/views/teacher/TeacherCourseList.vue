@@ -128,6 +128,17 @@ export default {
       }
     }
   },
+  computed: {
+    currentUserId() {
+      const raw = this.$store?.state?.user?.id || localStorage.getItem('userId')
+      const id = Number(raw)
+      if (!id || id <= 0) {
+        console.warn('[TeacherCourseList] 未能获取有效 userId, raw:', raw)
+        return 1
+      }
+      return id
+    }
+  },
   created() {
     this.loadCourses()
   },
@@ -135,8 +146,7 @@ export default {
     async loadCourses() {
       this.loading = true
       try {
-        const userId = this.$store?.state?.user?.id || localStorage.getItem('userId') || 1
-        const resp = await getMyCourses({ userId })
+        const resp = await getMyCourses({ userId: this.currentUserId })
         // 后端返回 { code: 200, resultData: [...] }
         const body = resp.data
         if (body && body.code === 200) {
@@ -223,11 +233,10 @@ export default {
       }
       this.creating = true
       try {
-        const userId = this.$store?.state?.user?.id || 1
         const resp = await apiCreateCourse({
           courseName: this.createForm.courseName,
           description: this.createForm.description,
-          userId
+          userId: this.currentUserId
         })
         const body = resp.data
         if (body && body.code === 200) {

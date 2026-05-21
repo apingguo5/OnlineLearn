@@ -89,12 +89,19 @@ public class CourseResourceController {
         // 获取章节所属课程ID（通过class表JOIN，因为course_chapter只有class_id字段）
         Integer courseId = courseResourceService.getCourseIdByChapterId(chapterId);
 
+        // 将本地路径转换为相对路径（如果包含 /courses/）
+        String normalizedPath = localPath.trim().replace("\\", "/");
+        int coursesIndex = normalizedPath.toLowerCase().indexOf("/courses/");
+        if (coursesIndex >= 0) {
+            normalizedPath = normalizedPath.substring(coursesIndex);
+        }
+
         // 1. 保存到 course_resource 表
         CourseResourceEntity resource = new CourseResourceEntity();
         resource.setCourseId(courseId);
         resource.setResourceName(resourceName.trim());
         resource.setResourceType(resourceType);
-        resource.setFileUrl(localPath.trim());
+        resource.setFileUrl(normalizedPath);
         resource.setChapterId(chapterId);
         resource.setUploaderId(uploaderId);
         resource.setIsPublic(0); // 默认仅班级学生可见

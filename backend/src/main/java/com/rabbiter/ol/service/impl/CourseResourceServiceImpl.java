@@ -38,10 +38,17 @@ public class CourseResourceServiceImpl extends ServiceImpl<CourseResourceDao, Co
         // 获取章节对应的课程ID（通过class表JOIN）
         Integer courseId = getCourseIdByChapterId(chapterId);
 
+        // 将本地路径转换为相对路径（如果包含 /courses/）
+        String normalizedPath = localPath.replace("\\", "/");
+        int coursesIndex = normalizedPath.toLowerCase().indexOf("/courses/");
+        if (coursesIndex >= 0) {
+            normalizedPath = normalizedPath.substring(coursesIndex);
+        }
+
         CourseResourceEntity resource = new CourseResourceEntity();
         resource.setCourseId(courseId);
         resource.setResourceName(resourceName);
-        resource.setFileUrl(localPath);
+        resource.setFileUrl(normalizedPath);
         resource.setResourceType(resourceType != null ? resourceType : 5);
         resource.setChapterId(chapterId);
         resource.setUploaderId(uploaderId);
@@ -133,10 +140,17 @@ public class CourseResourceServiceImpl extends ServiceImpl<CourseResourceDao, Co
         if (files == null) return 0;
 
         for (File file : files) {
-            String filePath = file.getAbsolutePath().replace("\\", "/");
+            String absolutePath = file.getAbsolutePath().replace("\\", "/");
 
-            // 跳过已导入的文件
-            if (existsByFilePath(filePath)) {
+            // 将绝对路径转换为相对路径（从 /courses/ 开始）
+            String relativePath = absolutePath;
+            int coursesIndex = absolutePath.toLowerCase().indexOf("/courses/");
+            if (coursesIndex >= 0) {
+                relativePath = absolutePath.substring(coursesIndex);
+            }
+
+            // 跳过已导入的文件（用相对路径检查）
+            if (existsByFilePath(relativePath)) {
                 continue;
             }
 
@@ -156,7 +170,7 @@ public class CourseResourceServiceImpl extends ServiceImpl<CourseResourceDao, Co
             CourseResourceEntity resource = new CourseResourceEntity();
             resource.setCourseId(courseId);
             resource.setResourceName(file.getName());
-            resource.setFileUrl(filePath);
+            resource.setFileUrl(relativePath);
             resource.setResourceType(resourceType);
             resource.setFileSize(file.length());
             resource.setChapterId(chapterId);

@@ -282,6 +282,13 @@ public class CourseChapterController {
             resourceName = lastSep >= 0 ? path.substring(lastSep + 1) : "本地资源";
         }
 
+        // 将本地路径转换为相对路径（如果包含 /courses/）
+        String normalizedPath = localPath.trim().replace("\\", "/");
+        int coursesIndex = normalizedPath.toLowerCase().indexOf("/courses/");
+        if (coursesIndex >= 0) {
+            normalizedPath = normalizedPath.substring(coursesIndex);
+        }
+
         Integer chapterId = ((Number) chapterIdObj).intValue();
 
         // 获取章节所属课程ID（通过class表JOIN，因为course_chapter只有class_id字段）
@@ -292,7 +299,7 @@ public class CourseChapterController {
         resource.setCourseId(courseId);
         resource.setResourceName(resourceName.trim());
         resource.setResourceType(5); // 其他类型
-        resource.setFileUrl(localPath.trim());
+        resource.setFileUrl(normalizedPath);
         resource.setChapterId(chapterId);
         resource.setIsPublic(0);
         resource.setCreateTime(new Date());
@@ -312,7 +319,7 @@ public class CourseChapterController {
         Map<String, Object> result = new HashMap<>();
         result.put("resourceId", resource.getId());
         result.put("resourceName", resourceName.trim());
-        result.put("fileUrl", localPath.trim());
+        result.put("fileUrl", normalizedPath);
         result.put("contentId", content.getId());
         return Result.success(result);
     }

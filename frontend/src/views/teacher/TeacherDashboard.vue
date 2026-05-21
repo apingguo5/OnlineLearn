@@ -282,7 +282,7 @@ export default {
             }
         },
         openCreateCourse() {
-            this.$router.push('/teachercourse')
+            this.$router.push('/teachercourselist')
         },
         openPublishHomework() {
             this.$router.push('/teacher-publish')

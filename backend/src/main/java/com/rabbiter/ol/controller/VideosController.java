@@ -80,7 +80,7 @@ public class VideosController {
         videos.setVideoTotalId(videoTotalId);
         long randomNum = System.currentTimeMillis();
         videos.setVideoUrl("/file/videoFile/" + randomNum + file.getOriginalFilename());
-        videos.setPath(PathUtils.getClassLoadRootPath() + "/file/videoFile/" + randomNum + file.getOriginalFilename());
+        videos.setPath("/file/videoFile/" + randomNum + file.getOriginalFilename());
         boolean save = videosService.save(videos);
         if (save) {
             try {

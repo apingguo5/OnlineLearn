@@ -82,7 +82,7 @@ public class VideoTotalController {
         videoTotalEntity.setCreateTime(new Date());
         videoTotalEntity.setUserId(userId);
         long randomNum = System.currentTimeMillis();
-        videoTotalEntity.setPath(PathUtils.getClassLoadRootPath() + "/file/imageFile/" + randomNum + file.getOriginalFilename());
+        videoTotalEntity.setPath("/file/imageFile/" + randomNum + file.getOriginalFilename());
 
         videoTotalEntity.setCoverUrl("/file/imageFile/" + randomNum + file.getOriginalFilename());
 
@@ -124,7 +124,7 @@ public class VideoTotalController {
             queryWrapper.eq("video_total_id", videoTotalVo.getId());
             List<VideosEntity> list = videosService.list(queryWrapper);
             for (VideosEntity videosEntity : list) {
-                boolean b = FileUtil.deleteFile(videosEntity.getPath());
+                boolean b = FileUtil.deleteFile(PathUtils.getClassLoadRootPath() + videosEntity.getPath());
                 if (b) {
                     videosService.remove(queryWrapper);
                 }
