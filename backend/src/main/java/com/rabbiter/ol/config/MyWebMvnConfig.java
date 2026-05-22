@@ -13,5 +13,8 @@ public class MyWebMvnConfig implements WebMvcConfigurer {
         registry.addResourceHandler("/file/imageFile/**").addResourceLocations("file:" + PathUtils.getClassLoadRootPath() + "/file/imageFile/");
         registry.addResourceHandler("/file/resourceFile/**").addResourceLocations("file:" + PathUtils.getClassLoadRootPath() + "/file/resourceFile/");
         registry.addResourceHandler("/resource/**").addResourceLocations("file:" + PathUtils.getClassLoadRootPath() + "/resource/");
+        // 课程结构化资源：项目根目录下的 courses/ 目录
+        // PathUtils.getClassLoadRootPath() 指向 backend/，所以向上一级取 courses/
+        registry.addResourceHandler("/courses/**").addResourceLocations("file:" + PathUtils.getClassLoadRootPath() + "/../courses/");
     }
 }

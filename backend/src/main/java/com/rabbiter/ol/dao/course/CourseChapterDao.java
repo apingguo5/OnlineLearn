@@ -19,8 +19,8 @@ public interface CourseChapterDao extends BaseMapper<CourseChapterEntity> {
     List<HashMap> queryListByCourseId(Integer courseId);
 
     /**
-     * 根据章节ID获取课程ID（通过class表JOIN）
+     * 根据章节ID获取课程ID（course_chapter 表直接有 course_id 字段）
      */
-    @Select("SELECT c.course_id FROM class c JOIN course_chapter cc ON c.id = cc.class_id WHERE cc.id = #{chapterId}")
+    @Select("SELECT course_id FROM course_chapter WHERE id = #{chapterId}")
     Integer getCourseIdByChapterId(@Param("chapterId") Integer chapterId);
 }

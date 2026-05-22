@@ -1,18 +1,7 @@
 <template>
     <div>
         <el-row :gutter="24" style="height: 80px">
-            <el-col :span="10" style="text-align: right;">
-                <img src="@/assets/我的学习.png" style="
-                    width: 40px;
-                    height: 40px;
-                    padding: 20px 0 0 0;
-                    -webkit-user-drag: none;
-                    -khtml-user-drag: none;
-                    -moz-user-drag: none;
-                    user-drag: none;
-                " />
-            </el-col>
-            <el-col :span="14" style="font-size: 32px;font-weight: 600;text-align: left;margin: 15px 0 0 0;">
+            <el-col :span="24" style="font-size: 32px;font-weight: 600;text-align: left;margin: 15px 0 0 20px;">
                 Online Learn
             </el-col>
         </el-row>
@@ -25,8 +14,9 @@
                         <el-submenu index="2">
                             <template slot="title">
                                 <div class="demo-fit">
-                                    <div class="block">
-                                        <i style="font-size: 40px;color: #8e99b0; margin-right: 30px;"
+                                    <div class="block avatar-wrap">
+                                        <img v-if="avatarUrl" :src="avatarUrl" class="header-avatar" alt="头像" />
+                                        <i v-else style="font-size: 40px;color: #8e99b0; margin-right: 30px;"
                                             class="el-icon-user-solid"></i>
                                     </div>
                                 </div>
@@ -79,12 +69,25 @@ export default {
                 id: ''
             },
             drawer: false,
+            avatarUrl: ''
         }
     },
     created() {
         this.changePassword.id = Cookies.get("userId")
+        this.loadAvatar()
+        // 监听个人信息页头像更新事件
+        this.$root.$on('avatar-updated', this.loadAvatar)
+    },
+    beforeDestroy() {
+        this.$root.$off('avatar-updated', this.loadAvatar)
     },
     methods: {
+        loadAvatar() {
+            const uid = Cookies.get('userId')
+            if (uid) {
+                this.avatarUrl = localStorage.getItem('user_avatar_' + uid) || ''
+            }
+        },
         handleSelect() {
 
         },
@@ -154,5 +157,19 @@ h1 {
     background-color: #ffffff;
     display: flex;
     justify-content: flex-end;
+}
+
+.avatar-wrap {
+    display: flex;
+    align-items: center;
+    margin-right: 30px;
+}
+
+.header-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid #e6e6e6;
 }
 </style>

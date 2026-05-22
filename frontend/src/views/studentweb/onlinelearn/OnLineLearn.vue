@@ -15,12 +15,28 @@
                     - 当前未加入班级或者任教老师未发布视频 -
                 </div>
             </div>
-            <div class='demo' v-for="url in iData" :key="url.id">
+            <div class='demo' v-for="(url, idx) in iData" :key="url.id || idx">
                 <div class="course-card">
                     <router-link
                         :to="{ path: '/detailonlineweb', query: { videoTotalId: url.id, userId: url.userId } }">
                         <div class="course-cover">
-                            <el-image style="height: 120px" :src="$store.state.baseApi + url.coverUrl" :fallback="'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=course%20cover%20education%20learning%20study&image_size=landscape_4_3'" fit="cover"></el-image>
+                            <!-- 真实封面：URL 解析非空且未失败时显示 -->
+                            <img
+                                v-show="resolveCoverUrl(url) && !failedCoverMap[url.id || idx]"
+                                :src="resolveCoverUrl(url)"
+                                class="cover-img"
+                                alt="封面"
+                                @error="onCoverError(url, idx)"
+                                @load="onCoverLoad(url, idx)"
+                            />
+                            <!-- 兜底封面：URL 为空 或 加载失败时显示 -->
+                            <div
+                                v-show="!resolveCoverUrl(url) || failedCoverMap[url.id || idx]"
+                                class="cover-fallback"
+                                :style="{ background: getCoverColor(url.id || idx) }"
+                            >
+                                <span class="cover-letter">{{ (url.topic || '课').charAt(0).toUpperCase() }}</span>
+                            </div>
                             <div class="course-overlay">
                                 <i class="el-icon-video-play"></i>
                             </div>
@@ -65,7 +81,9 @@ export default {
             },
             onLineCou: [],
 
-            total: 0
+            total: 0,
+            // 记录哪些卡片的封面加载失败（id -> true）
+            failedCoverMap: {}
 
         }
     },
@@ -113,7 +131,63 @@ export default {
             onlineweb(page).then(resp => {
                 this.iData = resp.data.resultData.records
                 this.total = resp.data.resultData.total
+                this.failedCoverMap = {}
+                // 调试输出：检查后端返回的 coverUrl 字段实际形态
+                if (this.iData && this.iData.length > 0) {
+                    console.log('[OnLineLearn] 第一条数据：', this.iData[0])
+                    console.log('[OnLineLearn] 解析后的封面 URL：', this.resolveCoverUrl(this.iData[0]))
+                }
             })
+        },
+        /**
+         * 将封面 URL 解析为可加载的完整地址
+         * 兼容：① http(s):// 直接返回；② /xxx 拼 baseApi；③ ./xxx 视为 resource/xxx；④ 纯文件名视为 resource/xxx
+         */
+        resolveCoverUrl(item) {
+            if (!item) return ''
+            const raw = item.coverUrl || item.cover_url
+            if (raw == null) return ''
+            const url = String(raw).trim()
+            if (!url) return ''
+            if (url.startsWith('http://') || url.startsWith('https://')) {
+                return url
+            }
+            const base = (this.$store && this.$store.state && this.$store.state.baseApi) || ''
+            if (url.startsWith('./')) {
+                return base + '/resource/' + url.substring(2)
+            }
+            if (url.startsWith('/')) {
+                return base + url
+            }
+            return base + '/resource/' + url
+        },
+        onCoverError(item, idx) {
+            const key = (item && item.id != null) ? item.id : idx
+            console.warn('[OnLineLearn] 封面加载失败:', this.resolveCoverUrl(item), 'key=', key)
+            this.$set(this.failedCoverMap, key, true)
+        },
+        onCoverLoad(item, idx) {
+            const key = (item && item.id != null) ? item.id : idx
+            // 加载成功时清理失败标记（防止重复请求时的状态残留）
+            if (this.failedCoverMap[key]) {
+                this.$set(this.failedCoverMap, key, false)
+            }
+        },
+        getCoverColor(id) {
+            const colors = [
+                'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+                'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+                'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)'
+            ]
+            const key = String(id == null ? '' : id)
+            let hash = 0
+            for (let i = 0; i < key.length; i++) {
+                hash = ((hash << 5) - hash) + key.charCodeAt(i)
+            }
+            return colors[Math.abs(hash) % colors.length]
         }
     }
 
@@ -175,16 +249,45 @@ export default {
 .course-cover {
     position: relative;
     overflow: hidden;
+    height: 160px;
+    /* 避免图片与 fallback 同时占位时叠加 */
+    background: #f5f7fa;
 }
 
-.course-cover .el-image {
+.course-cover .cover-img {
     width: 100%;
     height: 160px;
+    object-fit: cover;
+    display: block;
     transition: transform 0.3s ease;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
 }
 
-.course-cover:hover .el-image {
+.course-cover:hover .cover-img {
     transform: scale(1.05);
+}
+
+.course-cover .cover-fallback {
+    width: 100%;
+    height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+}
+
+.course-cover .cover-letter {
+    font-size: 64px;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.18);
+    user-select: none;
 }
 
 .course-overlay {

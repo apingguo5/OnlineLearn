@@ -303,14 +303,64 @@
           <el-input
             v-else
             v-model="resourceForm.localPath"
-            placeholder="请输入本地文件路径，例如：D:\课件\第一章\教学大纲.docx"
-            style="width: 100%">
+            placeholder="点击右侧按钮从课程文件库选择"
+            style="width: calc(100% - 130px); margin-right: 8px;"
+            readonly>
           </el-input>
+          <el-button
+            v-if="resourceForm.contentType === 3"
+            type="primary"
+            icon="el-icon-folder-opened"
+            size="small"
+            @click="openLocalFilePicker">
+            选择本地文件
+          </el-button>
         </el-form-item>
       </el-form>
       <span slot="footer">
         <el-button @click="resourceDialogVisible = false">取消</el-button>
         <el-button type="primary" native-type="button" @click="saveResource">确定</el-button>
+      </span>
+    </el-dialog>
+
+    <!-- 选择本地文件（从 courses/ 资源库选择） -->
+    <el-dialog
+      title="选择本地文件"
+      :visible.sync="localFileDialogVisible"
+      width="700px"
+      @opened="loadLocalFileTree">
+      <div class="local-file-picker">
+        <div class="picker-tip">
+          <i class="el-icon-info"></i>
+          <span>从项目根目录 <code>courses/</code> 资源库中选择文件（视频 / PDF / 讲义等）</span>
+        </div>
+        <div v-loading="loadingLocalFileTree" class="picker-body">
+          <el-tree
+            v-if="localFileTree.length > 0"
+            :data="localFileTree"
+            :props="localFileTreeProps"
+            node-key="path"
+            highlight-current
+            default-expand-all
+            @node-click="onLocalFileNodeClick">
+            <span class="local-file-node" slot-scope="{ node, data }">
+              <i :class="data.type === 'directory' ? 'el-icon-folder' : getFileIcon(data.name)"></i>
+              <span class="node-name">{{ node.label }}</span>
+              <span class="node-meta" v-if="data.type === 'file'">{{ formatFileSize(data.size) }}</span>
+            </span>
+          </el-tree>
+          <div v-else-if="!loadingLocalFileTree" class="picker-empty">
+            <i class="el-icon-folder-delete"></i>
+            <p>courses/ 目录为空或不存在</p>
+          </div>
+        </div>
+        <div v-if="selectedLocalFile" class="picker-selected">
+          已选择：<span>{{ selectedLocalFile.path }}</span>
+        </div>
+      </div>
+      <span slot="footer">
+        <el-button @click="localFileDialogVisible = false">取消</el-button>
+        <el-button type="primary" :disabled="!selectedLocalFile" @click="confirmLocalFile">确定</el-button>
       </span>
     </el-dialog>
   </div>
@@ -443,6 +493,16 @@ export default {
       },
       resourceOptions: [],
       resourceSearchLoading: false,
+      // 本地文件选择器（从 courses/ 资源库选择）
+      localFileDialogVisible: false,
+      loadingLocalFileTree: false,
+      localFileTree: [],
+      localFileTreeProps: {
+        children: 'children',
+        label: 'name',
+        isLeaf: data => data.type === 'file'
+      },
+      selectedLocalFile: null,
       // 加载状态
       loading: false
     }
@@ -972,6 +1032,125 @@ export default {
     },
 
     /**
+     * 打开本地文件选择器（从 courses/ 资源库中选择）
+     */
+    openLocalFilePicker() {
+      this.selectedLocalFile = null
+      this.localFileDialogVisible = true
+    },
+
+    /**
+     * 加载 courses/ 目录文件树
+     * 调用后端 /study/teacher/course-scanner/tree
+     */
+    async loadLocalFileTree() {
+      if (this.localFileTree.length > 0) return
+      this.loadingLocalFileTree = true
+      try {
+        const res = await get('/study/teacher/course-scanner/tree')
+        const data = extractData(res) || res.data && res.data.resultData || []
+        this.localFileTree = this.normalizeFileTree(Array.isArray(data) ? data : [])
+      } catch (e) {
+        console.error('加载课程文件树失败:', e)
+        this.$message.error('加载课程文件树失败')
+        this.localFileTree = []
+      } finally {
+        this.loadingLocalFileTree = false
+      }
+    },
+
+    /**
+     * 规范化后端返回的课程结构 → 文件树
+     * 后端返回：[{ name, path, chapters: [{ name, path, resources: [{ fileName, filePath, fileSize, fileType }] }] }]
+     * 转成：[{ type:'directory', name, path, children: [{ type:'directory', name, path, children: [{ type:'file', name, path, size }] }] }]
+     */
+    normalizeFileTree(courses) {
+      const toRelative = p => {
+        if (!p) return ''
+        let s = String(p).replace(/\\/g, '/')
+        const idx = s.toLowerCase().indexOf('/courses/')
+        if (idx >= 0) s = s.substring(idx)
+        else if (!s.startsWith('/courses/')) s = '/courses/' + s.replace(/^\/+/, '')
+        return s
+      }
+      return (courses || []).map(course => ({
+        type: 'directory',
+        name: course.name,
+        path: toRelative(course.path),
+        size: 0,
+        children: (course.chapters || []).map(chapter => ({
+          type: 'directory',
+          name: chapter.name,
+          path: toRelative(chapter.path),
+          size: 0,
+          children: (chapter.resources || []).map(res => ({
+            type: 'file',
+            // 若资源在子目录下，文件名前显示子目录路径，避免同名混淆
+            name: res.subDirectory ? (res.subDirectory + '/' + res.fileName) : res.fileName,
+            path: toRelative(res.filePath),
+            size: res.fileSize || 0
+          }))
+        }))
+      }))
+    },
+
+    /**
+     * 树节点点击：仅文件节点可选
+     */
+    onLocalFileNodeClick(data) {
+      if (data.type === 'file') {
+        this.selectedLocalFile = data
+      }
+    },
+
+    /**
+     * 确认选择本地文件
+     */
+    confirmLocalFile() {
+      if (!this.selectedLocalFile) {
+        this.$message.warning('请选择一个文件')
+        return
+      }
+      // 把选中文件的相对路径填入表单（统一以 /courses/ 开头）
+      let p = this.selectedLocalFile.path || ''
+      p = p.replace(/\\/g, '/')
+      if (!p.startsWith('/courses/') && !p.startsWith('courses/')) {
+        // 兜底拼上 /courses/ 前缀
+        p = '/courses/' + p.replace(/^\/+/, '')
+      } else if (p.startsWith('courses/')) {
+        p = '/' + p
+      }
+      this.resourceForm.localPath = p
+      this.localFileDialogVisible = false
+    },
+
+    /**
+     * 根据文件名后缀返回对应 Element 图标
+     */
+    getFileIcon(fileName) {
+      const name = (fileName || '').toLowerCase()
+      if (/\.(mp4|webm|mkv|avi|mov)$/.test(name)) return 'el-icon-video-play'
+      if (/\.(pdf)$/.test(name)) return 'el-icon-document'
+      if (/\.(pptx?|key)$/.test(name)) return 'el-icon-data-analysis'
+      if (/\.(docx?|md|markdown|txt|html?)$/.test(name)) return 'el-icon-reading'
+      if (/\.(png|jpe?g|gif|svg|webp)$/.test(name)) return 'el-icon-picture'
+      if (/\.(zip|rar|7z|tar|gz)$/.test(name)) return 'el-icon-folder-checked'
+      return 'el-icon-document'
+    },
+
+    /**
+     * 格式化文件大小
+     */
+    formatFileSize(bytes) {
+      if (!bytes || bytes <= 0) return ''
+      const units = ['B', 'KB', 'MB', 'GB']
+      let i = 0
+      let n = bytes
+      while (n >= 1024 && i < units.length - 1) { n /= 1024; i++ }
+      return n.toFixed(n < 10 && i > 0 ? 1 : 0) + ' ' + units[i]
+    },
+
+    /**
      * 搜索资源（视频/阅读材料）
      */
     async searchResources(query) {
@@ -1384,5 +1563,72 @@ export default {
   margin-bottom: 12px;
   padding-bottom: 8px;
   border-bottom: 1px solid #ebeef5;
+}
+
+/* 本地文件选择器 */
+.local-file-picker {
+  display: flex;
+  flex-direction: column;
+}
+.picker-tip {
+  background: #ecf5ff;
+  color: #409EFF;
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+.picker-tip code {
+  background: rgba(255,255,255,0.6);
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin: 0 2px;
+}
+.picker-body {
+  min-height: 280px;
+  max-height: 420px;
+  overflow: auto;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  padding: 8px;
+}
+.picker-empty {
+  text-align: center;
+  color: #909399;
+  padding: 60px 0;
+}
+.picker-empty i {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 8px;
+}
+.local-file-node {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+.local-file-node i {
+  margin-right: 6px;
+  color: #909399;
+}
+.local-file-node .node-name {
+  flex: 1;
+}
+.local-file-node .node-meta {
+  font-size: 12px;
+  color: #c0c4cc;
+  margin-left: 8px;
+}
+.picker-selected {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #f4faff;
+  border-left: 3px solid #409EFF;
+  font-size: 13px;
+  color: #606266;
+}
+.picker-selected span {
+  color: #409EFF;
+  font-family: Consolas, Monaco, monospace;
 }
 </style>

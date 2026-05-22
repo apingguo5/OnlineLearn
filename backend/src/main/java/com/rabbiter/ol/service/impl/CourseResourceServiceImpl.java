@@ -112,13 +112,10 @@ public class CourseResourceServiceImpl extends ServiceImpl<CourseResourceDao, Co
 
     @Override
     public Integer getCourseIdByChapterId(Integer chapterId) {
-        // course_chapter 表只有 class_id，需要通过 class 表关联到 course_id
-        // course_chapter.class_id -> class.id -> class.course_id
+        // course_chapter 表已迁移：直接有 course_id 字段
         try {
             return jdbcTemplate.queryForObject(
-                "SELECT c.course_id FROM course_chapter cc " +
-                "JOIN `class` c ON cc.class_id = c.id " +
-                "WHERE cc.id = ?",
+                "SELECT course_id FROM course_chapter WHERE id = ?",
                 Integer.class,
                 chapterId
             );

@@ -69,27 +69,38 @@
                     </div>
                 </el-col>
                 <el-col :span="6">
-                    <div>
-
-                        <div id="video-title"> 目录</div>
+                    <div class="video-catalog">
+                        <div id="video-title">
+                            <i class="el-icon-files"></i>
+                            视频目录
+                            <span class="catalog-count" v-if="videolist.length > 0">（共 {{ videolist.length }} 节）</span>
+                        </div>
                         <hr>
-                        <div style="color: grey; padding: 10px 0 0 0" v-if="videolist.length <= 0">- 暂无视频 -</div>
-                        <div v-for="(item, index) in videolist" :key="index">
-                            <el-row :gutter="24">
-                                <el-col :span="21">
-
-                                    <el-button class="el" @click="choose(index)"
-                                        style="width: 100%; font-size: 11px; text-align: left;">{{
-                                            item.topic | ellipsis }}</el-button>
-                                </el-col>
-                                <el-col :span="3">
-
-                                    <el-button type="danger" size="small" @click="deletOneVideo(item.id)"
-                                        v-if="roleId == 2">
-                                        <i class="iconfont icon-r-delete"></i>
-                                    </el-button>
-                                </el-col>
-                            </el-row>
+                        <div v-if="videolist.length <= 0" class="empty-videos">
+                            <i class="el-icon-warning-outline"></i>
+                            <p>暂无视频</p>
+                            <p class="empty-hint">老师还没有上传课程视频</p>
+                        </div>
+                        <div v-else class="video-list-wrap">
+                            <div
+                                v-for="(item, index) in videolist"
+                                :key="index"
+                                class="video-list-item"
+                                :class="{ active: count == index }"
+                            >
+                                <div class="video-item-content" @click="choose(index)">
+                                    <span class="video-index">{{ index + 1 }}</span>
+                                    <span class="video-name" :title="item.topic">{{ item.topic }}</span>
+                                </div>
+                                <el-button
+                                    v-if="roleId == 2"
+                                    type="danger"
+                                    size="mini"
+                                    icon="el-icon-delete"
+                                    circle
+                                    @click.stop="deletOneVideo(item.id)"
+                                ></el-button>
+                            </div>
                         </div>
 
                     </div>
@@ -313,6 +324,8 @@ export default {
 
 
         getMovieList() {
+            // 每次重新构建播放器选项数组，避免重复累加导致索引错乱
+            this.playerOptions = [];
             // 这里正常来说应该是从后台获取的数据，以下操作都是在成功的回调函数里
             for (var i = 0; i < this.videolist.length; i++) {
                 let arrs = {
@@ -373,7 +386,9 @@ export default {
             console.log("9998")
             console.log(page)
             videos(page).then(resp => {
-                this.videolist = resp.data.resultData;
+                this.videolist = resp.data.resultData || [];
+                // 重置当前播放索引，避免越界
+                this.count = 0;
                 this.getMovieList();
                 
                 // 视频列表加载完成后不自动启动计时，只在用户开始播放时才记录
@@ -434,6 +449,105 @@ export default {
     font-size: 24px;
     color: black;
     font-weight: 600;
+}
+
+.catalog-count {
+    font-size: 14px;
+    color: #909399;
+    font-weight: normal;
+    margin-left: 6px;
+}
+
+.video-catalog {
+    background: #fafbfc;
+    padding: 14px 12px;
+    border-radius: 8px;
+    border: 1px solid #ebeef5;
+    min-height: 200px;
+}
+
+.empty-videos {
+    text-align: center;
+    color: #909399;
+    padding: 40px 10px;
+}
+.empty-videos i {
+    font-size: 42px;
+    color: #c0c4cc;
+    margin-bottom: 10px;
+}
+.empty-videos p {
+    margin: 4px 0;
+    font-size: 14px;
+}
+.empty-videos .empty-hint {
+    font-size: 12px;
+    color: #c0c4cc;
+}
+
+.video-list-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 480px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+.video-list-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: #ffffff;
+    border: 1px solid #ebeef5;
+    transition: all 0.2s;
+}
+.video-list-item:hover {
+    border-color: #409eff;
+    background: #ecf5ff;
+}
+.video-list-item.active {
+    border-color: #409eff;
+    background: linear-gradient(90deg, #ecf5ff 0%, #ffffff 100%);
+    box-shadow: 0 2px 6px rgba(64, 158, 255, 0.15);
+}
+.video-list-item.active .video-index {
+    background: #409eff;
+    color: #fff;
+}
+.video-list-item.active .video-name {
+    color: #409eff;
+    font-weight: 600;
+}
+.video-item-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    cursor: pointer;
+    min-width: 0;
+}
+.video-index {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: #e6e8eb;
+    color: #606266;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.video-name {
+    flex: 1;
+    font-size: 13px;
+    color: #303133;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .vid {

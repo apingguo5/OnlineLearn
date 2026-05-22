@@ -20,7 +20,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -58,17 +57,51 @@ public class StudentCourseChapterController {
     /**
      * 获取课程的学习章节树形结构（按班级）
      * POST /study/student/course/learningChapters
-     * @param params { classId: 班级ID }
+     * @param params { classId: 班级ID, courseId: 可选-课程ID（用于回退查询） }
      */
     @RequestMapping("/learningChapters")
     public Result getLearningChapters(@RequestBody Map<String, Object> params) {
-        Object classIdObj = params.get("classId");
-        if (classIdObj == null) {
+        Integer classId = parseIntegerSafe(params.get("classId"));
+        if (classId == null) {
             return Result.failure("班级ID不能为空");
         }
-        Integer classId = ((Number) classIdObj).intValue();
-        List<HashMap> chapters = courseChapterService.getChapterTreeByClassId(classId);
-        return Result.success(chapters);
+
+        List<HashMap> chapters = null;
+        try {
+            chapters = courseChapterService.getChapterTreeByClassId(classId);
+        } catch (Exception e) {
+            // 查询异常时打印日志，但不返回 500，转入回退逻辑
+            e.printStackTrace();
+        }
+
+        // 回退：若按 classId 查询无数据，则尝试用 courseId 查询同课程下任意班级的章节
+        Integer courseId = parseIntegerSafe(params.get("courseId"));
+        if ((chapters == null || chapters.isEmpty()) && courseId != null) {
+            try {
+                chapters = courseChapterService.getChaptersByCourseId(courseId);
+            } catch (Exception e) {
+                // 回退失败时静默处理，保持空列表
+                e.printStackTrace();
+            }
+        }
+
+        return Result.success(chapters == null ? new ArrayList<HashMap>() : chapters);
+    }
+
+    /**
+     * 安全地把任意对象解析为 Integer
+     * 兼容 Number（Integer/Long/Double 等）与 String 两种来源，失败时返回 null
+     */
+    private Integer parseIntegerSafe(Object obj) {
+        if (obj == null) return null;
+        if (obj instanceof Number) {
+            return ((Number) obj).intValue();
+        }
+        try {
+            return Integer.parseInt(String.valueOf(obj).trim());
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     /**
@@ -96,12 +129,20 @@ public class StudentCourseChapterController {
      */
     @RequestMapping("/chapterContents")
     public Result getChapterContents(@RequestBody Map<String, Object> params) {
-        Object chapterIdObj = params.get("chapterId");
-        if (chapterIdObj == null) {
+        Integer chapterId = parseIntegerSafe(params.get("chapterId"));
+        if (chapterId == null) {
             return Result.failure("章节ID不能为空");
         }
-        Integer chapterId = ((Number) chapterIdObj).intValue();
 
+        try {
+            return doGetChapterContents(chapterId);
+        } catch (Exception e) {
+            log.error("获取章节内容失败 chapterId={}", chapterId, e);
+            return Result.failure("获取章节内容失败: " + e.getMessage());
+        }
+    }
+
+    private Result doGetChapterContents(Integer chapterId) {
         // 1️⃣ 先尝试从 chapter_content 表获取（标准路径），包裹 try-catch 防止异常导致 500
         try {
             List<HashMap> contents = chapterContentService.getContentsWithDetails(chapterId);
@@ -110,12 +151,10 @@ public class StudentCourseChapterController {
                 List<Map<String, Object>> resultList = new ArrayList<>();
                 for (HashMap content : contents) {
                     Map<String, Object> item = new HashMap<>(content);
-                    Object ctObj = content.get("contentType");
-                    Integer contentType = ctObj != null ? ((Number) ctObj).intValue() : null;
-                    Object refIdObj = content.get("refId");
+                    Integer contentType = parseIntegerSafe(content.get("contentType"));
+                    Integer refId = parseIntegerSafe(content.get("refId"));
 
-                    if (contentType != null && refIdObj != null) {
-                        Integer refId = ((Number) refIdObj).intValue();
+                    if (contentType != null && refId != null) {
                         if (contentType == 1) {
                             // 视频类型 - 获取视频详情
                             VideosEntity video = videosService.getById(refId);
@@ -295,9 +334,15 @@ public class StudentCourseChapterController {
             if (i > 0) {
                 encoded.append("/");
             }
-            String segment = URLEncoder.encode(segments[i], StandardCharsets.UTF_8)
-                .replace("+", "%20");
-            encoded.append(segment);
+            try {
+                // JDK 8 兼容：URLEncoder.encode(String, String) 而不是 (String, Charset)
+                String segment = URLEncoder.encode(segments[i], "UTF-8")
+                    .replace("+", "%20");
+                encoded.append(segment);
+            } catch (java.io.UnsupportedEncodingException e) {
+                // UTF-8 永远存在，不会进这里
+                encoded.append(segments[i]);
+            }
         }
         return encoded.toString();
     }

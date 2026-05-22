@@ -5,7 +5,7 @@
 
     <resultMap type="com.rabbiter.ol.entity.course.CourseChapterEntity" id="chapterMap">
         <result property="id" column="id"/>
-        <result property="classId" column="class_id"/>
+        <result property="courseId" column="course_id"/>
         <result property="chapterName" column="chapter_name"/>
         <result property="chapterType" column="chapter_type"/>
         <result property="description" column="description"/>
@@ -15,6 +15,10 @@
         <result property="updateTime" column="update_time"/>
     </resultMap>
 
+    <!--
+        queryListByClassId：传入的虽叫 classId（历史命名），实际期望按班级所属课程查询章节
+        班级 → 课程 → 章节
+    -->
     <select id="queryListByClassId" resultType="java.util.HashMap">
         SELECT
             cc.id,
@@ -27,7 +31,8 @@
             cc.update_time AS updateTime,
             0 AS resourceCount
         FROM course_chapter cc
-        WHERE cc.class_id = #{classId}
+        JOIN class cl ON cl.course_id = cc.course_id
+        WHERE cl.id = #{classId}
         ORDER BY cc.sort_order ASC, cc.id ASC
     </select>
 
@@ -37,18 +42,22 @@
             cc.chapter_name AS chapterName,
             cc.chapter_type AS chapterType,
             cc.description,
-            cc.class_id AS classId,
+            cc.course_id AS courseId,
             cc.parent_id AS parentId,
             cc.sort_order AS sortOrder,
             cc.create_time AS createTime,
             cc.update_time AS updateTime,
             0 AS resourceCount
         FROM course_chapter cc
-        JOIN class cl ON cc.class_id = cl.id
-        WHERE cl.course_id = #{courseId}
+        WHERE cc.course_id = #{courseId}
         ORDER BY cc.sort_order ASC, cc.id ASC
     </select>
 
+    <!--
+        queryTreeByClassId：传入 classId 时同样走"班级→课程"路径
+        前端 CourseLearning.vue 调用 learningChapters({classId, courseId})
+        后端 StudentCourseChapterController 已加回退：先 byClassId，空则 byCourseId
+    -->
     <select id="queryTreeByClassId" resultType="java.util.HashMap">
         SELECT
             cc.id,
@@ -61,7 +70,8 @@
             cc.update_time AS updateTime,
             0 AS resourceCount
         FROM course_chapter cc
-        WHERE cc.class_id = #{classId}
+        JOIN class cl ON cl.course_id = cc.course_id
+        WHERE cl.id = #{classId}
         ORDER BY cc.parent_id ASC, cc.sort_order ASC, cc.id ASC
     </select>
 

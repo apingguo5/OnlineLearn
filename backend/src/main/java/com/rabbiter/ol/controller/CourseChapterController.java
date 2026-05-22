@@ -93,8 +93,8 @@ public class CourseChapterController {
         }
         Integer classId = ((Number) classIdObj).intValue();
 
-        // 获取当前最大排序值
-        int maxSort = courseChapterService.count(new QueryWrapper<CourseChapterEntity>().eq("class_id", classId));
+        // 获取当前最大排序值（注意：参数名 classId 是历史命名，实际承载的是 courseId）
+        int maxSort = courseChapterService.count(new QueryWrapper<CourseChapterEntity>().eq("course_id", classId));
 
         CourseChapterEntity entity = new CourseChapterEntity();
         entity.setClassId(classId);
@@ -209,7 +209,7 @@ public class CourseChapterController {
             return Result.failure("章节不存在");
         }
         CourseChapterEntity copy = new CourseChapterEntity();
-        copy.setClassId(source.getClassId());
+        copy.setCourseId(source.getCourseId());
         copy.setChapterName(source.getChapterName() + " (副本)");
         copy.setChapterType(source.getChapterType());
         copy.setDescription(source.getDescription());
@@ -291,7 +291,7 @@ public class CourseChapterController {
 
         Integer chapterId = ((Number) chapterIdObj).intValue();
 
-        // 获取章节所属课程ID（通过class表JOIN，因为course_chapter只有class_id字段）
+        // 获取章节所属课程ID（course_chapter.course_id 直接关联 course.id）
         Integer courseId = courseResourceService.getCourseIdByChapterId(chapterId);
 
         // 1. 保存到 course_resource 表

@@ -86,7 +86,7 @@ public class CourseResourceController {
         Integer resourceType = resourceTypeObj != null ? ((Number) resourceTypeObj).intValue() : 1; // 默认视频
         Integer uploaderId = uploaderIdObj != null ? ((Number) uploaderIdObj).intValue() : null;
 
-        // 获取章节所属课程ID（通过class表JOIN，因为course_chapter只有class_id字段）
+        // 获取章节所属课程ID（course_chapter.course_id 直接关联 course.id）
         Integer courseId = courseResourceService.getCourseIdByChapterId(chapterId);
 
         // 将本地路径转换为相对路径（如果包含 /courses/）

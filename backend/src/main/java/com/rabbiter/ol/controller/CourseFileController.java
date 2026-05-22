@@ -4,13 +4,13 @@ import com.rabbiter.ol.tool.PathUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -38,6 +38,7 @@ import java.nio.file.Paths;
  * - 与 CourseScannerService 一致
  */
 @Controller
+@CrossOrigin(origins = "*", maxAge = 3600)
 public class CourseFileController {
 
     private static final Logger log = LoggerFactory.getLogger(CourseFileController.class);
@@ -65,6 +66,13 @@ public class CourseFileController {
      */
     @GetMapping("/courses/**")
     public void serveCourseFile(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        // 手动添加 CORS 头（前端通过 fetch 跨端口访问 markdown/html 等需要 CORS）
+        // 因为本 Controller 直接写 HttpServletResponse，@CrossOrigin 注解可能不生效
+        response.setHeader("Access-Control-Allow-Origin", "*");
+        response.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+        response.setHeader("Access-Control-Allow-Headers", "*");
+        response.setHeader("Access-Control-Max-Age", "3600");
+
         // 1. 获取完整请求 URI 并提取 /courses/ 之后的路径
         String requestUri = request.getRequestURI();
         String contextPath = request.getContextPath();
@@ -75,7 +83,8 @@ public class CourseFileController {
         );
 
         // 2. URL 解码路径（因为浏览器发送的是编码后的路径）
-        String decodedPath = URLDecoder.decode(relativePath, StandardCharsets.UTF_8);
+        // JDK 8 兼容：URLDecoder.decode(String, String) 而不是 (String, Charset)
+        String decodedPath = URLDecoder.decode(relativePath, "UTF-8");
 
         // 3. 构建本地文件路径并规范化（防止路径穿越）
         Path filePath = Paths.get(COURSES_ROOT, decodedPath).normalize();
@@ -98,7 +107,21 @@ public class CourseFileController {
         long fileLength = file.length();
         String contentType = Files.probeContentType(filePath);
         if (contentType == null) {
-            contentType = "application/octet-stream";
+            // 兜底：根据文件后缀手动映射，避免一律 octet-stream 导致浏览器强制下载
+            String name = file.getName().toLowerCase();
+            if (name.endsWith(".md") || name.endsWith(".markdown")) contentType = "text/markdown; charset=utf-8";
+            else if (name.endsWith(".txt"))   contentType = "text/plain; charset=utf-8";
+            else if (name.endsWith(".html") || name.endsWith(".htm")) contentType = "text/html; charset=utf-8";
+            else if (name.endsWith(".json"))  contentType = "application/json; charset=utf-8";
+            else if (name.endsWith(".css"))   contentType = "text/css; charset=utf-8";
+            else if (name.endsWith(".js"))    contentType = "application/javascript; charset=utf-8";
+            else if (name.endsWith(".webm"))  contentType = "video/webm";
+            else if (name.endsWith(".mp4"))   contentType = "video/mp4";
+            else if (name.endsWith(".mkv"))   contentType = "video/x-matroska";
+            else if (name.endsWith(".pdf"))   contentType = "application/pdf";
+            else if (name.endsWith(".png"))   contentType = "image/png";
+            else if (name.endsWith(".jpg") || name.endsWith(".jpeg")) contentType = "image/jpeg";
+            else contentType = "application/octet-stream";
         }
 
         // 5. 处理 Range 请求（视频快进/拖动进度条）

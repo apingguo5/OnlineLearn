@@ -2,13 +2,22 @@
     <div class="home-container">
         <el-carousel :interval="4000" type="card" height="400px">
             <el-carousel-item>
-                <img src="@/assets/1111.png" alt="banner1" style="height: 100%">
+                <img src="@/assets/11.png" alt="banner1" style="height: 100%">
             </el-carousel-item>
             <el-carousel-item>
-                <img src="@/assets/77777.png" alt="banner2" style="height: 100%">
+                <img src="@/assets/22.jpg" alt="banner2" style="height: 100%">
             </el-carousel-item>
             <el-carousel-item>
-                <img src="@/assets/2222.png" alt="banner3" style="height: 100%">
+                <img src="@/assets/33.png" alt="banner3" style="height: 100%">
+            </el-carousel-item>
+            <el-carousel-item>
+                <img src="@/assets/44.png" alt="banner4" style="height: 100%">
+            </el-carousel-item>
+            <el-carousel-item>
+                <img src="@/assets/44.jpg" alt="banner5" style="height: 100%">
+            </el-carousel-item>
+            <el-carousel-item>
+                <img src="@/assets/66.jpg" alt="banner6" style="height: 100%">
             </el-carousel-item>
         </el-carousel>
 
@@ -23,9 +32,14 @@
                     <el-card shadow="hover" class="course-card" @click.native="goToCourse(course)">
                         <div class="card-cover">
                             <img
-                                :src="course.coverUrl || 'https://via.placeholder.com/300x160?text=No+Image'"
+                                v-if="resolveCoverUrl(course) && !failedCoverMap[course.id]"
+                                :src="String(resolveCoverUrl(course))"
                                 :alt="course.courseName || course.course_name"
+                                @error="onCoverError(course)"
                             />
+                            <div v-else class="cover-fallback" :style="{ background: getCoverColor(course.id) }">
+                                <span class="cover-letter">{{ (course.courseName || course.course_name || '课').charAt(0).toUpperCase() }}</span>
+                            </div>
                         </div>
                         <div class="card-body">
                             <h3 class="card-title">{{ course.courseName || course.course_name }}</h3>
@@ -45,7 +59,9 @@ export default {
     name: "home",
     data() {
         return {
-            courses: []
+            courses: [],
+            // 记录哪些课程的封面加载失败（id -> true），失败后改为渐变色兜底
+            failedCoverMap: {}
         }
     },
     created() {
@@ -67,9 +83,69 @@ export default {
                     console.warn('课程数据格式异常:', res);
                     this.courses = [];
                 }
+                // 每次刷新课程列表时重置封面失败记录
+                this.failedCoverMap = {};
             }).catch(() => {
                 this.courses = [];
+                this.failedCoverMap = {};
             });
+        },
+        /**
+         * 将课程的 coverUrl 解析为可加载的完整 URL
+         * 兼容三种存储形式：
+         *   1) 网络链接：http(s):// 开头 → 直接返回
+         *   2) 相对路径：./xxx.png → 拼成 baseApi + /resource/xxx.png
+         *   3) 绝对路径：/file/imageFile/xxx.png → 拼成 baseApi + path
+         *   4) 纯文件名：xxx.png → 视为 resource 目录下的文件
+         * 必须始终返回字符串，避免 :src 绑定到函数引用
+         */
+        resolveCoverUrl(course) {
+            if (!course) return '';
+            const raw = course.coverUrl || course.cover_url;
+            if (raw == null) return '';
+            const url = String(raw).trim();
+            if (!url) return '';
+            if (url.startsWith('http://') || url.startsWith('https://')) {
+                return url;
+            }
+            const base = (this.$store && this.$store.state && this.$store.state.baseApi) || '';
+            if (url.startsWith('./')) {
+                return base + '/resource/' + url.substring(2);
+            }
+            if (url.startsWith('/')) {
+                return base + url;
+            }
+            return base + '/resource/' + url;
+        },
+        /**
+         * 封面加载失败时，标记该课程改用兜底渐变色
+         * ⚠️ 不修改 course.coverUrl，避免污染数据
+         */
+        onCoverError(course) {
+            if (course && course.id != null) {
+                this.$set(this.failedCoverMap, course.id, true);
+            }
+        },
+        /**
+         * 根据课程 id 生成稳定的渐变色（无图时显示）
+         */
+        getCoverColor(id) {
+            const colors = [
+                'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+                'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+                'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
+                'linear-gradient(135deg, #fccb90 0%, #d57eeb 100%)',
+                'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)'
+            ];
+            const key = String(id == null ? '' : id);
+            let hash = 0;
+            for (let i = 0; i < key.length; i++) {
+                hash = ((hash << 5) - hash) + key.charCodeAt(i);
+            }
+            return colors[Math.abs(hash) % colors.length];
         },
         goToCourse(course) {
             this.$router.push({
@@ -120,6 +196,20 @@ export default {
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+.card-cover .cover-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+}
+.card-cover .cover-letter {
+    font-size: 56px;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.18);
+    user-select: none;
 }
 .card-body {
     padding: 12px;
