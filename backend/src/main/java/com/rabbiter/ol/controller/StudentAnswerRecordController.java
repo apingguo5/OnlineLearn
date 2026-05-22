@@ -53,7 +53,7 @@ public class StudentAnswerRecordController {
             vo.setQuestionId((Integer) a.get("questionId"));
             vo.setAnswer((String) a.get("answer"));
             return vo;
-        }).toList();
+        }).collect(java.util.stream.Collectors.toList());
 
         studentAnswerRecordService.submitAnswer(answerList);
         return Result.successCode();
@@ -75,7 +75,7 @@ public class StudentAnswerRecordController {
             vo.setQuestionId((Integer) a.get("questionId"));
             vo.setAnswer((String) a.get("answer"));
             return vo;
-        }).toList();
+        }).collect(java.util.stream.Collectors.toList());
 
         studentAnswerRecordService.saveDraft(paperId, studentId, answerList);
         return Result.successCode();
