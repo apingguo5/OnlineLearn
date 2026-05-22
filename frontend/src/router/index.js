@@ -55,6 +55,7 @@ import TeacherGradebook from '../views/teacher/TeacherGradebook.vue'
 import TeacherCommunication from '../views/teacher/TeacherCommunication.vue'
 
 import TeacherGrading from '../views/teacher/TeacherGrading.vue'
+import TeacherQuestionBank from '../views/teacher/TeacherQuestionBank.vue'
 import TestComponent from '../views/test/TestComponent.vue'
 import SimpleTest from '../views/test/SimpleTest.vue'
 Vue.use(VueRouter)
@@ -539,6 +540,15 @@ const routes = [
                 path: '/teachergrading',
                 name: 'TeacherGrading',
                 component: TeacherGrading,
+                meta: {
+                    requireAuth: true,
+                },
+            },
+
+            {
+                path: '/teacherquestionbank',
+                name: 'TeacherQuestionBank',
+                component: TeacherQuestionBank,
                 meta: {
                     requireAuth: true,
                 },

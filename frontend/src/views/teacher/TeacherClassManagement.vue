@@ -29,8 +29,9 @@
                         </el-tag>
                     </template>
                 </el-table-column>
-                <el-table-column label="操作" width="260" align="center" fixed="right">
+                <el-table-column label="操作" width="320" align="center" fixed="right">
                     <template slot-scope="scope">
+                        <el-button type="text" icon="el-icon-edit" @click="editClass(scope.row)">编辑</el-button>
                         <el-button type="text" icon="el-icon-user" @click="manageStudents(scope.row)">学生管理</el-button>
                         <el-button type="text" icon="el-icon-monitor" @click="viewMonitor(scope.row)">学情监控</el-button>
                         <el-button type="text" icon="el-icon-delete" style="color:#F56C6C" @click="deleteClass(scope.row)">删除</el-button>
@@ -68,6 +69,36 @@
             <span slot="footer">
                 <el-button @click="showCreateDialog = false">取消</el-button>
                 <el-button type="primary" @click="createClass" :loading="saving">创建</el-button>
+            </span>
+        </el-dialog>
+
+        <!-- 编辑班级对话框（修改班级名等基本信息） -->
+        <el-dialog title="编辑班级" :visible.sync="showEditDialog" width="500px">
+            <el-form :model="editForm" :rules="editRules" ref="editForm" label-width="100px">
+                <el-form-item label="所属课程">
+                    <el-input :value="editForm.courseName" disabled></el-input>
+                </el-form-item>
+                <el-form-item label="班级名称" prop="className">
+                    <el-input v-model="editForm.className" placeholder="如：2024春季1班" maxlength="50" show-word-limit></el-input>
+                </el-form-item>
+                <el-form-item label="学年">
+                    <el-select v-model="editForm.academicYear" placeholder="选填" clearable style="width:100%">
+                        <el-option v-for="y in academicYearOptions" :key="y" :label="y" :value="y"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="学期">
+                    <el-select v-model="editForm.semester" placeholder="选填" clearable style="width:100%">
+                        <el-option label="春季学期" :value="1"></el-option>
+                        <el-option label="秋季学期" :value="2"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="最大人数">
+                    <el-input-number v-model="editForm.maxStudents" :min="0" :max="500" style="width:100%"></el-input-number>
+                </el-form-item>
+            </el-form>
+            <span slot="footer">
+                <el-button @click="showEditDialog = false">取消</el-button>
+                <el-button type="primary" @click="saveEdit" :loading="saving">保存</el-button>
             </span>
         </el-dialog>
 
@@ -151,6 +182,18 @@ export default {
             classList: [],
             courseList: [],
             showCreateDialog: false,
+            showEditDialog: false,
+            editForm: {
+                id: null,
+                className: '',
+                courseName: '',
+                academicYear: '',
+                semester: null,
+                maxStudents: 50
+            },
+            editRules: {
+                className: [{ required: true, message: '请输入班级名称', trigger: 'blur' }]
+            },
             classForm: {
                 courseId: null,
                 className: '',
@@ -264,6 +307,38 @@ export default {
                         this.$message.error('删除失败')
                     }
                 }).catch(() => {})
+        },
+        editClass(row) {
+            this.editForm = {
+                id: row.id,
+                className: row.className || '',
+                courseName: row.courseName || '',
+                academicYear: row.academicYear || row.academic_year || '',
+                semester: row.semester || null,
+                maxStudents: row.maxStudents || row.max_students || 50
+            }
+            this.showEditDialog = true
+        },
+        saveEdit() {
+            this.$refs.editForm.validate(async valid => {
+                if (!valid) return
+                this.saving = true
+                try {
+                    await teacherApi.updateClass({
+                        id: this.editForm.id,
+                        className: this.editForm.className,
+                        academicYear: this.editForm.academicYear || undefined,
+                        semester: this.editForm.semester || undefined,
+                        maxStudents: this.editForm.maxStudents || undefined
+                    })
+                    this.$message.success('修改成功')
+                    this.showEditDialog = false
+                    this.loadClasses()
+                } catch (e) {
+                    this.$message.error('修改失败')
+                }
+                this.saving = false
+            })
         },
         async manageStudents(row) {
             this.currentClassId = row.id

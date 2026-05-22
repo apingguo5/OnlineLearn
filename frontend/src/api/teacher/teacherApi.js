@@ -268,6 +268,15 @@ export function deleteClass(params) {
 }
 
 /**
+ * 更新班级信息
+ * 调用 /study/class/update (POST)
+ * @param {Object} params - { id, className?, ... }
+ */
+export function updateClass(params) {
+  return post(`/study/class/update`, params)
+}
+
+/**
  * 获取班级学生列表
  * 调用 /study/userClass/findList (POST)
  * @param {Object} params - { classId }
@@ -448,6 +457,7 @@ export default {
   getMyClasses,
   createClass,
   deleteClass,
+  updateClass,
   getClassStudents,
   removeStudent,
   batchAddStudents,

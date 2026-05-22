@@ -143,9 +143,6 @@
 </template>
 
 <script>
-import * as dashboardApi from '@/api/teacher/dashboard'
-import teacherApi from '@/api/teacher/teacherApi'
-
 export default {
     name: "TeacherDashboard",
     data() {
@@ -203,79 +200,93 @@ export default {
                         } catch (e) {}
                     }
                 }
-
-                // 加载课程列表（按当前教师过滤）
-                try {
-                    const res = await teacherApi.getMyCourses({ userId })
-                    const body = res.data
-                    let courseList = []
-                    // 后端返回格式: { code: 200, resultData: [...] }
-                    if (body.code === 200 && Array.isArray(body.resultData)) {
-                        courseList = body.resultData
-                    }
-                    if (courseList.length > 0) {
-                        this.activeCourses = courseList.map((c, idx) => ({
-                            id: c.id || idx,
-                            name: c.courseName || c.name || '未命名课程',
-                            abbr: (c.courseName || c.name || '课').charAt(0),
-                            classCount: c.classCount || 0,
-                            studentCount: c.studentCount || 0,
-                            color: ['#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#909399', '#9B59B6'][idx % 6]
-                        }))
-                    }
-                } catch (e) {
-                    console.log('课程列表加载失败', e.message)
+                if (!userId) {
+                    console.warn('未找到 userId，无法加载仪表盘数据')
+                    return
                 }
-                this.statistics[0].value = this.activeCourses.length
 
-                // 统计计数
-                this.statistics[1].value = this.activeCourses.reduce((sum, c) => sum + (c.classCount || 0), 0) || 0
-                this.statistics[2].value = this.activeCourses.reduce((sum, c) => sum + (c.studentCount || 0), 0) || 0
-
-                // 待办任务模拟
-                this.pendingTasks = [
-                    { id: 1, title: '待批改作业', desc: '你有 5 份作业等待批改', icon: 'el-icon-document-checked', type: 'homework', tag: '5份', tagType: 'warning' },
-                    { id: 2, title: '待回复提问', desc: '有 3 个学生提问等待回复', icon: 'el-icon-chat-dot-round', type: 'question', tag: '3条', tagType: 'danger' },
-                    { id: 3, title: '即将截止', desc: '《高等数学》作业将于明天截止', icon: 'el-icon-time', type: 'deadline', tag: '紧急', tagType: 'danger' },
-                ]
-                this.statistics[3].value = this.pendingTasks.length
-
-                // 班级概况 - 使用已有的课程数据模拟，避免调用不存在的 myClasses 后端端点
+                // 🎯 一次性调用 /stats 拿全部首页数据（后端聚合 SQL）
+                let stats = null
                 try {
-                    const clsRes = await dashboardApi.getMyClasses({ userId })
-                    // 后端响应格式：{ code: 200, resultData: [...] }
-                    if (clsRes.data && clsRes.data.code === 200) {
-                        const clsData = clsRes.data.resultData
-                        const clsList = Array.isArray(clsData) ? clsData : []
-                        this.classOverview = clsList.map(cls => ({
-                            name: cls.className || cls.name || '未命名班级',
-                            studentCount: cls.studentCount || 0,
-                            completionRate: cls.completionRate || Math.floor(Math.random() * 40) + 30,
-                            status: cls.status || 'active',
-                            barColor: cls.status === 'active' ? '#409EFF' : '#909399'
-                        }))
-                    } else if (this.activeCourses.length > 0) {
-                        // 降级：从课程数据生成模拟班级概况
-                        this.classOverview = this.activeCourses.slice(0, 3).map(course => ({
-                            name: course.name + '班级',
-                            studentCount: course.studentCount || 0,
-                            completionRate: Math.floor(Math.random() * 50) + 30,
-                            status: 'active',
-                            barColor: '#409EFF'
-                        }))
+                    const res = await this.$post('/study/teacher/dashboard/stats', { userId })
+                    if (res && res.data && res.data.code === 200 && res.data.resultData) {
+                        stats = res.data.resultData
                     }
                 } catch (e) {
-                    console.log('班级数据加载跳过（端点可能未实现）', e.message)
-                    // 降级：从课程数据生成模拟班级概况
-                    if (this.activeCourses.length > 0) {
-                        this.classOverview = this.activeCourses.slice(0, 3).map(course => ({
-                            name: course.name + '班级',
-                            studentCount: course.studentCount || 0,
-                            completionRate: Math.floor(Math.random() * 50) + 30,
-                            status: 'active',
-                            barColor: '#409EFF'
-                        }))
+                    console.warn('dashboard/stats 接口异常，将走降级路径', e.message)
+                }
+
+                if (stats) {
+                    // ----- 统计卡片（4 个真实数字） -----
+                    this.statistics[0].value = stats.courseCount || 0
+                    this.statistics[1].value = stats.classCount || 0
+                    this.statistics[2].value = stats.studentCount || 0
+                    this.statistics[3].value = (stats.pendingHomeworkCount || 0)
+                                             + (stats.pendingQuestionCount || 0)
+                                             + (stats.nearDueHomeworkCount || 0)
+
+                    // ----- 进行中的课程 -----
+                    const courses = stats.recentCourses || []
+                    this.activeCourses = courses.map((c, idx) => ({
+                        id: c.id,
+                        name: c.courseName || '未命名课程',
+                        abbr: (c.courseName || '课').charAt(0),
+                        classCount: c.classCount || 0,
+                        studentCount: c.studentCount || 0,
+                        color: ['#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#909399', '#9B59B6'][idx % 6]
+                    }))
+
+                    // ----- 待办事项（真实数字，0 的隐藏） -----
+                    const tasks = []
+                    if (stats.pendingHomeworkCount > 0) {
+                        tasks.push({
+                            id: 'hw', type: 'homework',
+                            title: '待批改作业',
+                            desc: `你有 ${stats.pendingHomeworkCount} 份作业等待批改`,
+                            icon: 'el-icon-document-checked',
+                            tag: `${stats.pendingHomeworkCount} 份`,
+                            tagType: 'warning'
+                        })
                     }
+                    if (stats.pendingQuestionCount > 0) {
+                        tasks.push({
+                            id: 'qa', type: 'question',
+                            title: '待回复提问',
+                            desc: `有 ${stats.pendingQuestionCount} 个学生提问等待回复`,
+                            icon: 'el-icon-chat-dot-round',
+                            tag: `${stats.pendingQuestionCount} 条`,
+                            tagType: 'danger'
+                        })
+                    }
+                    if (stats.nearDueHomeworkCount > 0) {
+                        tasks.push({
+                            id: 'due', type: 'deadline',
+                            title: '即将截止',
+                            desc: `有 ${stats.nearDueHomeworkCount} 份作业将在 3 天内截止`,
+                            icon: 'el-icon-time',
+                            tag: '紧急',
+                            tagType: 'danger'
+                        })
+                    }
+                    this.pendingTasks = tasks
+
+                    // ----- 班级概况（真实完成率） -----
+                    const overview = stats.classOverview || []
+                    this.classOverview = overview.map(cls => ({
+                        name: cls.className || '未命名班级',
+                        studentCount: cls.studentCount || 0,
+                        completionRate: cls.completionRate || 0,
+                        status: cls.status || 'active',
+                        barColor: (cls.completionRate || 0) >= 60 ? '#67C23A'
+                                : (cls.completionRate || 0) >= 30 ? '#409EFF'
+                                : '#E6A23C'
+                    }))
+                } else {
+                    // 降级：清零展示
+                    this.statistics.forEach(s => { s.value = 0 })
+                    this.activeCourses = []
+                    this.pendingTasks = []
+                    this.classOverview = []
                 }
             } catch (e) {
                 console.error('加载数据失败', e)
@@ -285,25 +296,29 @@ export default {
             this.$router.push('/teachercourselist')
         },
         openPublishHomework() {
-            this.$router.push('/teacher-publish')
+            this.$router.push('/teacherassessment')
         },
         openSendNotice() {
-            this.$router.push('/teacher-notice')
+            this.$router.push('/teacherclassmanagement')
         },
         handleTodo(item) {
             if (item.type === 'homework') {
-                this.$router.push('/teacher-grading')
+                this.$router.push('/teachergrading')
             } else if (item.type === 'question') {
-                this.$router.push('/teacher-qa')
+                this.$router.push('/teacheraskandanswer')
             } else {
-                this.$router.push('/teachercourse')
+                this.$router.push('/teacherassessment')
             }
         },
         goToCourse(id) {
-            this.$router.push('/teachercourse')
+            if (id) {
+                this.$router.push(`/teachercoursemanagement/${id}`)
+            } else {
+                this.$router.push('/teachercourselist')
+            }
         },
         goToClassMgmt() {
-            this.$router.push('/teacherclass')
+            this.$router.push('/teacherclassmanagement')
         }
     }
 }

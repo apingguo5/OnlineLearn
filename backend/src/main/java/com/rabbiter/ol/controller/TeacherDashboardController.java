@@ -469,4 +469,141 @@ public class TeacherDashboardController {
         }
         return result;
     }
+
+    /**
+     * 教师端首页一站式统计
+     * POST /study/teacher/dashboard/stats
+     * @param params { userId }
+     * 返回：{
+     *   courseCount: 进行中课程数,
+     *   classCount: 班级总数,
+     *   studentCount: 学生总数（去重）,
+     *   pendingHomeworkCount: 待批改作业数,
+     *   pendingQuestionCount: 待回复提问数,
+     *   nearDueHomeworkCount: 即将截止作业数,
+     *   recentCourses: 最近 5 个课程（含 classCount/studentCount）,
+     *   classOverview: 最近 5 个班级（含 studentCount/completionRate）
+     * }
+     */
+    @PostMapping("/stats")
+    public Map<String, Object> dashboardStats(@RequestBody Map<String, Object> params) {
+        Map<String, Object> result = new HashMap<>();
+        Map<String, Object> data = new HashMap<>();
+        try {
+            Object userIdObj = params == null ? null : params.get("userId");
+            if (userIdObj == null) {
+                result.put("code", 400);
+                result.put("resultData", "缺少 userId 参数");
+                return result;
+            }
+            Integer userId = Integer.valueOf(userIdObj.toString());
+
+            // 1. 课程总数（教师创建的启用状态课程）
+            Integer courseCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM course WHERE creator_id = ? AND status = 1",
+                Integer.class, userId);
+            data.put("courseCount", courseCount == null ? 0 : courseCount);
+
+            // 2. 班级总数（教师作为负责人 + 教师创建的课程下的班级）
+            Integer classCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(DISTINCT c.id) FROM class c " +
+                "LEFT JOIN course co ON co.id = c.course_id " +
+                "WHERE c.user_id = ? OR co.creator_id = ?",
+                Integer.class, userId, userId);
+            data.put("classCount", classCount == null ? 0 : classCount);
+
+            // 3. 学生总数（去重）
+            Integer studentCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(DISTINCT uc.user_id) FROM user_class uc " +
+                "JOIN class c ON c.id = uc.class_id " +
+                "LEFT JOIN course co ON co.id = c.course_id " +
+                "WHERE c.user_id = ? OR co.creator_id = ?",
+                Integer.class, userId, userId);
+            data.put("studentCount", studentCount == null ? 0 : studentCount);
+
+            // 4. 待批改作业数（学生提交但未批改的 user_do_homework）
+            Integer pendingHomework = 0;
+            try {
+                pendingHomework = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM user_do_homework udh " +
+                    "JOIN homework hw ON hw.id = udh.homework_id " +
+                    "WHERE hw.creator = ? AND udh.completion_time IS NOT NULL " +
+                    "  AND (udh.mode IS NULL OR udh.mode != '1')",
+                    Integer.class, userId);
+            } catch (Exception ignore) {}
+            data.put("pendingHomeworkCount", pendingHomework == null ? 0 : pendingHomework);
+
+            // 5. 待回复提问数（ask_questions 表中 reply 为空的）
+            Integer pendingQuestion = 0;
+            try {
+                pendingQuestion = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM ask_questions aq " +
+                    "WHERE (aq.reply IS NULL OR aq.reply = '') " +
+                    "  AND aq.class_id IN (SELECT id FROM class WHERE user_id = ?)",
+                    Integer.class, userId);
+            } catch (Exception ignore) {}
+            data.put("pendingQuestionCount", pendingQuestion == null ? 0 : pendingQuestion);
+
+            // 6. 即将截止作业数（截止时间在未来 3 天内）
+            Integer nearDue = 0;
+            try {
+                nearDue = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM homework WHERE creator = ? " +
+                    "AND commit_time IS NOT NULL " +
+                    "AND commit_time > NOW() AND commit_time <= DATE_ADD(NOW(), INTERVAL 3 DAY)",
+                    Integer.class, userId);
+            } catch (Exception ignore) {}
+            data.put("nearDueHomeworkCount", nearDue == null ? 0 : nearDue);
+
+            // 7. 最近 5 个课程（含班级数 + 学生数）
+            List<Map<String, Object>> recentCourses = jdbcTemplate.queryForList(
+                "SELECT c.id, c.course_name AS courseName, c.cover_url AS coverUrl, " +
+                "       (SELECT COUNT(*) FROM class WHERE course_id = c.id) AS classCount, " +
+                "       (SELECT COUNT(DISTINCT uc.user_id) FROM user_class uc " +
+                "        JOIN class cl ON cl.id = uc.class_id WHERE cl.course_id = c.id) AS studentCount " +
+                "FROM course c WHERE c.creator_id = ? AND c.status = 1 " +
+                "ORDER BY c.create_time DESC LIMIT 5",
+                userId);
+            data.put("recentCourses", recentCourses);
+
+            // 8. 最近 5 个班级（含学生数 + 完成率）
+            List<Map<String, Object>> classOverview = jdbcTemplate.queryForList(
+                "SELECT c.id, c.class_name AS className, " +
+                "       (SELECT COUNT(*) FROM user_class uc WHERE uc.class_id = c.id) AS studentCount " +
+                "FROM class c " +
+                "LEFT JOIN course co ON co.id = c.course_id " +
+                "WHERE c.user_id = ? OR co.creator_id = ? " +
+                "ORDER BY c.id DESC LIMIT 5",
+                userId, userId);
+            // 完成率暂以"班级中已观看任意视频的学生数 / 总学生数"估算（没有则给 0）
+            for (Map<String, Object> cls : classOverview) {
+                Object idObj = cls.get("id");
+                int rate = 0;
+                try {
+                    Integer total = ((Number) cls.get("studentCount")).intValue();
+                    if (total > 0) {
+                        Integer active = jdbcTemplate.queryForObject(
+                            "SELECT COUNT(DISTINCT vwr.user_id) FROM video_watch_record vwr " +
+                            "JOIN user_class uc ON uc.user_id = vwr.user_id " +
+                            "WHERE uc.class_id = ?",
+                            Integer.class, idObj);
+                        if (active != null && active > 0) {
+                            rate = Math.min(100, (int) Math.round(active * 100.0 / total));
+                        }
+                    }
+                } catch (Exception ignore) {}
+                cls.put("completionRate", rate);
+                cls.put("status", "active");
+            }
+            data.put("classOverview", classOverview);
+
+            result.put("code", 200);
+            result.put("resultData", data);
+        } catch (Exception e) {
+            log.error("dashboardStats 失败: {}", e.getMessage(), e);
+            result.put("code", 500);
+            result.put("resultData", "获取仪表盘数据失败: " + e.getMessage());
+        }
+        return result;
+    }
 }
