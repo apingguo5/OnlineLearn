@@ -2,7 +2,7 @@
  * 教师端 API 封装
  * 基于后端 /study/teacher/dashboard/* 接口
  */
-import { post, get } from '../request'
+import { post, get, service } from '../request'
 
 const TEACHER_BASE = '/study/teacher/dashboard'
 
@@ -26,10 +26,32 @@ export function createCourse(params) {
 
 /**
  * 更新课程
- * @param {Object} params - { id, courseName, description? }
+ * @param {Object} params - { id, courseName, description?, coverUrl? }
  */
 export function updateCourse(params) {
   return post(`${TEACHER_BASE}/updateSubject`, params)
+}
+
+/**
+ * 获取 resource 目录下的图片列表（课程封面选择）
+ * GET /study/teacher/dashboard/listCoverImages
+ */
+export function getResourceImages() {
+  return get(`${TEACHER_BASE}/listCoverImages`)
+}
+
+/**
+ * 上传课程封面图片到 resource 目录，后端直接更新 course 表 cover_url
+ * @param {FormData} formData - 包含 "file" 和 "courseId" 字段
+ * 注意：不能显式设置 Content-Type 头，axios 会自动删除 Content-Type，
+ * 让浏览器写入正确的 multipart/form-data; boundary=... 否则后端无法解析
+ */
+export function importCoverImage(formData) {
+  return service({
+    url: `${TEACHER_BASE}/importCoverImage`,
+    method: 'post',
+    data: formData
+  })
 }
 
 /**

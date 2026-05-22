@@ -1,159 +1,255 @@
 <template>
   <div class="teacher-course-management">
-    <!-- 顶部导航：课程选择 -->
+    <!-- 顶部导航 -->
     <div class="management-header">
       <el-breadcrumb separator="/">
         <el-breadcrumb-item :to="{ path: '/teachercourselist' }">课程列表</el-breadcrumb-item>
-        <el-breadcrumb-item>章节管理</el-breadcrumb-item>
+        <el-breadcrumb-item>{{ courseName }}</el-breadcrumb-item>
       </el-breadcrumb>
-      <div class="header-info">
-        <h2>{{ courseName }}</h2>
-        <el-select v-model="currentClassId" placeholder="选择班级" @change="onClassChange" style="width: 250px;">
-          <el-option
-            v-for="item in classList"
-            :key="item.id"
-            :label="item.className"
-            :value="item.id">
-            <span>{{ item.className }}</span>
-            <span class="class-course-name"> - {{ item.courseName || item.course_id || '' }}</span>
-          </el-option>
-        </el-select>
+      <div class="header-actions">
+        <el-button
+          type="danger"
+          size="small"
+          icon="el-icon-delete"
+          :loading="deletingCourse"
+          native-type="button"
+          @click="onDeleteCourse">
+          删除课程
+        </el-button>
       </div>
     </div>
 
-    <!-- 主体区域：大纲编辑器 -->
-    <div class="management-body">
-      <!-- 大纲列表 -->
-      <div class="outline-panel">
-        <div class="panel-header">
-          <span>课程大纲</span>
-          <div class="panel-actions">
-            <el-button
-              size="small"
-              type="primary"
-              icon="el-icon-plus"
-              @click="addTopLevelChapter"
-              :disabled="!currentClassId">
-              添加章节
-            </el-button>
-            <el-button
-              size="small"
-              icon="el-icon-refresh"
-              @click="loadChapters"
-              :disabled="!currentClassId">
-              刷新
-            </el-button>
-          </div>
-        </div>
-        <div class="panel-body">
-          <el-tree
-            ref="chapterTree"
-            :data="chapterTree"
-            :props="treeProps"
-            node-key="id"
-            default-expand-all
-            draggable
-            :allow-drag="() => true"
-            :allow-drop="allowDrop"
-            @node-drag-end="onDragEnd"
-            @node-click="selectChapter"
-            :expand-on-click-node="false"
-            empty-text="暂无章节，点击上方「添加章节」开始创建">
-            <span class="custom-tree-node" slot-scope="{ node, data }">
-              <span class="node-label">
-                <i class="el-icon-document" v-if="!data.parentId"></i>
-                <i class="el-icon-document-copy" v-else></i>
-                <span class="node-name" :class="{ 'is-leaf': data.parentId }">{{ data.chapterName }}</span>
-                <el-tag size="mini" type="info" v-if="data.resourceCount > 0">{{ data.resourceCount }} 资源</el-tag>
-              </span>
-              <span class="node-actions">
-                <el-button
-                  type="text"
-                  size="mini"
-                  icon="el-icon-plus"
-                  @click="addChildChapter(data)">
-                </el-button>
-                <el-button
-                  type="text"
-                  size="mini"
-                  icon="el-icon-edit"
-                  @click="editChapter(data)">
-                </el-button>
-                <el-button
-                  type="text"
-                  size="mini"
-                  icon="el-icon-delete"
-                  style="color: #F56C6C;"
-                  @click="deleteChapter(data)">
-                </el-button>
-              </span>
-            </span>
-          </el-tree>
-        </div>
-      </div>
-
-      <!-- 章节详情 -->
-      <div class="detail-panel">
-        <div class="panel-header">
-          <span>章节详情</span>
-          <div class="panel-actions">
-            <el-button
-              size="small"
-              type="primary"
-              icon="el-icon-plus"
-              @click="showAddResourceDialog"
-              :disabled="!selectedChapter">
-              添加资源
-            </el-button>
-          </div>
-        </div>
-        <div class="panel-body">
-          <!-- 未选择章节 -->
-          <el-empty v-if="!selectedChapter" description="请从左侧选择一个章节"></el-empty>
-          <!-- 章节详情 -->
-          <div v-else class="chapter-detail">
-            <el-form label-width="80px" size="small">
-              <el-form-item label="章节名称">
-                <el-input v-model="selectedChapter.chapterName" :disabled="true"></el-input>
+    <!-- Tab 导航栏 -->
+    <div class="management-tabs">
+      <el-tabs v-model="activeTab" @tab-click="handleTabClick">
+        <el-tab-pane label="课程信息" name="info">
+          <div class="course-info-panel">
+            <el-form ref="courseForm" :model="courseForm" label-width="100px" size="small" :rules="courseRules">
+              <el-form-item label="课程封面">
+                <div class="cover-wrapper">
+                  <div class="cover-preview">
+                    <img v-if="courseForm.coverUrl && !coverLoadFailed && coverDisplayUrl" :src="String(coverDisplayUrl)" class="cover-image" @error="onCoverError" />
+                    <div v-else class="cover-fallback" :style="{ background: coverColor }">
+                      <span class="cover-letter">{{ (courseForm.courseName || '课').charAt(0).toUpperCase() }}</span>
+                    </div>
+                    <el-button
+                       v-if="courseForm.coverUrl"
+                       size="mini"
+                       type="danger"
+                       icon="el-icon-delete"
+                       class="cover-remove-btn"
+                       circle
+                       native-type="button"
+                       @click="removeCover">
+                     </el-button>
+                  </div>
+                  <el-button type="primary" icon="el-icon-picture" native-type="button" @click="coverDialogVisible = true">
+                    选择封面
+                  </el-button>
+                </div>
+              </el-form-item>
+              <el-form-item label="课程名称" prop="courseName">
+                <el-input v-model="courseForm.courseName" placeholder="请输入课程名称" maxlength="100" />
+              </el-form-item>
+              <el-form-item label="课程简介" prop="description">
+                <el-input
+                  v-model="courseForm.description"
+                  type="textarea"
+                  :rows="4"
+                  placeholder="请输入课程简介"
+                  maxlength="500"
+                />
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" native-type="button" @click="saveCourseInfo" :loading="savingCourse">保存修改</el-button>
               </el-form-item>
             </el-form>
-
-            <!-- 章节资源列表 -->
-            <div class="resource-section">
-              <div class="resource-header">
-                <span>关联资源（{{ resources.length }}）</span>
+          </div>
+        </el-tab-pane>
+        <el-tab-pane label="课程大纲" name="outline">
+          <div class="outline-toolbar">
+            <el-select v-model="currentClassId" placeholder="选择班级" @change="onClassChange" style="width: 250px;">
+              <el-option
+                v-for="item in classList"
+                :key="item.id"
+                :label="item.className"
+                :value="item.id">
+                <span>{{ item.className }}</span>
+                <span class="class-course-name"> - {{ item.courseName || item.course_id || '' }}</span>
+              </el-option>
+            </el-select>
+          </div>
+          <div class="management-body">
+            <!-- 大纲列表 -->
+            <div class="outline-panel">
+              <div class="panel-header">
+                <span>课程大纲</span>
+                <div class="panel-actions">
+                  <el-button
+                    size="small"
+                    type="primary"
+                    icon="el-icon-plus"
+                    @click="addTopLevelChapter"
+                    :disabled="!currentClassId">
+                    添加章节
+                  </el-button>
+                  <el-button
+                    size="small"
+                    icon="el-icon-refresh"
+                    @click="loadChapters"
+                    :disabled="!currentClassId">
+                    刷新
+                  </el-button>
+                </div>
               </div>
-              <el-table :data="resources" style="width: 100%" size="small" empty-text="暂无关联资源">
-                <el-table-column label="资源名称" prop="contentTitle" min-width="180">
-                  <template slot-scope="{ row }">
-                    <i :class="row.contentType === 1 ? 'el-icon-video-camera' : 'el-icon-document'"></i>
-                    {{ row.contentTitle || '未命名资源' }}
-                  </template>
-                </el-table-column>
-                <el-table-column label="类型" width="100">
-                  <template slot-scope="{ row }">
-                    <el-tag :type="row.contentType === 1 ? 'primary' : (row.contentType === 3 ? 'warning' : 'success')" size="mini">
-                      {{ row.contentType === 1 ? '视频' : (row.contentType === 3 ? '本地' : '阅读') }}
-                    </el-tag>
-                  </template>
-                </el-table-column>
-                <el-table-column label="操作" width="80">
-                  <template slot-scope="{ row }">
-                    <el-button
-                      type="text"
-                      size="mini"
-                      style="color: #F56C6C;"
-                      icon="el-icon-delete"
-                      @click="deleteResource(row)">
-                    </el-button>
-                  </template>
-                </el-table-column>
-              </el-table>
+              <div class="panel-body">
+                <el-tree
+                  ref="chapterTree"
+                  :data="chapterTree"
+                  :props="treeProps"
+                  node-key="id"
+                  default-expand-all
+                  draggable
+                  :allow-drag="() => true"
+                  :allow-drop="allowDrop"
+                  @node-drag-end="onDragEnd"
+                  @node-click="selectChapter"
+                  :expand-on-click-node="false"
+                  empty-text="暂无章节，点击上方「添加章节」开始创建">
+                  <span class="custom-tree-node" slot-scope="{ node, data }">
+                    <span class="node-label">
+                      <i class="el-icon-document" v-if="!data.parentId"></i>
+                      <i class="el-icon-document-copy" v-else></i>
+                      <span class="node-name" :class="{ 'is-leaf': data.parentId }">{{ data.chapterName }}</span>
+                      <el-tag size="mini" type="info" v-if="data.resourceCount > 0">{{ data.resourceCount }} 资源</el-tag>
+                    </span>
+                    <span class="node-actions">
+                      <el-button
+                        type="text"
+                        size="mini"
+                        icon="el-icon-plus"
+                        @click="addChildChapter(data)">
+                      </el-button>
+                      <el-button
+                        type="text"
+                        size="mini"
+                        icon="el-icon-edit"
+                        @click="editChapter(data)">
+                      </el-button>
+                      <el-button
+                        type="text"
+                        size="mini"
+                        icon="el-icon-delete"
+                        style="color: #F56C6C;"
+                        @click="deleteChapter(data)">
+                      </el-button>
+                    </span>
+                  </span>
+                </el-tree>
+              </div>
+            </div>
+
+            <!-- 章节详情 -->
+            <div class="detail-panel">
+              <div class="panel-header">
+                <span>章节详情</span>
+                <div class="panel-actions">
+                  <el-button
+                    size="small"
+                    type="primary"
+                    icon="el-icon-plus"
+                    @click="showAddResourceDialog"
+                    :disabled="!selectedChapter">
+                    添加资源
+                  </el-button>
+                </div>
+              </div>
+              <div class="panel-body">
+                <el-empty v-if="!selectedChapter" description="请从左侧选择一个章节"></el-empty>
+                <div v-else class="chapter-detail">
+                  <el-form label-width="80px" size="small">
+                    <el-form-item label="章节名称">
+                      <el-input v-model="selectedChapter.chapterName" :disabled="true"></el-input>
+                    </el-form-item>
+                  </el-form>
+
+                  <div class="resource-section">
+                    <div class="resource-header">
+                      <span>关联资源（{{ resources.length }}）</span>
+                    </div>
+                    <el-table :data="resources" style="width: 100%" size="small" empty-text="暂无关联资源">
+                      <el-table-column label="资源名称" prop="contentTitle" min-width="180">
+                        <template slot-scope="{ row }">
+                          <i :class="row.contentType === 1 ? 'el-icon-video-camera' : 'el-icon-document'"></i>
+                          {{ row.contentTitle || '未命名资源' }}
+                        </template>
+                      </el-table-column>
+                      <el-table-column label="类型" width="100">
+                        <template slot-scope="{ row }">
+                          <el-tag :type="row.contentType === 1 ? 'primary' : (row.contentType === 3 ? 'warning' : 'success')" size="mini">
+                            {{ row.contentType === 1 ? '视频' : (row.contentType === 3 ? '本地' : '阅读') }}
+                          </el-tag>
+                        </template>
+                      </el-table-column>
+                      <el-table-column label="操作" width="80">
+                        <template slot-scope="{ row }">
+                          <el-button
+                            type="text"
+                            size="mini"
+                            style="color: #F56C6C;"
+                            icon="el-icon-delete"
+                            @click="deleteResource(row)">
+                          </el-button>
+                        </template>
+                      </el-table-column>
+                    </el-table>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </el-tab-pane>
+      </el-tabs>
     </div>
+
+    <!-- 选择封面对话框 -->
+    <el-dialog title="选择课程封面" :visible.sync="coverDialogVisible" width="600px" @opened="onCoverDialogOpen" @closed="coverUrlInput = ''">
+      <el-tabs v-model="coverTab">
+        <el-tab-pane label="资源库" name="library">
+          <div class="cover-upload-area">
+            <div class="upload-tip">
+              <i class="el-icon-upload el-icon--large"></i>
+              <p>从本地上传图片到资源库</p>
+              <span>文件将保存到 resource 目录，并以课程名称命名</span>
+            </div>
+            <input
+              ref="coverFileInput"
+              type="file"
+              accept="image/*"
+              style="display: none"
+              @change="onCoverFileSelected"
+            />
+            <el-button type="primary" icon="el-icon-folder-opened" @click="$refs.coverFileInput.click()" :loading="uploadingCover" native-type="button">
+              选择本地图片
+            </el-button>
+          </div>
+        </el-tab-pane>
+        <el-tab-pane label="网络链接" name="url">
+          <div class="cover-url-input">
+            <el-input
+              v-model="coverUrlInput"
+              placeholder="请输入网络图片链接，如 https://example.com/image.jpg"
+              clearable
+            >
+            </el-input>
+          </div>
+        </el-tab-pane>
+      </el-tabs>
+      <span slot="footer">
+        <el-button @click="coverDialogVisible = false" native-type="button">取消</el-button>
+        <el-button type="primary" @click="confirmCover" native-type="button">确定</el-button>
+      </span>
+    </el-dialog>
 
     <!-- 添加/编辑章节对话框 -->
     <el-dialog :title="chapterDialogTitle" :visible.sync="chapterDialogVisible" width="500px">
@@ -172,7 +268,7 @@
       </el-form>
       <span slot="footer">
         <el-button @click="chapterDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveChapter">确定</el-button>
+        <el-button type="primary" native-type="button" @click="saveChapter">确定</el-button>
       </span>
     </el-dialog>
 
@@ -214,7 +310,7 @@
       </el-form>
       <span slot="footer">
         <el-button @click="resourceDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveResource">确定</el-button>
+        <el-button type="primary" native-type="button" @click="saveResource">确定</el-button>
       </span>
     </el-dialog>
   </div>
@@ -230,7 +326,10 @@ import {
   getChapterContents,
   addContent,
   deleteContent,
-  addLocalResource
+  addLocalResource,
+  updateCourse,
+  importCoverImage,
+  deleteCourse
 } from '@/api/teacher/teacherApi'
 import { get, post } from '@/api/request'
 
@@ -288,9 +387,31 @@ export default {
   name: 'TeacherCourseManagement',
   data() {
     return {
+      // Tab 切换
+      activeTab: 'info',
       // 课程信息
       courseId: null,
       courseName: '',
+      // 课程信息表单
+      courseForm: {
+        courseName: '',
+        description: '',
+        coverUrl: '',
+        coverColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+      },
+      coverUrlInput: '',
+      coverDialogVisible: false,
+      coverTab: 'library',
+      uploadingCover: false,
+      coverLoadFailed: false,
+      courseRules: {
+        courseName: [
+          { required: true, message: '课程名称不能为空', trigger: 'blur' },
+          { max: 100, message: '名称不超过100字符', trigger: 'blur' }
+        ]
+      },
+      savingCourse: false,
+      deletingCourse: false,
       // 班级列表
       classList: [],
       currentClassId: null,
@@ -335,7 +456,59 @@ export default {
     await this.loadCourseInfo()
     await this.loadClassList()
   },
+  computed: {
+    /**
+     * 获取封面完整显示 URL（计算属性，依赖 courseForm.coverUrl）
+     * ⚠️ 必须始终返回字符串，避免 :src 绑定到函数引用导致出现 "function() { [native code]}" 这类异常 URL
+     */
+    coverDisplayUrl() {
+      const raw = this.courseForm && this.courseForm.coverUrl
+      if (raw == null) return ''
+      const url = String(raw).trim()
+      if (!url) return ''
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        return url
+      }
+      const base = (this.$store && this.$store.state && this.$store.state.baseApi) || ''
+      if (url.startsWith('./')) {
+        return base + '/resource/' + url.substring(2)
+      }
+      if (url.startsWith('/')) {
+        return base + url
+      }
+      return base + '/resource/' + url
+    },
+
+    /**
+     * 封面渐变色（计算属性，依赖 courseId）
+     */
+    coverColor() {
+      const colors = [
+        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+        'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+        'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+        'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
+        'linear-gradient(135deg, #fccb90 0%, #d57eeb 100%)',
+        'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)'
+      ]
+      let hash = 0
+      for (let i = 0; i < String(this.courseId).length; i++) {
+        hash = ((hash << 5) - hash) + String(this.courseId).charCodeAt(i)
+      }
+      return colors[Math.abs(hash) % colors.length]
+    }
+  },
   methods: {
+    /**
+     * 打开封面对话框时初始化
+     */
+    onCoverDialogOpen() {
+      this.coverTab = 'library'
+      this.coverLoadFailed = false
+    },
+
     /**
      * 加载课程信息
      */
@@ -347,15 +520,221 @@ export default {
           const course = data.find(c => c.id === this.courseId || c.subjectId === this.courseId)
           if (course) {
             this.courseName = course.courseName || course.subjectName || course.name || ''
+            this.courseForm.courseName = this.courseName
+            this.courseForm.description = course.description || ''
+            this.courseForm.coverUrl = course.coverUrl || ''
+            this.coverLoadFailed = false
           }
         } else if (data && data.list) {
           const course = data.list.find(c => c.id === this.courseId || c.subjectId === this.courseId)
           if (course) {
             this.courseName = course.courseName || course.subjectName || course.name || ''
+            this.courseForm.courseName = this.courseName
+            this.courseForm.description = course.description || ''
+            this.courseForm.coverUrl = course.coverUrl || ''
+            this.coverLoadFailed = false
           }
         }
       } catch (e) {
         console.error('加载课程信息失败:', e)
+      }
+    },
+
+    /**
+     * Tab 切换
+     */
+    handleTabClick(tab) {
+      if (tab.name === 'outline' && !this.currentClassId) {
+        this.loadClassList()
+      }
+    },
+
+    /**
+     * 选择本地图片 → 上传到 resource 目录，后端自动存库
+     */
+    async onCoverFileSelected(e) {
+      const file = e.target.files[0]
+      if (!file) return
+      if (!file.type.startsWith('image/')) {
+        this.$message.warning('请选择图片文件')
+        return
+      }
+      this.uploadingCover = true
+      try {
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('courseId', this.courseId)
+        console.log('[封面上传] 开始上传:', { fileName: file.name, fileSize: file.size, courseId: this.courseId })
+        const res = await importCoverImage(formData)
+        console.log('[封面上传] 后端响应:', res)
+        const body = res.data
+        if (body && body.code === 200 && body.resultData) {
+          const coverUrl = body.resultData.relativePath || body.resultData.coverUrl
+          console.log('[封面上传] 成功, coverUrl:', coverUrl, 'fileWritten:', body.resultData.fileWritten, 'dbRows:', body.resultData.dbRows)
+          this.courseForm.coverUrl = coverUrl
+          this.coverLoadFailed = false
+          this.coverDialogVisible = false
+          this.$message.success('封面上传成功')
+          this.$forceUpdate()
+        } else {
+          console.error('[封面上传] 失败:', body)
+          this.$message.error(body?.resultData || '封面上传失败')
+        }
+      } catch (e) {
+        console.error('[封面上传] 异常:', e)
+        this.$message.error('封面上传失败: ' + (e.message || '网络错误'))
+      } finally {
+        this.uploadingCover = false
+        e.target.value = ''
+      }
+    },
+
+    /**
+     * 确认选择封面（"确定"按钮）
+     * - 网络链接模式：直接存储 URL 到数据库
+     * - 资源库模式：不做额外操作（上传时已完成）
+     */
+    confirmCover() {
+      if (this.coverTab === 'url') {
+        const url = this.coverUrlInput.trim()
+        if (!url) {
+          this.$message.warning('请输入图片链接')
+          return
+        }
+        console.log('[封面保存] 网络链接模式, URL:', url)
+        this.courseForm.coverUrl = url
+        this.coverDialogVisible = false
+        this.saveCoverToDatabase()
+      }
+      // 资源库模式：图片已在 onCoverFileSelected 中上传完成，直接关闭对话框
+      if (this.coverTab === 'library') {
+        this.coverDialogVisible = false
+      }
+    },
+
+    /**
+     * 图片加载失败时的回退
+     * ⚠️ 绝对不能清空 coverUrl！
+     * 原因：如果清空了，用户再点"保存修改"会把空值持久化到 DB，覆盖掉正确的 cover_url
+     */
+    onCoverError(e) {
+      const failedSrc = e && e.target && e.target.src
+      console.warn('[封面显示] 图片加载失败，URL:', failedSrc, 'cover_url 保持不变:', this.courseForm.coverUrl)
+      // 如果失败的 src 不是当前 coverDisplayUrl（例如残留的旧 src 或异常字符串），
+      // 触发一次重渲染，让 :src 重新绑定到正确的计算属性
+      if (failedSrc && this.coverDisplayUrl && failedSrc !== this.coverDisplayUrl) {
+        console.warn('[封面显示] 检测到 src 与 coverDisplayUrl 不一致，尝试重新渲染')
+        this.$nextTick(() => this.$forceUpdate())
+      }
+      this.coverLoadFailed = true
+    },
+
+    /**
+     * 移除封面
+     */
+    removeCover() {
+      this.courseForm.coverUrl = ''
+      this.coverUrlInput = ''
+      this.saveCoverToDatabase()
+    },
+
+    /**
+     * 保存封面 URL 到数据库（自动保存，无需点击「保存修改」）
+     */
+    async saveCoverToDatabase() {
+      this.savingCourse = true
+      try {
+        const res = await updateCourse({
+          id: this.courseId,
+          coverUrl: this.courseForm.coverUrl || ''
+        })
+        const body = res.data
+        if (body && body.code === 200) {
+          this.$message.success('封面保存成功')
+        } else {
+          this.$message.error(body?.resultData || '封面保存失败')
+        }
+      } catch (e) {
+        console.error('封面保存失败:', e)
+        this.$message.error('封面保存失败')
+      } finally {
+        this.savingCourse = false
+      }
+    },
+
+    /**
+     * 保存课程信息
+     */
+    async saveCourseInfo() {
+      try {
+        await this.$refs.courseForm.validate()
+      } catch {
+        return
+      }
+      this.savingCourse = true
+      try {
+        const res = await updateCourse({
+          id: this.courseId,
+          courseName: this.courseForm.courseName.trim(),
+          description: this.courseForm.description || '',
+          coverUrl: this.courseForm.coverUrl || ''
+        })
+        const body = res.data
+        if (body && body.code === 200) {
+          this.$message.success('课程信息保存成功')
+          this.courseName = this.courseForm.courseName.trim()
+        } else {
+          this.$message.error(body?.resultData || '保存失败')
+        }
+      } catch (e) {
+        console.error('保存课程信息失败:', e)
+        this.$message.error('保存课程信息失败')
+      } finally {
+        this.savingCourse = false
+      }
+    },
+
+    /**
+     * 删除当前课程
+     * - 二次确认后调用后端 deleteSubject 接口
+     * - 删除成功后返回课程列表页
+     * - 数据库已配置 ON DELETE CASCADE，会自动清理 class / chapter 等关联数据
+     */
+    async onDeleteCourse() {
+      if (!this.courseId) {
+        this.$message.warning('缺少课程ID，无法删除')
+        return
+      }
+      try {
+        await this.$confirm(
+          `确定要删除课程「${this.courseName || '当前课程'}」吗？此操作将同时删除该课程下的所有班级、章节和资源，且不可恢复！`,
+          '删除确认',
+          {
+            confirmButtonText: '确认删除',
+            cancelButtonText: '取消',
+            type: 'warning',
+            confirmButtonClass: 'el-button--danger'
+          }
+        )
+      } catch {
+        // 用户取消
+        return
+      }
+      this.deletingCourse = true
+      try {
+        const res = await deleteCourse(this.courseId)
+        const body = res.data
+        if (body && body.code === 200) {
+          this.$message.success('课程已删除')
+          this.$router.replace({ path: '/teachercourselist' })
+        } else {
+          this.$message.error(body?.resultData || '删除失败')
+        }
+      } catch (e) {
+        console.error('删除课程失败:', e)
+        this.$message.error('删除课程失败: ' + (e.message || '网络错误'))
+      } finally {
+        this.deletingCourse = false
       }
     },
 
@@ -769,27 +1148,142 @@ export default {
   background: #fff;
   padding: 16px 24px;
   border-bottom: 1px solid #e4e7ed;
-}
-
-.management-header .header-info {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 12px;
+  gap: 16px;
 }
 
-.management-header .header-info h2 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: #303133;
+.management-header .header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.management-tabs {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0 16px;
+  min-height: 0;
+}
+
+.management-tabs .el-tabs {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.management-tabs .el-tabs__content {
+  flex: 1;
+  min-height: 0;
+}
+
+.management-tabs .el-tab-pane {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.course-info-panel {
+  max-width: 680px;
+  padding: 24px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  margin-top: 16px;
+}
+
+.cover-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cover-preview {
+  width: 100%;
+  max-width: 480px;
+  height: 160px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+.cover-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cover-letter {
+  font-size: 56px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.cover-remove-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.cover-upload-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 40px 20px;
+}
+
+.upload-tip {
+  text-align: center;
+  color: #909399;
+}
+
+.upload-tip i {
+  font-size: 48px;
+  color: #c0c4cc;
+  margin-bottom: 12px;
+}
+
+.upload-tip p {
+  font-size: 14px;
+  color: #606266;
+  margin: 8px 0 4px;
+}
+
+.upload-tip span {
+  font-size: 12px;
+  color: #c0c4cc;
+}
+
+.cover-url-input {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 20px;
+}
+
+.outline-toolbar {
+  padding: 12px 0;
+  background: #f5f7fa;
 }
 
 .management-body {
   flex: 1;
   display: flex;
   gap: 16px;
-  padding: 16px;
   min-height: 0;
 }
 

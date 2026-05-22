@@ -34,10 +34,8 @@
       >
         <!-- 课程封面 -->
         <div class="card-cover" :style="{ background: getCourseColor(course.id) }">
-          <div class="cover-icon">{{ (course.courseName || '').charAt(0).toUpperCase() }}</div>
-          <div class="status-badge" :class="getStatusBadgeClass(course.status)">
-            {{ getStatusText(course.status) }}
-          </div>
+          <img v-if="course.coverUrl" :src="getCoverUrl(course)" class="cover-image" @error="e => e.target.style.display='none'" />
+          <div class="cover-icon" v-show="!course.coverUrl">{{ (course.courseName || '').charAt(0).toUpperCase() }}</div>
         </div>
 
         <!-- 课程信息 -->
@@ -46,23 +44,6 @@
           <p class="course-desc" :title="course.description || ''">
             {{ course.description || '暂无简介' }}
           </p>
-
-          <div class="course-meta">
-            <span class="meta-item">
-              <i class="el-icon-time"></i>
-              {{ formatTime(course.updateTime || course.createTime) }}
-            </span>
-          </div>
-        </div>
-
-        <!-- 操作按钮 -->
-        <div class="card-actions">
-          <el-button type="text" size="small" @click.stop="enterCourseEditor(course)">
-            <i class="el-icon-edit"></i> 编辑大纲
-          </el-button>
-          <el-button type="text" size="small" @click.stop="deleteCourse(course)">
-            <i class="el-icon-delete"></i> 删除
-          </el-button>
         </div>
       </div>
     </div>
@@ -97,14 +78,14 @@
       </el-form>
       <span slot="footer">
         <el-button @click="showCreateDialog = false">取消</el-button>
-        <el-button type="primary" @click="createCourse" :loading="creating">创建</el-button>
+        <el-button type="primary" native-type="button" @click="createCourse" :loading="creating">创建</el-button>
       </span>
     </el-dialog>
   </div>
 </template>
 
 <script>
-import { getMyCourses, createCourse as apiCreateCourse, deleteCourse as apiDeleteCourse } from '@/api/teacher/teacherApi'
+import { getMyCourses, createCourse as apiCreateCourse } from '@/api/teacher/teacherApi'
 
 export default {
   name: 'TeacherCourseList',
@@ -178,6 +159,16 @@ export default {
       })
       this.filteredCourses = list
     },
+    getCoverUrl(course) {
+      if (!course.coverUrl) return ''
+      if (course.coverUrl.startsWith('http://') || course.coverUrl.startsWith('https://')) {
+        return course.coverUrl
+      }
+      if (course.coverUrl.startsWith('./')) {
+        return this.$store.state.baseApi + '/resource/' + course.coverUrl.substring(2)
+      }
+      return this.$store.state.baseApi + course.coverUrl
+    },
     enterCourseEditor(course) {
       this.$router.push({
         name: 'TeacherCourseManagement',
@@ -201,29 +192,6 @@ export default {
         hash = ((hash << 5) - hash) + String(id).charCodeAt(i)
       }
       return colors[Math.abs(hash) % colors.length]
-    },
-    getStatusBadgeClass(status) {
-      // status: 1=启用, 2=停用, 3=草稿
-      if (status === 1) return 'status-published'
-      if (status === 3) return 'status-draft'
-      return 'status-draft'
-    },
-    getStatusText(status) {
-      if (status === 1) return '已发布'
-      if (status === 3) return '草稿'
-      return '未知'
-    },
-    formatTime(time) {
-      if (!time) return ''
-      const d = new Date(time)
-      const now = new Date()
-      const diff = now - d
-      if (diff < 60000) return '刚刚'
-      if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前'
-      if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前'
-      const month = (d.getMonth() + 1).toString().padStart(2, '0')
-      const day = d.getDate().toString().padStart(2, '0')
-      return month + '-' + day
     },
     async createCourse() {
       try {
@@ -253,26 +221,6 @@ export default {
       } finally {
         this.creating = false
       }
-    },
-    deleteCourse(course) {
-      this.$confirm(`确认删除课程《${course.courseName}》？所有章节资料将被永久删除。`, '警告', {
-        confirmButtonText: '确认删除',
-        cancelButtonText: '取消',
-        type: 'error'
-      }).then(async () => {
-        try {
-          const resp = await apiDeleteCourse(course.id)
-          const body = resp.data
-          if (body && body.code === 200) {
-            this.$message.success('删除成功')
-            this.loadCourses()
-          } else {
-            this.$message.error(body?.resultData || '删除失败')
-          }
-        } catch (e) {
-          this.$message.error('删除失败')
-        }
-      }).catch(() => {})
     }
   }
 }
@@ -365,24 +313,10 @@ export default {
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-.status-badge {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  padding: 2px 10px;
-  border-radius: 10px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.status-published {
-  background: rgba(103, 194, 58, 0.9);
-  color: #fff;
-}
-
-.status-draft {
-  background: rgba(230, 162, 60, 0.9);
-  color: #fff;
+.cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .card-body {
@@ -411,26 +345,6 @@ export default {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   min-height: 36px;
-}
-
-.course-meta {
-  display: flex;
-  gap: 16px;
-  font-size: 12px;
-  color: #c0c4cc;
-  margin-top: auto;
-}
-
-.meta-item i {
-  margin-right: 4px;
-}
-
-.card-actions {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 16px;
-  border-top: 1px solid #f2f2f2;
-  background: #fafafa;
 }
 
 .empty-state {
