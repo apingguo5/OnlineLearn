@@ -52,6 +52,11 @@ public class AskQuestionsEntity implements Serializable {
 	 */
 	private Integer status;
 	/**
+	 * 班级ID（NULL表示全员可见）
+	 */
+	@TableField("class_id")
+	private Integer classId;
+	/**
 	 * 时间
 	 */
 	private Date createTime;
@@ -119,5 +124,13 @@ public class AskQuestionsEntity implements Serializable {
 
 	public void setStatus(Integer status) {
 		this.status = status;
+	}
+
+	public Integer getClassId() {
+		return classId;
+	}
+
+	public void setClassId(Integer classId) {
+		this.classId = classId;
 	}
 }

@@ -15,34 +15,38 @@
 
         <!-- ====== Tab 切换区 ====== -->
         <div class="tab-nav">
-            <div class="tab-item" :class="{ active: activeTab === 'notices' }" @click="activeTab = 'notices'">
-                <i class="el-icon-bell"></i>
-                <span>通知公告</span>
-                <el-badge v-if="noticeList.length > 0" :value="noticeList.length" class="tab-badge" />
+            <div class="tab-item" :class="{ active: activeTab === 'square' }" @click="activeTab = 'square'">
+                <i class="el-icon-s-promotion"></i>
+                <span>问答广场</span>
+                <el-badge v-if="squareTotal > 0" :value="squareTotal" class="tab-badge" />
             </div>
             <div class="tab-item" :class="{ active: activeTab === 'ask' }" @click="activeTab = 'ask'">
                 <i class="el-icon-edit-outline"></i>
                 <span>我要提问</span>
             </div>
-            <div class="tab-item" :class="{ active: activeTab === 'my' }" @click="activeTab = 'my'">
-                <i class="el-icon-question"></i>
-                <span>我的提问</span>
-                <el-badge v-if="questionTotal > 0" :value="questionTotal" class="tab-badge" />
-            </div>
         </div>
 
-        <!-- ====== 通知公告 ====== -->
-        <div v-show="activeTab === 'notices'" class="tab-content">
+        <!-- ====== 问答广场 ====== -->
+        <div v-show="activeTab === 'square'" class="tab-content">
             <!-- 筛选 + 统计 -->
-            <div class="notice-toolbar">
-                <div class="toolbar-left">
+            <div class="square-toolbar">
+                <div class="toolbar-left" style="display:flex;gap:12px;align-items:center;">
                     <el-select
-                        v-model="noticeFilterClassId"
+                        v-model="squareFilterType"
+                        placeholder="筛选类型"
+                        size="small"
+                        @change="onSquareFilter"
+                    >
+                        <el-option label="全部" value="all" />
+                        <el-option label="通知公告" value="notice" />
+                        <el-option label="问题" value="question" />
+                    </el-select>
+                    <el-select
+                        v-model="squareFilterClassId"
                         placeholder="全部班级"
                         size="small"
                         clearable
-                        @change="onNoticeFilterChange"
-                        class="notice-filter-select"
+                        @change="onSquareFilter"
                     >
                         <el-option
                             v-for="cls in enrolledClasses"
@@ -53,48 +57,132 @@
                     </el-select>
                 </div>
                 <div class="toolbar-right">
-                    <span class="notice-count-text">共 <strong>{{ noticeList.length }}</strong> 条通知</span>
+                    <span class="square-count-text">共 <strong>{{ filteredSquareList.length }}</strong> 条</span>
                 </div>
             </div>
 
             <!-- 空状态 -->
-            <div v-if="noticeList.length === 0" class="empty-state">
+            <div v-if="filteredSquareList.length === 0" class="empty-state">
                 <div class="empty-icon">
-                    <i class="el-icon-reading"></i>
+                    <i class="el-icon-chat-square"></i>
                 </div>
-                <p class="empty-title">暂无通知公告</p>
-                <p class="empty-desc">当老师发布新通知时，会在这里显示</p>
+                <p class="empty-title">暂无内容</p>
+                <p class="empty-desc">切换筛选条件或去「我要提问」发布你的第一个问题吧</p>
+                <el-button type="primary" size="small" @click="activeTab = 'ask'">去提问</el-button>
             </div>
 
-            <!-- 通知卡片列表 -->
-            <div v-else class="notice-card-list">
-                <div
-                    v-for="n in noticeList"
-                    :key="'notice-' + n.id"
-                    class="notice-card"
-                    :class="{ 'notice-pinned': n.isPinned == 1 }"
-                >
-                    <div class="notice-card-left">
-                        <div class="notice-dot" :class="n.isPinned == 1 ? 'dot-pinned' : 'dot-normal'"></div>
-                    </div>
-                    <div class="notice-card-body">
-                        <div class="notice-card-head">
-                            <span class="notice-card-title">
-                                <i v-if="n.isPinned == 1" class="el-icon-top" style="color:#F56C6C;margin-right:4px;"></i>
-                                {{ n.title }}
-                            </span>
-                            <el-tag size="mini" effect="plain" type="info">{{ n.courseName ? n.courseName + ' - ' : '' }}{{ n.className }}</el-tag>
+            <!-- 混合卡片列表 -->
+            <div v-else class="square-list">
+                <!-- ====== 通知卡片 ====== -->
+                <div v-for="item in filteredSquareList" :key="item._key">
+                    <div
+                        v-if="item._type === 'notice'"
+                        class="notice-card"
+                        :class="{ 'notice-pinned': item.isPinned == 1 }"
+                    >
+                        <div class="notice-card-left">
+                            <div class="notice-dot" :class="item.isPinned == 1 ? 'dot-pinned' : 'dot-normal'"></div>
                         </div>
-                        <p class="notice-card-content">{{ n.content }}</p>
-                        <div class="notice-card-foot">
-                            <span class="foot-sender">
-                                <el-avatar :size="20" style="vertical-align:middle;margin-right:4px;">{{ (n.senderName || '教')[0] }}</el-avatar>
-                                {{ n.senderName }}
-                            </span>
-                            <span class="foot-time">{{ n.createTime }}</span>
+                        <div class="notice-card-body">
+                            <div class="notice-card-head">
+                                <span class="notice-card-title">
+                                    <i v-if="item.isPinned == 1" class="el-icon-top" style="color:#F56C6C;margin-right:4px;"></i>
+                                    {{ item.title }}
+                                </span>
+                                <el-tag size="mini" effect="plain" type="info">
+                                    {{ item.courseName ? item.courseName + ' - ' : '' }}{{ item.className }}
+                                </el-tag>
+                            </div>
+                            <p class="notice-card-content">{{ item.content }}</p>
+                            <div class="notice-card-foot">
+                                <span class="foot-sender">
+                                    <el-avatar :size="20" style="vertical-align:middle;margin-right:4px;">{{ (item.senderName || '教')[0] }}</el-avatar>
+                                    {{ item.senderName }}
+                                </span>
+                                <el-tag size="mini" type="warning" effect="plain">通知</el-tag>
+                                <span class="foot-time">{{ item.createTime }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ====== 问题卡片 ====== -->
+                    <div
+                        v-else
+                        class="qa-card"
+                        :class="{ 'qa-answered': item.restore && item.restore !== 'undefined' }"
+                    >
+                        <div class="qa-card-head">
+                            <div class="qa-head-left">
+                                <span class="qa-topic-tag">
+                                    <i class="el-icon-collection-tag"></i>
+                                    {{ item.topic || '通用问题' }}
+                                </span>
+                                <span class="qa-sender-name">{{ item.senderName }}</span>
+                            </div>
+                            <div class="qa-head-right">
+                                <el-tag v-if="item.restore && item.restore !== 'undefined'" type="success" size="small" effect="plain">已回复</el-tag>
+                                <el-tag v-else type="warning" size="small" effect="plain">待回复</el-tag>
+                                <el-tag size="mini" type="primary" effect="plain">问题</el-tag>
+                                <span class="qa-time">{{ item.createTime }}</span>
+                            </div>
+                        </div>
+
+                        <div class="qa-card-question">
+                            <div class="qa-label">📝 问题描述</div>
+                            <div class="qa-text">
+                                <p>{{ item.content }}</p>
+                            </div>
+                        </div>
+
+                        <div class="qa-card-reply">
+                            <div class="qa-label">💬 老师回复</div>
+                            <div v-if="item.restore && item.restore !== 'undefined'" class="qa-reply-body">
+                                <el-avatar :size="28" style="margin-right:8px;">师</el-avatar>
+                                <div class="qa-reply-box">
+                                    <p class="qa-reply-text">{{ item.restore }}</p>
+                                    <span class="qa-reply-teacher">— {{ item.recipientName || '老师' }}</span>
+                                </div>
+                            </div>
+                            <p v-else class="qa-reply-waiting">
+                                <i class="el-icon-time"></i> 老师正在赶来回复的路上...
+                            </p>
+                        </div>
+
+                        <div v-if="item.className" class="qa-card-class">
+                            <i class="el-icon-school"></i>
+                            {{ item.courseName ? item.courseName + ' - ' : '' }}{{ item.className }}
+                        </div>
+
+                        <div class="qa-card-actions">
+                            <el-button
+                                v-if="canEditOrDelete(item)"
+                                type="text"
+                                size="small"
+                                icon="el-icon-edit"
+                                @click="startEdit(item)"
+                            >修改</el-button>
+                            <el-button
+                                v-if="canEditOrDelete(item)"
+                                type="text"
+                                size="small"
+                                icon="el-icon-delete"
+                                style="color:#F56C6C;"
+                                @click="confirmDelete(item.id)"
+                            >删除</el-button>
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- 修改对话框 -->
+            <div v-if="editingId" class="qa-edit-inline" style="margin-top:12px;">
+                <el-card shadow="never">
+                    <el-input type="textarea" v-model="editContent" :rows="3" placeholder="修改你的问题..." />
+                    <div style="margin-top:8px;display:flex;gap:8px;">
+                        <el-button type="primary" size="small" @click="confirmEdit(editingId)">保存</el-button>
+                        <el-button size="small" @click="cancelEdit">取消</el-button>
+                    </div>
+                </el-card>
             </div>
         </div>
 
@@ -116,6 +204,25 @@
                             show-word-limit
                         />
                     </el-form-item>
+                    <el-form-item label="选择班级（可选）">
+                        <el-select
+                            v-model="askForm.classId"
+                            placeholder="不选择则全员可见"
+                            size="small"
+                            clearable
+                            style="width:100%;"
+                        >
+                            <el-option
+                                v-for="cls in enrolledClasses"
+                                :key="'ask-' + cls.classId"
+                                :label="cls.courseName + ' - ' + cls.className"
+                                :value="cls.classId"
+                            />
+                        </el-select>
+                        <span style="font-size:12px;color:#909399;margin-top:4px;display:block;">
+                            <i class="el-icon-info"></i> 选择班级后仅该班学生可见，不选择则所有人可见
+                        </span>
+                    </el-form-item>
                     <el-form-item>
                         <el-button
                             type="primary"
@@ -131,102 +238,6 @@
                 </el-form>
             </el-card>
         </div>
-
-        <!-- ====== 我的提问 ====== -->
-        <div v-show="activeTab === 'my'" class="tab-content">
-            <!-- 空状态 -->
-            <div v-if="NotHomeWork.length === 0" class="empty-state">
-                <div class="empty-icon">
-                    <i class="el-icon-chat-square"></i>
-                </div>
-                <p class="empty-title">还没有提问记录</p>
-                <p class="empty-desc">去「我要提问」发布你的第一个问题吧</p>
-                <el-button type="primary" size="small" @click="activeTab = 'ask'">去提问</el-button>
-            </div>
-
-            <!-- 提问列表 -->
-            <div v-else class="qa-list">
-                <div v-for="t in NotHomeWork" :key="'qa-' + t.id" class="qa-card" :class="{ 'qa-answered': t.restore && t.restore !== 'undefined' }">
-                    <!-- 头部：来源 + 时间 + 状态 -->
-                    <div class="qa-card-head">
-                        <div class="qa-head-left">
-                            <span class="qa-topic-tag">
-                                <i class="el-icon-collection-tag"></i>
-                                {{ t.topic || '通用问题' }}
-                            </span>
-                            <span class="qa-sender-name">{{ t.senderName }}</span>
-                        </div>
-                        <div class="qa-head-right">
-                            <el-tag v-if="t.restore && t.restore !== 'undefined'" type="success" size="small" effect="plain">已回复</el-tag>
-                            <el-tag v-else type="warning" size="small" effect="plain">待回复</el-tag>
-                            <span class="qa-time">{{ t.createTime }}</span>
-                        </div>
-                    </div>
-
-                    <!-- 问题内容 -->
-                    <div class="qa-card-question">
-                        <div class="qa-label">📝 问题描述</div>
-                        <div v-if="editingId !== t.id" class="qa-text">
-                            <p>{{ t.content }}</p>
-                        </div>
-                        <div v-else class="qa-edit">
-                            <el-input type="textarea" v-model="editContent" :rows="3" placeholder="修改你的问题..." />
-                            <div class="qa-edit-btns">
-                                <el-button type="primary" size="small" @click="confirmEdit(t.id)">保存</el-button>
-                                <el-button size="small" @click="cancelEdit">取消</el-button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 回复内容 -->
-                    <div class="qa-card-reply">
-                        <div class="qa-label">💬 老师回复</div>
-                        <div v-if="t.restore && t.restore !== 'undefined'" class="qa-reply-body">
-                            <el-avatar :size="28" style="margin-right:8px;">师</el-avatar>
-                            <div class="qa-reply-box">
-                                <p class="qa-reply-text">{{ t.restore }}</p>
-                                <span class="qa-reply-teacher">— {{ t.recipientName || '老师' }}</span>
-                            </div>
-                        </div>
-                        <p v-else class="qa-reply-waiting">
-                            <i class="el-icon-time"></i> 老师正在赶来回复的路上...
-                        </p>
-                    </div>
-
-                    <!-- 操作 -->
-                    <div class="qa-card-actions">
-                        <el-button
-                            v-if="canEditOrDelete(t)"
-                            type="text"
-                            size="small"
-                            icon="el-icon-edit"
-                            @click="startEdit(t)"
-                        >修改</el-button>
-                        <el-button
-                            v-if="canEditOrDelete(t)"
-                            type="text"
-                            size="small"
-                            icon="el-icon-delete"
-                            style="color:#F56C6C;"
-                            @click="confirmDelete(t.id)"
-                        >删除</el-button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 分页 -->
-            <el-pagination
-                v-if="questionTotal > 0"
-                class="qa-pagination"
-                @size-change="handleQaSizeChange"
-                @current-change="handleQaPageChange"
-                :current-page="qaPage.page"
-                :page-sizes="[10, 20, 30, 40]"
-                :page-size="qaPage.pageSize"
-                layout="total, sizes, prev, pager, next, jumper"
-                :total="questionTotal"
-            />
-        </div>
     </div>
 </template>
 
@@ -239,20 +250,60 @@ export default {
     data() {
         return {
             userId: null,
-            activeTab: 'notices',
+            activeTab: 'square',
             submitting: false,
             // 班级
             enrolledClasses: [],
             // 通知
             noticeList: [],
-            noticeFilterClassId: null,
-            // 提问
-            qaPage: { page: 1, pageSize: 10 },
+            // 问题
             NotHomeWork: [],
             questionTotal: 0,
-            askForm: { content: '', sender: null, recipient: 2, videoId: 1, status: 2 },
+            // 问答广场筛选
+            squareFilterType: 'all',
+            squareFilterClassId: null,
+            // 提问
+            askForm: { content: '', sender: null, recipient: 2, videoId: 1, status: 2, classId: null },
             editingId: null,
             editContent: ''
+        }
+    },
+    computed: {
+        squareList() {
+            const notices = this.noticeList.map(n => ({
+                ...n,
+                _type: 'notice',
+                _key: 'notice-' + n.id
+            }))
+            const questions = this.NotHomeWork.map(q => ({
+                ...q,
+                _type: 'question',
+                _key: 'qa-' + q.id
+            }))
+            const merged = [...notices, ...questions]
+            merged.sort((a, b) => {
+                const ta = a.createTime || ''
+                const tb = b.createTime || ''
+                return tb.localeCompare(ta)
+            })
+            return merged
+        },
+        filteredSquareList() {
+            return this.squareList.filter(item => {
+                if (this.squareFilterType && this.squareFilterType !== 'all') {
+                    if (item._type !== this.squareFilterType) return false
+                }
+                if (this.squareFilterClassId) {
+                    const cid = item._type === 'notice'
+                        ? item.classId
+                        : (item.classId || null)
+                    if (cid != this.squareFilterClassId) return false
+                }
+                return true
+            })
+        },
+        squareTotal() {
+            return this.noticeList.length + this.NotHomeWork.length
         }
     },
     created() {
@@ -281,14 +332,12 @@ export default {
                 }
             } catch (e) { this.enrolledClasses = [] }
         },
-        onNoticeFilterChange() {
-            this.loadNotices()
-        },
+        onSquareFilter() {},
         async loadNotices() {
             try {
                 const params = { userId: this.userId, page: 1, pageSize: 100 }
-                if (this.noticeFilterClassId) {
-                    params.classId = this.noticeFilterClassId
+                if (this.squareFilterClassId) {
+                    params.classId = this.squareFilterClassId
                 }
                 const res = await getStudentNotices(params)
                 if (res.data.code === 200) {
@@ -298,7 +347,7 @@ export default {
         },
         async loadQuestions() {
             try {
-                const params = { page: this.qaPage.page, pageSize: this.qaPage.pageSize, userId: this.userId, roleId: 3 }
+                const params = { page: 1, pageSize: 100, userId: this.userId, roleId: 3 }
                 const res = await askandanswer(params)
                 if (res.data.code === 200) {
                     const data = res.data.resultData
@@ -307,19 +356,19 @@ export default {
                 }
             } catch (e) { this.NotHomeWork = [] }
         },
-        handleQaSizeChange(size) { this.qaPage.pageSize = size; this.loadQuestions() },
-        handleQaPageChange(p) { this.qaPage.page = p; this.loadQuestions() },
 
         submitQuestion() {
             if (!this.askForm.content.trim()) { this.$message.error('问题内容不能为空'); return }
             this.askForm.sender = this.userId
+            this.askForm.classId = this.askForm.classId || null
             this.submitting = true
             saveQuestion(this.askForm).then(res => {
                 if (res.data.code === 200) {
                     this.$message.success('提问成功！老师会尽快回复你')
                     this.askForm.content = ''
+                    this.askForm.classId = null
                     this.loadQuestions()
-                    this.activeTab = 'my'
+                    this.activeTab = 'square'
                 } else {
                     this.$message.error('提问失败')
                 }
@@ -439,19 +488,22 @@ export default {
 .tab-content { animation: fadeIn 0.25s ease; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-/* ====== 通知筛选栏 ====== */
-.notice-toolbar {
+/* ====== 问答广场筛选栏 ====== */
+.square-toolbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 8px;
 }
-.notice-filter-select { width: 180px; }
-.notice-count-text { font-size: 13px; color: #909399; }
-.notice-count-text strong { color: #303133; }
+.square-count-text { font-size: 13px; color: #909399; }
+.square-count-text strong { color: #303133; }
+
+/* ====== 广场卡片列表 ====== */
+.square-list { display: flex; flex-direction: column; gap: 12px; }
 
 /* ====== 通知卡片 ====== */
-.notice-card-list { display: flex; flex-direction: column; gap: 12px; }
 .notice-card {
     display: flex;
     gap: 14px;
@@ -483,7 +535,6 @@ export default {
 }
 .dot-normal { background: #409EFF; }
 .dot-pinned { background: #F56C6C; }
-
 .notice-card-body { flex: 1; min-width: 0; }
 .notice-card-head {
     display: flex;
@@ -562,7 +613,6 @@ export default {
 .empty-desc { font-size: 13px; color: #C0C4CC; margin: 0 0 16px; }
 
 /* ====== QA 卡片 ====== */
-.qa-list { display: flex; flex-direction: column; gap: 16px; }
 .qa-card {
     background: #fff;
     border-radius: 10px;
@@ -614,9 +664,6 @@ export default {
     line-height: 1.7;
 }
 
-.qa-edit { margin-top: 8px; }
-.qa-edit-btns { margin-top: 8px; display: flex; gap: 8px; }
-
 .qa-card-reply { margin-bottom: 8px; }
 .qa-reply-body {
     display: flex;
@@ -643,14 +690,20 @@ export default {
 }
 .qa-reply-waiting i { margin-right: 4px; }
 
+.qa-card-class {
+    font-size: 12px;
+    color: #909399;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
 .qa-card-actions {
     display: flex;
     gap: 4px;
     padding-top: 4px;
 }
 
-.qa-pagination {
-    margin-top: 20px;
-    text-align: center;
-}
+.qa-edit-inline { margin-top: 12px; }
 </style>

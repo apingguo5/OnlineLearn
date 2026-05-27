@@ -59,6 +59,10 @@ public class AskQuestionsVo {
 	 * 登陆人角色ID
 	 */
 	private Integer roleId;
+	/**
+	 * 班级ID（NULL表示全员可见）
+	 */
+	private Integer classId;
 
 
 	public Integer getPage() {
@@ -147,6 +151,14 @@ public class AskQuestionsVo {
 
 	public void setRoleId(Integer roleId) {
 		this.roleId = roleId;
+	}
+
+	public Integer getClassId() {
+		return classId;
+	}
+
+	public void setClassId(Integer classId) {
+		this.classId = classId;
 	}
 
 }

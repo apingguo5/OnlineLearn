@@ -11,6 +11,7 @@
         <result property="videoId" column="resource_id"/>
         <result property="restore" column="reply"/>
         <result property="status" column="status"/>
+        <result property="classId" column="class_id"/>
         <result property="createTime" column="create_time"/>
     </resultMap>
 
@@ -21,6 +22,7 @@
         aq.recipient,
         aq.resource_id AS resourceId,
         aq.reply AS restore,
+        aq.class_id AS classId,
         CASE aq.status WHEN 1 THEN '已回复' WHEN 2 THEN '未回复' END AS status,
         DATE_FORMAT(aq.create_time ,'%Y-%m-%d %H:%i:%s') AS createTime
     </sql>
@@ -30,13 +32,16 @@
         COUNT(*) AS total
         FROM
         ask_questions aq
-        LEFT JOIN `user` u1 ON u1.id = aq.sender
-        LEFT JOIN `user` u2 ON u2.id = aq.recipient
-        LEFT JOIN course_resource cr ON cr.id = aq.resource_id
         <where>
             <if test="userId != null">
                 <if test="roleId == 3">
-                    AND (aq.sender = #{userId} OR aq.recipient = #{userId})
+                    AND (
+                        aq.class_id IS NULL
+                        OR EXISTS (
+                            SELECT 1 FROM user_class uc3
+                            WHERE uc3.class_id = aq.class_id AND uc3.user_id = #{userId}
+                        )
+                    )
                 </if>
             </if>
             <if test="content != null and content != ''">
@@ -53,16 +58,26 @@
         u1.user_name AS senderName,
         u2.user_name AS recipientName,
         cr.resource_name AS topic,
+        c.class_name AS className,
+        co.course_name AS courseName,
         <include refid="baseQuery"></include>
         FROM
         ask_questions aq
         LEFT JOIN `user` u1 ON u1.id = aq.sender
         LEFT JOIN `user` u2 ON u2.id = aq.recipient
         LEFT JOIN course_resource cr ON cr.id = aq.resource_id
+        LEFT JOIN class c ON c.id = aq.class_id
+        LEFT JOIN course co ON co.id = c.course_id
         <where>
             <if test="userId != null">
                 <if test="roleId == 3">
-                    AND (aq.sender = #{userId} OR aq.recipient = #{userId})
+                    AND (
+                        aq.class_id IS NULL
+                        OR EXISTS (
+                            SELECT 1 FROM user_class uc3
+                            WHERE uc3.class_id = aq.class_id AND uc3.user_id = #{userId}
+                        )
+                    )
                 </if>
             </if>
             <if test="content != null and content != ''">
