@@ -35,6 +35,16 @@
                         </template>
                     </el-table-column>
                 </el-table>
+                <el-pagination
+                    v-if="notificationTotal > 0"
+                    @size-change="handleNotifSizeChange"
+                    @current-change="handleNotifPageChange"
+                    :current-page="notificationPage.page"
+                    :page-sizes="[10, 20, 30, 40]"
+                    :page-size="notificationPage.pageSize"
+                    layout="total, sizes, prev, pager, next, jumper"
+                    :total="notificationTotal">
+                </el-pagination>
             </el-card>
         </div>
 
@@ -45,9 +55,6 @@
                     <el-card shadow="never" class="main-card">
                         <div slot="header" class="card-header">
                             <span>待回答的问题</span>
-                            <el-select v-model="qaFilterClass" placeholder="按班级筛选" style="width:160px" clearable @change="loadQuestions">
-                                <el-option v-for="cls in classList" :key="cls.id" :label="cls.className" :value="cls.id"></el-option>
-                            </el-select>
                         </div>
                         <div class="qa-empty" v-if="questionList.length === 0">
                             <i class="el-icon-chat-line-square" style="font-size:48px;color:#C0C4CC"></i>
@@ -56,17 +63,28 @@
                         <div class="qa-list" v-else v-loading="loading">
                             <div class="qa-item" v-for="(q, idx) in questionList" :key="idx" @click="selectedQuestion = q" :class="{ 'qa-item-active': selectedQuestion && selectedQuestion.id === q.id }">
                                 <div class="qa-item-header">
-                                    <el-avatar :size="28" :src="q.avatar" style="margin-right:8px">{{ (q.studentName || '?')[0] }}</el-avatar>
-                                    <span class="qa-student">{{ q.studentName }}</span>
-                                    <el-tag size="mini" type="info">{{ q.className }}</el-tag>
+                                    <el-avatar :size="28" style="margin-right:8px">{{ (q.senderName || '?')[0] }}</el-avatar>
+                                    <span class="qa-student">{{ q.senderName }}</span>
+                                    <el-tag size="mini" type="info">{{ q.topic || '通用问题' }}</el-tag>
                                 </div>
                                 <p class="qa-question">{{ q.content }}</p>
                                 <div class="qa-meta">
                                     <span>{{ q.createTime }}</span>
-                                    <span v-if="q.answerCount" style="margin-left:12px;color:#409EFF">{{ q.answerCount }} 个回答</span>
+                                    <span v-if="q.restore && q.restore !== 'undefined'" style="margin-left:12px;color:#67C23A">已回复</span>
+                                    <span v-else style="margin-left:12px;color:#E6A23C">待回复</span>
                                 </div>
                             </div>
                         </div>
+                        <el-pagination
+                            v-if="questionTotal > 0"
+                            @size-change="handleQaSizeChange"
+                            @current-change="handleQaPageChange"
+                            :current-page="qaPage.page"
+                            :page-sizes="[10, 20, 30, 40]"
+                            :page-size="qaPage.pageSize"
+                            layout="total, sizes, prev, pager, next, jumper"
+                            :total="questionTotal">
+                        </el-pagination>
                     </el-card>
                 </el-col>
                 <el-col :span="8">
@@ -80,17 +98,15 @@
                         </div>
                         <div v-else class="qa-detail">
                             <div class="qa-detail-question">
-                                <p><strong>{{ selectedQuestion.studentName }}：</strong></p>
+                                <p><strong>{{ selectedQuestion.senderName }}：</strong></p>
                                 <p>{{ selectedQuestion.content }}</p>
                             </div>
-                            <div class="qa-existing-answers" v-if="selectedQuestion.answers && selectedQuestion.answers.length">
-                                <p class="qa-answer-label">已有回答：</p>
-                                <div class="qa-answer-item" v-for="(ans, idx) in selectedQuestion.answers" :key="idx">
+                            <div class="qa-existing-answers" v-if="selectedQuestion.restore && selectedQuestion.restore !== 'undefined'">
+                                <p class="qa-answer-label">已有回复：</p>
+                                <div class="qa-answer-item">
                                     <el-avatar :size="24" style="margin-right:6px">师</el-avatar>
                                     <div class="qa-answer-content">
-                                        <p>{{ ans.content }}</p>
-                                        <span class="qa-answer-time">{{ ans.createTime }}</span>
-                                        <el-button type="text" size="mini" icon="el-icon-top" style="margin-left:8px">置顶</el-button>
+                                        <p>{{ selectedQuestion.restore }}</p>
                                     </div>
                                 </div>
                             </div>
@@ -111,8 +127,8 @@
                     <el-input v-model="notificationForm.title" placeholder="如：开课提醒"></el-input>
                 </el-form-item>
                 <el-form-item label="目标班级">
-                    <el-select v-model="notificationForm.classId" placeholder="请选择班级" style="width:100%">
-                        <el-option v-for="cls in classList" :key="cls.id" :label="cls.className" :value="cls.id"></el-option>
+                    <el-select v-model.number="notificationForm.classId" placeholder="请选择班级" style="width:100%">
+                        <el-option v-for="cls in classList" :key="cls.className + '_' + cls.id" :label="cls.className" :value="cls.id"></el-option>
                     </el-select>
                 </el-form-item>
                 <el-form-item label="通知内容">
@@ -129,6 +145,7 @@
 
 <script>
 import * as teacherApi from '@/api/teacher/teacherApi'
+import Cookies from 'js-cookie'
 
 export default {
     name: "TeacherCommunication",
@@ -136,9 +153,12 @@ export default {
         return {
             activeTab: 'notification',
             loading: false,
+            userId: null,
             classList: [],
             // 通知
             notificationList: [],
+            notificationTotal: 0,
+            notificationPage: { page: 1, pageSize: 10 },
             showSendNotification: false,
             notificationForm: {
                 title: '',
@@ -147,12 +167,14 @@ export default {
             },
             // 问答
             questionList: [],
-            qaFilterClass: null,
+            questionTotal: 0,
+            qaPage: { page: 1, pageSize: 10 },
             selectedQuestion: null,
             replyContent: ''
         }
     },
     created() {
+        this.userId = Number(Cookies.get('userId'))
         this.loadClasses()
         this.loadNotifications()
         this.loadQuestions()
@@ -160,46 +182,94 @@ export default {
     methods: {
         async loadClasses() {
             try {
-                const res = await teacherApi.getMyClasses({})
-                this.classList = (res.data && res.data.list) ? res.data.list : []
+                const res = await teacherApi.getMyClasses({ userId: this.userId })
+                const data = res.data.resultData
+                this.classList = Array.isArray(data) ? data : []
             } catch (e) { this.classList = [] }
         },
         async loadNotifications() {
             this.loading = true
             try {
-                const res = await teacherApi.getNotifications({})
-                this.notificationList = (res.data && res.data.list) ? res.data.list : []
+                const params = {
+                    page: this.notificationPage.page,
+                    pageSize: this.notificationPage.pageSize,
+                    senderId: this.userId
+                }
+                const res = await teacherApi.getNotifications(params)
+                if (res.data.code === 200) {
+                    const data = res.data.resultData
+                    this.notificationList = data.data || []
+                    this.notificationTotal = data.total || 0
+                }
             } catch (e) { this.notificationList = [] }
             this.loading = false
+        },
+        handleNotifSizeChange(size) {
+            this.notificationPage.pageSize = size
+            this.loadNotifications()
+        },
+        handleNotifPageChange(pageNum) {
+            this.notificationPage.page = pageNum
+            this.loadNotifications()
         },
         async loadQuestions() {
             this.loading = true
             try {
-                const params = {}
-                if (this.qaFilterClass) params.classId = this.qaFilterClass
-                const res = await teacherApi.getQuestions(params)
-                this.questionList = (res.data && res.data.list) ? res.data.list : []
+                const params = {
+                    page: this.qaPage.page,
+                    pageSize: this.qaPage.pageSize,
+                    userId: this.userId,
+                    roleId: Number(Cookies.get('roleId'))
+                }
+                const res = await teacherApi.getQaQuestions(params)
+                if (res.data.code === 200) {
+                    const data = res.data.resultData
+                    this.questionList = data.data || data.records || []
+                    this.questionTotal = data.total || 0
+                }
             } catch (e) { this.questionList = [] }
             this.loading = false
+        },
+        handleQaSizeChange(size) {
+            this.qaPage.pageSize = size
+            this.loadQuestions()
+        },
+        handleQaPageChange(pageNum) {
+            this.qaPage.page = pageNum
+            this.loadQuestions()
         },
         sendNotification() {
             if (!this.notificationForm.title || !this.notificationForm.content || !this.notificationForm.classId) {
                 this.$message.warning('请填写完整信息')
                 return
             }
-            teacherApi.sendNotification(this.notificationForm).then(() => {
-                this.$message.success('发送成功')
-                this.showSendNotification = false
-                this.notificationForm = { title: '', classId: null, content: '' }
-                this.loadNotifications()
+            const params = {
+                title: this.notificationForm.title,
+                content: this.notificationForm.content,
+                classId: Number(this.notificationForm.classId),
+                senderId: Number(this.userId)
+            }
+            teacherApi.sendNotification(params).then((res) => {
+                if (res.data.code === 200) {
+                    this.$message.success('发送成功')
+                    this.showSendNotification = false
+                    this.notificationForm = { title: '', classId: null, content: '' }
+                    this.loadNotifications()
+                } else {
+                    this.$message.error('发送失败: ' + (res.data.msg || ''))
+                }
             }).catch(() => this.$message.error('发送失败'))
         },
         deleteNotification(row) {
             this.$confirm('确定删除该通知吗？', '提示', { type: 'warning' })
                 .then(() => teacherApi.deleteNotification({ id: row.id })
-                    .then(() => {
-                        this.$message.success('已删除')
-                        this.loadNotifications()
+                    .then((res) => {
+                        if (res.data.code === 200) {
+                            this.$message.success('已删除')
+                            this.loadNotifications()
+                        } else {
+                            this.$message.error('删除失败')
+                        }
                     })).catch(() => {})
         },
         submitReply() {
@@ -207,17 +277,22 @@ export default {
                 this.$message.warning('请输入回答内容')
                 return
             }
-            teacherApi.answerQuestion({ questionId: this.selectedQuestion.id, content: this.replyContent })
-                .then(() => {
-                    this.$message.success('回答已提交')
-                    this.replyContent = ''
-                    this.loadQuestions()
-                    // 重新选择该问题以刷新回答区
-                    const qid = this.selectedQuestion.id
-                    this.selectedQuestion = null
-                    this.$nextTick(() => {
-                        this.selectedQuestion = this.questionList.find(q => q.id === qid)
-                    })
+            const params = {
+                id: this.selectedQuestion.id,
+                restore: this.replyContent,
+                status: 1
+            }
+            teacherApi.answerQaQuestion(params)
+                .then((res) => {
+                    if (res.data.code === 200) {
+                        this.$message.success('回答已提交')
+                        this.replyContent = ''
+                        this.loadQuestions()
+                        const qid = this.selectedQuestion.id
+                        this.selectedQuestion = this.questionList.find(q => q.id === qid) || null
+                    } else {
+                        this.$message.error('提交失败')
+                    }
                 }).catch(() => this.$message.error('提交失败'))
         }
     }

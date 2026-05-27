@@ -1,6 +1,7 @@
 package com.rabbiter.ol.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
@@ -39,10 +40,12 @@ public class AskQuestionsEntity implements Serializable {
 	/**
 	 * 问题来源
 	 */
+	@TableField("resource_id")
 	private Integer videoId;
 	/**
 	 * 回复
 	 */
+	@TableField("reply")
 	private String restore;
 	/**
 	 * 状态（1：已回复；2：未回复）

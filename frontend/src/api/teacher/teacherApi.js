@@ -427,6 +427,75 @@ export function deleteTask(params) {
   return post(`/study/homework/delete`, params)
 }
 
+// ========== 通知管理 ==========
+
+/**
+ * 获取通知列表（教师端）
+ * @param {Object} params - { page, pageSize, senderId?, classId? }
+ * POST /study/classNotice/list
+ */
+export function getNotifications(params) {
+  return post(`/study/classNotice/list`, params)
+}
+
+/**
+ * 发送通知
+ * @param {Object} params - { title, content, classId, senderId }
+ * POST /study/classNotice/save
+ */
+export function sendNotification(params) {
+  return post(`/study/classNotice/save`, params)
+}
+
+/**
+ * 删除通知
+ * @param {Object} params - { id }
+ * POST /study/classNotice/delete
+ */
+export function deleteNotification(params) {
+  return post(`/study/classNotice/delete`, params)
+}
+
+// ========== 问答（ask_questions 表） ==========
+
+/**
+ * 获取问答列表（教师端）
+ * @param {Object} params - { page, pageSize, userId, roleId }
+ * POST /study/askQuestions/list
+ */
+export function getQaQuestions(params) {
+  return post(`/study/askQuestions/list`, params)
+}
+
+/**
+ * 回答/回复问题
+ * @param {Object} params - { id, restore, status }
+ * POST /study/askQuestions/update
+ */
+export function answerQaQuestion(params) {
+  return post(`/study/askQuestions/update`, params)
+}
+
+/**
+ * 删除问答问题
+ * @param {Object} params - { id }
+ * POST /study/askQuestions/delete
+ */
+export function deleteQaQuestion(params) {
+  return post(`/study/askQuestions/delete`, params)
+}
+
+// ========== 学生端通知 ==========
+
+/**
+ * 学生端查询通知（仅显示学生所在班级的通知）
+ * @param {Object} params - { userId, page, pageSize, classId? }
+ * POST /study/classNotice/studentList
+ */
+export function getStudentNotices(params) {
+  return post(`/study/classNotice/studentList`, params)
+}
+
 // 默认导出（向后兼容）
 export default {
   getMyCourses,
@@ -474,5 +543,15 @@ export default {
   // 作业/任务管理
   getPublishedTasks,
   publishTask,
-  deleteTask
+  deleteTask,
+  // 通知管理
+  getNotifications,
+  sendNotification,
+  deleteNotification,
+  // 问答
+  getQaQuestions,
+  answerQaQuestion,
+  deleteQaQuestion,
+  // 学生端通知
+  getStudentNotices
 }

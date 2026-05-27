@@ -299,13 +299,13 @@ export default {
             this.$router.push('/teacherassessment')
         },
         openSendNotice() {
-            this.$router.push('/teacherclassmanagement')
+            this.$router.push('/teachercommunication')
         },
         handleTodo(item) {
             if (item.type === 'homework') {
                 this.$router.push('/teachergrading')
             } else if (item.type === 'question') {
-                this.$router.push('/teacheraskandanswer')
+                this.$router.push('/teachercommunication')
             } else {
                 this.$router.push('/teacherassessment')
             }

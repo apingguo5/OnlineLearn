@@ -1,175 +1,18 @@
 <template>
     <div>
-        <el-row :gutter="24" style="height: 80px">
-            <el-col :span="24" style="font-size: 32px;font-weight: 600;text-align: left;margin: 15px 0 0 20px;">
+        <el-row :gutter="24" style="height: 60px; display: flex; align-items: center;">
+            <el-col :span="24" style="font-size: 28px; font-weight: 600; text-align: left; padding-left: 24px; color: #1a1a2e;">
                 Online Learn
             </el-col>
         </el-row>
-
-        <div style="margin: 0 -20px 0 -20px;padding: 0;">
-            <el-menu :background-color="'#ffffff'" :text-color="'#4a5568'" :active-text-color="'#4e6ef2'" :default-active="'1'"
-                class="el-menu-demo" :router="true" mode="horizontal" @select="handleSelect">
-                <div class="cn">
-                    <div class="blockl">
-                        <el-submenu index="2">
-                            <template slot="title">
-                                <div class="demo-fit">
-                                    <div class="block avatar-wrap">
-                                        <img v-if="avatarUrl" :src="avatarUrl" class="header-avatar" alt="头像" />
-                                        <i v-else style="font-size: 40px;color: #8e99b0; margin-right: 30px;"
-                                            class="el-icon-user-solid"></i>
-                                    </div>
-                                </div>
-                            </template>
-                            <el-menu-item index="/essentiainfo">
-                                <i class="el-icon-user" style="color: #8e99b0;font-size: 22px;"></i> 个人信息
-                            </el-menu-item>
-                            <el-menu-item @click="change()">
-                                <i class="el-icon-lock" style="color: #8e99b0;font-size: 22px;"></i> 修改密码
-                            </el-menu-item>
-                            <el-menu-item @click="logout()">
-                                <i class="el-icon-switch-button" style="color: #8e99b0;font-size: 22px;"></i> 退出
-                            </el-menu-item>
-                        </el-submenu>
-                    </div>
-                </div>
-            </el-menu>
-        </div>
-
-        <el-dialog :modal-append-to-body='false' title="修改密码" :visible.sync="dialogFormVisible" width="30%" :before-close="handleClose">
-            <el-input placeholder="请输入原密码" v-model="changePassword.password" show-password></el-input>
-            <p>
-                <el-input placeholder="请输入新密码" v-model="changePassword.newPassword" show-password></el-input>
-            </p>
-            <span slot="footer" class="dialog-footer">
-                <el-button @click="dialogFormVisible = false"> 取 消</el-button>
-                <el-button type="primary" @click="submit(changePassword)"> 确 定</el-button>
-            </span>
-        </el-dialog>
     </div>
 </template>
 
 <script>
-import Cookies from "js-cookie";
-import { password } from '../../../../api/personal.js'
-
 export default {
-    name: "Header",
-    data() {
-        return {
-            changePassword: {
-                password: '',
-                newPassword: '',
-                id: ''
-            },
-            dialogFormVisible: false,
-            info: {
-                password: '',
-                newPassword: '',
-                id: ''
-            },
-            drawer: false,
-            avatarUrl: ''
-        }
-    },
-    created() {
-        this.changePassword.id = Cookies.get("userId")
-        this.loadAvatar()
-        // 监听个人信息页头像更新事件
-        this.$root.$on('avatar-updated', this.loadAvatar)
-    },
-    beforeDestroy() {
-        this.$root.$off('avatar-updated', this.loadAvatar)
-    },
-    methods: {
-        loadAvatar() {
-            const uid = Cookies.get('userId')
-            if (uid) {
-                this.avatarUrl = localStorage.getItem('user_avatar_' + uid) || ''
-            }
-        },
-        handleSelect() {
-
-        },
-        handleClose(done) {
-            this.$confirm('确认关闭？')
-                .then(_ => {
-                    done();
-                })
-                .catch(_ => { });
-        },
-        change() {
-            this.dialogFormVisible = true
-        },
-
-        submit(da) {
-            password(da).then(resp => {
-                if (resp.data.code == 200) {
-                    this.$message({
-                        message: '密码修改成功 ',
-                        type: 'success'
-                    });
-                    this.dialogFormVisible = false
-                } else {
-                    this.$message.error('原密码错误');
-                }
-            })
-        },
-        logout() {
-            Cookies.remove('userId')
-            Cookies.remove('classId')
-            Cookies.remove('roleId')
-            this.$router.push('/login')
-            this.$message({
-                message: '退出成功',
-                type: 'success'
-            });
-        }
-    }
+    name: "Header"
 }
 </script>
 
 <style scoped>
-h1 {
-    margin-left: 40%;
-}
-
-.el-dialog__wrapper {
-    z-index: 9999 !important;
-}
-
-.blockl {
-    position: absolute;
-    right: 0px;
-}
-
-.cn {
-    display: flex;
-    justify-content: flex-end;
-    width: 100%;
-}
-
-.el-menu {
-    border-right: solid 1px #e6e6e6;
-    list-style: none;
-    margin: 0;
-    padding-left: 0;
-    background-color: #ffffff;
-    display: flex;
-    justify-content: flex-end;
-}
-
-.avatar-wrap {
-    display: flex;
-    align-items: center;
-    margin-right: 30px;
-}
-
-.header-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 1px solid #e6e6e6;
-}
 </style>

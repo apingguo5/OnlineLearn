@@ -4,17 +4,11 @@
             <Header></Header>
         </el-header>
         <el-container>
-            <el-aside id="tc-el-aside" width="200px">
+            <el-aside id="tc-el-aside" width="220px">
                 <Aside></Aside>
             </el-aside>
             <el-main>
-                <div style="font-size: 30px;font-weight: bold" >
-                     欢迎登录教师端
-                </div>
-                <hr>
-                <router-view>
-
-                </router-view>
+                <router-view></router-view>
             </el-main>
         </el-container>
     </el-container>

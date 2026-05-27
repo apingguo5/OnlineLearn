@@ -5,7 +5,7 @@
                 <Header></Header>
             </el-header>
             <el-container>
-                <el-aside width="200px">
+                <el-aside width="220px">
                     <StudentAside></StudentAside>
                 </el-aside>
                 <el-main>
