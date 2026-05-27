@@ -98,7 +98,7 @@
         </div>
 
         <!-- 发布任务对话框 -->
-        <el-dialog title="发布任务" :visible.sync="showPublishDialog" width="500px">
+        <el-dialog title="发布任务" :visible.sync="showPublishDialog" width="500px" :append-to-body="false">
             <el-form :model="publishForm" label-width="100px">
                 <el-form-item label="任务名称">
                     <el-input v-model="publishForm.title" placeholder="如：第二章课后作业"></el-input>
@@ -130,7 +130,7 @@
         </el-dialog>
 
         <!-- 创建/编辑试卷对话框 -->
-        <el-dialog :title="isEditPaper ? '编辑试卷' : '创建试卷'" :visible.sync="showPaperDialog" width="800px" @closed="resetPaperForm">
+        <el-dialog :title="isEditPaper ? '编辑试卷' : '创建试卷'" :visible.sync="showPaperDialog" width="800px" :append-to-body="false" @closed="resetPaperForm">
             <el-form :model="paperForm" label-width="100px" size="small">
                 <el-form-item label="试卷名称" required>
                     <el-input v-model="paperForm.title" placeholder="如：第二章单元测试" />
@@ -186,30 +186,58 @@
         </el-dialog>
 
         <!-- 预览试卷对话框 -->
-        <el-dialog title="试卷预览" :visible.sync="showPreviewDialog" width="700px">
-            <div class="paper-preview">
+        <el-dialog title="试卷预览" :visible.sync="showPreviewDialog" width="850px" top="3vh" :append-to-body="false" @closed="previewCurrentIdx=0">
+            <div class="paper-preview" v-if="previewData.questions && previewData.questions.length > 0">
                 <h3>{{ previewData.title }}</h3>
                 <p class="paper-desc" v-if="previewData.description">{{ previewData.description }}</p>
                 <p class="paper-meta">
                     <span>总分：{{ previewData.totalScore }}分</span>
                     <span v-if="previewData.duration"> | 时长：{{ previewData.duration }}分钟</span>
-                    <span> | 题目数：{{ previewData.questionCount || 0 }}题</span>
+                    <span> | 题目数：{{ previewData.questionCount || previewData.questions.length }}题</span>
                 </p>
-                <div class="preview-questions">
-                    <div v-for="(q, idx) in previewData.questions" :key="idx" class="pq-item">
-                        <div class="pq-header">
-                            <strong>{{ idx + 1 }}.</strong>
-                            <el-tag :type="typeTag(q.questionType)" size="mini" style="margin:0 8px">{{ typeLabel(q.questionType) }}</el-tag>
-                            <span class="pq-score">({{ q.score }}分)</span>
+                <div class="preview-nav-bar">
+                    <div
+                        v-for="(q, idx) in previewData.questions" :key="idx"
+                        class="preview-nav-dot"
+                        :class="{ 'preview-nav-active': previewCurrentIdx === idx }"
+                        @click="previewCurrentIdx = idx"
+                    >{{ idx + 1 }}</div>
+                </div>
+                <div v-for="(q, idx) in previewData.questions" :key="idx" v-show="previewCurrentIdx === idx" class="pq-item-single">
+                    <div class="pq-header">
+                        <strong>{{ idx + 1 }}.</strong>
+                        <el-tag :type="typeTag(q.questionType)" size="mini" style="margin:0 8px">{{ typeLabel(q.questionType) }}</el-tag>
+                        <span class="pq-score">({{ q.score }}分)</span>
+                    </div>
+                    <div class="pq-stem">{{ q.stem }}</div>
+                    <div v-if="q.questionType === 'single' || q.questionType === 'multiple'" class="pq-options">
+                        <div v-for="(opt, oi) in parsedOptions(q)" :key="oi" class="pq-option-single">
+                            {{ String.fromCharCode(65 + oi) }}. {{ opt }}
                         </div>
-                        <div class="pq-stem">{{ q.stem }}</div>
+                    </div>
+                    <div v-if="q.questionType === 'judge'" class="pq-options">
+                        <div class="pq-option-single">正确 / 错误</div>
+                    </div>
+                    <div v-if="q.answer" class="pq-answer">
+                        <span class="answer-label">正确答案：</span>
+                        <span class="answer-value">{{ formatAnswer(q) }}</span>
+                    </div>
+                    <div v-if="q.analysis" class="pq-answer">
+                        <span class="answer-label">解析：</span>
+                        <span class="answer-value">{{ q.analysis }}</span>
                     </div>
                 </div>
+                <div class="preview-nav-footer">
+                    <el-button size="small" @click="prevPreviewQuestion" :disabled="previewCurrentIdx <= 0">上一题</el-button>
+                    <span class="nav-progress">{{ previewCurrentIdx + 1 }} / {{ previewData.questions.length }}</span>
+                    <el-button size="small" @click="nextPreviewQuestion" :disabled="previewCurrentIdx >= previewData.questions.length - 1">下一题</el-button>
+                </div>
             </div>
+            <el-empty v-else description="试卷暂无题目" />
         </el-dialog>
 
         <!-- 作业详情对话框 -->
-        <el-dialog :title="homeworkDetail.title" :visible.sync="showHomeworkDetailDialog" width="800px" v-loading="detailLoading">
+        <el-dialog :title="homeworkDetail.title" :visible.sync="showHomeworkDetailDialog" width="850px" top="3vh" :append-to-body="false" v-loading="detailLoading" @closed="detailCurrentIdx=0">
             <div class="homework-detail">
                 <div class="detail-meta">
                     <el-tag :type="getTaskType(homeworkDetail.content) === 'exam' ? 'danger' : 'warning'" size="small">
@@ -219,7 +247,7 @@
                     <span style="margin-left:12px;color:#606266">课程：{{ homeworkDetail.courseName }}</span>
                     <span style="margin-left:12px;color:#606266">截止时间：{{ homeworkDetail.commitTime || homeworkDetail.createTime }}</span>
                 </div>
-                
+
                 <!-- 简单文本作业 -->
                 <div v-if="!hasPaperQuestions" class="simple-homework">
                     <div class="hw-content">
@@ -232,36 +260,48 @@
                     </div>
                 </div>
 
-                <!-- 关联试卷的作业/考试 -->
-                <div v-else class="paper-homework">
-                    <div class="paper-questions">
-                        <div v-for="(q, idx) in homeworkDetail.questions" :key="idx" class="pq-item">
-                            <div class="pq-header">
-                                <strong>{{ idx + 1 }}.</strong>
-                                <el-tag :type="typeTag(q.questionType)" size="mini" style="margin:0 8px">{{ typeLabel(q.questionType) }}</el-tag>
-                                <span class="pq-score">({{ q.score }}分)</span>
-                            </div>
-                            <div class="pq-stem">{{ q.stem }}</div>
-                            
-                            <!-- 选项 -->
-                            <div v-if="q.questionType === 'single' || q.questionType === 'multiple'" class="pq-options">
-                                <div v-for="(opt, oi) in parsedOptions(q)" :key="oi" class="pq-option">
-                                    {{ String.fromCharCode(65 + oi) }}. {{ opt }}
-                                </div>
-                            </div>
+                <!-- 关联试卷的作业/考试 - 逐题显示 -->
+                <div v-else class="paper-homework-onebyone">
+                    <div class="detail-nav-bar">
+                        <div
+                            v-for="(q, idx) in homeworkDetail.questions" :key="idx"
+                            class="detail-nav-dot"
+                            :class="{ 'detail-nav-active': detailCurrentIdx === idx }"
+                            @click="detailCurrentIdx = idx"
+                        >{{ idx + 1 }}</div>
+                    </div>
+                    <div v-for="(q, idx) in homeworkDetail.questions" :key="idx" v-show="detailCurrentIdx === idx" class="pq-item-single">
+                        <div class="pq-header">
+                            <strong>{{ idx + 1 }}.</strong>
+                            <el-tag :type="typeTag(q.questionType)" size="mini" style="margin:0 8px">{{ typeLabel(q.questionType) }}</el-tag>
+                            <span class="pq-score">({{ q.score }}分)</span>
+                        </div>
+                        <div class="pq-stem">{{ q.stem }}</div>
 
-                            <!-- 答案和解析 -->
-                            <div class="pq-answer">
-                                <div class="answer-item">
-                                    <span class="answer-label">正确答案：</span>
-                                    <span class="answer-value">{{ formatAnswer(q) }}</span>
-                                </div>
-                                <div v-if="q.analysis" class="answer-item">
-                                    <span class="answer-label">解析：</span>
-                                    <span class="answer-value">{{ q.analysis }}</span>
-                                </div>
+                        <div v-if="q.questionType === 'single' || q.questionType === 'multiple'" class="pq-options">
+                            <div v-for="(opt, oi) in parsedOptions(q)" :key="oi" class="pq-option-single">
+                                {{ String.fromCharCode(65 + oi) }}. {{ opt }}
                             </div>
                         </div>
+                        <div v-if="q.questionType === 'judge'" class="pq-options">
+                            <div class="pq-option-single">正确 / 错误</div>
+                        </div>
+
+                        <div class="pq-answer">
+                            <div class="answer-item">
+                                <span class="answer-label">正确答案：</span>
+                                <span class="answer-value">{{ formatAnswer(q) }}</span>
+                            </div>
+                            <div v-if="q.analysis" class="answer-item">
+                                <span class="answer-label">解析：</span>
+                                <span class="answer-value">{{ q.analysis }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="detail-nav-footer">
+                        <el-button size="small" @click="prevDetailQuestion" :disabled="detailCurrentIdx <= 0">上一题</el-button>
+                        <span class="nav-progress">{{ detailCurrentIdx + 1 }} / {{ homeworkDetail.questions.length }}</span>
+                        <el-button size="small" @click="nextDetailQuestion" :disabled="detailCurrentIdx >= homeworkDetail.questions.length - 1">下一题</el-button>
                     </div>
                 </div>
             </div>
@@ -330,7 +370,7 @@
         </div>
 
         <!-- 录入/编辑题目对话框 -->
-        <el-dialog :title="isQbEdit ? '编辑题目' : '录入题目'" :visible.sync="showQbDialog" width="700px" @closed="resetQbForm">
+        <el-dialog :title="isQbEdit ? '编辑题目' : '录入题目'" :visible.sync="showQbDialog" width="700px" :append-to-body="false" @closed="resetQbForm">
             <el-form :model="qbForm" label-width="100px" size="small">
                 <el-form-item label="所属课程" required>
                     <el-select v-model="qbForm.courseId" placeholder="请选择课程" style="width:100%">
@@ -398,7 +438,7 @@
 
 <script>
 import * as teacherApi from '@/api/teacher/teacherApi'
-import { getPaperList, createPaper, updatePaper, deletePaper, publishPaper, getPaperDetail } from '@/api/teacher/examApi'
+import { getPaperList, createPaper, updatePaper, deletePaper, publishPaper, getPaperDetail, previewPaper } from '@/api/teacher/examApi'
 import { getQuestionList, createQuestion, updateQuestion, deleteQuestion } from '@/api/teacher/examApi'
 
 // 题型映射：后端使用整数，前端使用字符串
@@ -443,9 +483,11 @@ export default {
             availableQuestions: [],
             selectedQuestionIds: [],
             previewData: { questions: [] },
+            previewCurrentIdx: 0,
             // 作业详情
             showHomeworkDetailDialog: false,
             homeworkDetail: {},
+            detailCurrentIdx: 0,
             detailLoading: false,
             // 题库管理
             qbLoading: false,
@@ -534,7 +576,7 @@ export default {
             this.loading = false
         },
         // ===== 发布任务 =====
-        doPublish() {
+        async doPublish() {
             if (!this.publishForm.title || !this.publishForm.classId || !this.publishForm.deadline) {
                 this.$message.warning('请填写完整信息')
                 return
@@ -553,42 +595,44 @@ export default {
                 commitTime: commitTime,
                 creator: this.$cookies.get('userId')
             }
-            teacherApi.publishTask(params).then(() => {
+            try {
+                await teacherApi.publishTask(params)
+                // 如果关联了试卷，自动发布试卷（确保学生能获取到题目）
+                if (this.publishForm.paperId) {
+                    try { await publishPaper(this.publishForm.paperId) } catch (e) {}
+                }
                 this.$message.success('发布成功')
                 this.showPublishDialog = false
                 this.publishForm = { title: '', type: 'homework', classId: null, paperId: null, deadline: null }
                 this.loadTasks()
-            }).catch(() => this.$message.error('发布失败'))
+            } catch (e) { this.$message.error('发布失败') }
         },
         async viewTaskDetail(row) {
             this.showHomeworkDetailDialog = true
             this.detailLoading = true
             this.homeworkDetail = { ...row, questions: [] }
+            this.detailCurrentIdx = 0
             
             try {
                 const content = row.content || ''
                 let contentData = null
-                try {
-                    contentData = JSON.parse(content)
-                } catch (e) {}
+                try { contentData = JSON.parse(content) } catch (e) {}
 
-                // 如果是考试类型或关联了试卷，加载试卷题目
-                if ((contentData && contentData.type === 'exam') || (content && content.indexOf('paperRef:') === 0)) {
-                    let paperId = null
-                    if (contentData && contentData.paperRef) {
-                        paperId = contentData.paperRef
-                    } else if (content.indexOf('paperRef:') === 0) {
-                        paperId = content.replace('paperRef:', '')
-                    }
-                    
-                    if (paperId) {
-                        const res = await getPaperDetail(paperId)
-                        const paper = (res.data && res.data.resultData) ? res.data.resultData : {}
-                        this.homeworkDetail.questions = (paper.questions || []).map(q => ({
-                            ...q,
-                            questionType: this.numToType(q.questionType)
-                        }))
-                    }
+                let paperId = null
+                if (contentData && contentData.paperRef) {
+                    paperId = contentData.paperRef
+                } else if (content && content.indexOf('paperRef:') === 0) {
+                    paperId = content.replace('paperRef:', '').trim()
+                }
+
+                if (paperId) {
+                    paperId = parseInt(paperId, 10)
+                    const res = await previewPaper(paperId)
+                    const paper = (res.data && res.data.resultData) ? res.data.resultData : {}
+                    this.homeworkDetail.questions = (paper.questions || []).map(q => ({
+                        ...q,
+                        questionType: this.numToType(q.questionType)
+                    }))
                 }
             } catch (e) {
                 console.error('加载作业详情失败:', e)
@@ -628,6 +672,20 @@ export default {
                 return q.answer === 'true' ? '正确' : '错误'
             }
             return q.answer
+        },
+        // 预览导航
+        prevPreviewQuestion() {
+            if (this.previewCurrentIdx > 0) this.previewCurrentIdx--
+        },
+        nextPreviewQuestion() {
+            if (this.previewCurrentIdx < (this.previewData.questions || []).length - 1) this.previewCurrentIdx++
+        },
+        // 作业详情导航
+        prevDetailQuestion() {
+            if (this.detailCurrentIdx > 0) this.detailCurrentIdx--
+        },
+        nextDetailQuestion() {
+            if (this.detailCurrentIdx < (this.homeworkDetail.questions || []).length - 1) this.detailCurrentIdx++
         },
         deleteTask(row) {
             this.$confirm('确定删除该任务吗？', '提示', { type: 'warning' })
@@ -802,14 +860,22 @@ export default {
         },
         onCourseChange(val) { this.loadChapters(val); this.loadAvailableQuestions() },
         async loadAvailableQuestions() {
-            if (!this.paperForm.courseId) { this.$message.warning('请先选择课程'); return }
+            const cid = this.paperForm.courseId
+            if (!cid || cid === '' || cid === 0) { this.$message.warning('请先选择课程'); return }
             this.qsLoading = true
             try {
-                const params = { page: 1, limit: 999, courseId: this.paperForm.courseId, questionType: this.qsFilter.type ? (TYPE_REVERSE[this.qsFilter.type] || this.qsFilter.type) : undefined }
+                const params = { page: 1, limit: 999, courseId: parseInt(cid) || cid, questionType: this.qsFilter.type ? (TYPE_REVERSE[this.qsFilter.type] || this.qsFilter.type) : undefined }
                 const res = await getQuestionList(params)
                 const resultData = res.data && res.data.resultData
                 this.availableQuestions = (resultData && resultData.data) ? resultData.data : []
-            } catch (e) { this.availableQuestions = [] }
+                if (this.availableQuestions.length === 0) {
+                    console.warn('[loadAvailableQuestions] 没有找到题目, params:', params, 'response:', res.data)
+                }
+            } catch (e) {
+                console.error('[loadAvailableQuestions] 加载失败:', e)
+                this.availableQuestions = []
+                this.$message.error('加载题目失败: ' + (e.message || ''))
+            }
             this.qsLoading = false
         },
         onSelectionChange(rows) { this.selectedQuestionIds = rows.map(r => r.id) },
@@ -820,12 +886,15 @@ export default {
         },
         async previewPaper(row) {
             try {
-                const res = await getPaperDetail(row.id)
-                this.previewData = (res.data && res.data.resultData) ? res.data.resultData : row
+                const res = await previewPaper(row.id)
+                const data = (res.data && res.data.resultData) ? res.data.resultData : {}
+                this.previewData = data.questions ? data : { ...row, questions: data.questions || [], questionCount: data.questionCount || (data.questions ? data.questions.length : 0) }
                 if (!this.previewData.questions) this.previewData.questions = []
+                this.previewCurrentIdx = 0
                 this.showPreviewDialog = true
             } catch (e) {
-                this.previewData = row
+                this.previewData = { ...row, questions: [] }
+                this.previewCurrentIdx = 0
                 this.showPreviewDialog = true
             }
         },
@@ -846,12 +915,16 @@ export default {
         async savePaper() {
             if (!this.paperForm.title) { this.$message.warning('请输入试卷名称'); return }
             if (!this.paperForm.courseId) { this.$message.warning('请选择课程'); return }
+            if (this.selectedQuestionIds.length === 0) {
+                this.$confirm('未选择任何题目，确定要保存空试卷吗？', '提示', { type: 'warning' }).catch(() => { this.paperSaving = false; return })
+            }
             this.paperSaving = true
             try {
                 const params = {
                     ...this.paperForm,
                     questionIds: this.selectedQuestionIds
                 }
+                console.log('[savePaper] 发送参数:', { title: params.title, courseId: params.courseId, questionIds: params.questionIds })
                 if (this.isEditPaper) {
                     params.id = this.editPaperId
                     await updatePaper(params)
@@ -863,7 +936,7 @@ export default {
                 }
                 this.showPaperDialog = false
                 this.loadPapers()
-            } catch (e) { this.$message.error('保存失败') }
+            } catch (e) { this.$message.error('保存失败: ' + (e.message || '')) }
             this.paperSaving = false
         },
         async publishPaper(row) {
@@ -916,12 +989,14 @@ export default {
 .paper-desc { color: #909399; margin-bottom: 8px; }
 .paper-meta { color: #606266; font-size: 14px; margin-bottom: 16px; }
 .pq-item { background: #fafafa; border: 1px solid #e4e7ed; border-radius: 6px; padding: 12px; margin-bottom: 8px; }
+.pq-item-single { background: white; border: 1px solid #e4e7ed; border-radius: 8px; padding: 20px; min-height: 280px; }
 .pq-header { margin-bottom: 4px; }
 .pq-score { font-size: 12px; color: #909399; }
-.pq-stem { font-size: 14px; color: #303133; line-height: 1.5; }
+.pq-stem { font-size: 14px; color: #303133; line-height: 1.5; margin-bottom: 12px; }
 .pq-options { margin: 8px 0; padding-left: 20px; }
 .pq-option { margin: 4px 0; color: #606266; }
-.pq-answer { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e4e7ed; }
+.pq-option-single { padding: 10px 16px; background: #fafafa; border: 1px solid #e4e7ed; border-radius: 6px; margin: 6px 0; color: #606266; }
+.pq-answer { margin-top: 16px; padding-top: 12px; border-top: 1px dashed #e4e7ed; }
 .answer-item { margin: 4px 0; }
 .answer-label { color: #909399; font-size: 13px; }
 .answer-value { color: #67C23A; font-weight: 500; }
@@ -931,4 +1006,17 @@ export default {
 .hw-answer { margin-top: 16px; padding-top: 12px; border-top: 1px dashed #e4e7ed; }
 .hw-answer h4 { margin: 0 0 8px; color: #303133; }
 .hw-answer p { color: #67C23A; line-height: 1.6; }
+
+/* 预览导航条 */
+.preview-nav-bar, .detail-nav-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #e4e7ed; }
+.preview-nav-dot, .detail-nav-dot {
+  width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; font-size: 13px; cursor: pointer; font-weight: 600;
+  background: #f0f2f5; color: #909399; border: 2px solid transparent; transition: all 0.2s;
+}
+.preview-nav-dot:hover, .detail-nav-dot:hover { background: #d9ecff; color: #409EFF; }
+.preview-nav-active, .detail-nav-active { border-color: #303133; background: #409EFF; color: white; }
+.preview-nav-footer, .detail-nav-footer { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 20px; padding-top: 14px; border-top: 1px solid #e4e7ed; }
+.nav-progress { font-size: 14px; color: #909399; }
+.paper-homework-onebyone { margin-top: 12px; }
 </style>

@@ -12,6 +12,7 @@ import com.rabbiter.ol.service.UserDoHomeworkService;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 
 @Service("userDoHomeworkService")
@@ -30,8 +31,6 @@ public class UserDoHomeworkServiceImpl extends ServiceImpl<UserDoHomeworkDao, Us
         return result;
     }
 
-
-
     @Override
     public Boolean updateModeByUserId(String userId, String homeworkId,String score,String remark) {
         return userDoHomeworkDao.updateModeByUserId(userId,homeworkId,score,remark);
@@ -39,11 +38,51 @@ public class UserDoHomeworkServiceImpl extends ServiceImpl<UserDoHomeworkDao, Us
 
     @Override
     public List<HashMap> queryByHomeworkId(Integer homeworkId) {
-        return userDoHomeworkDao.queryByHomeworkId(homeworkId);
+        List<HashMap> list = userDoHomeworkDao.queryByHomeworkId(homeworkId);
+        for (HashMap record : list) {
+            String reply = (String) record.get("reply");
+            String answer = (String) record.get("answer");
+            Double autoScore = autoGradeHomework(reply, answer);
+            record.put("autoScore", autoScore);
+        }
+        return list;
     }
 
     @Override
     public Boolean updateGrade(Integer recordId, String mode, String score, String remark) {
         return userDoHomeworkDao.updateGrade(recordId, mode, score, remark);
+    }
+
+    @Override
+    public Double autoGradeHomework(String studentReply, String referenceAnswer) {
+        if (studentReply == null || referenceAnswer == null) {
+            return null;
+        }
+        String reply = studentReply.trim().replaceAll("\\s+", " ");
+        String answer = referenceAnswer.trim().replaceAll("\\s+", " ");
+        if (reply.isEmpty() || answer.isEmpty()) {
+            return null;
+        }
+        if (reply.equalsIgnoreCase(answer)) {
+            return 100.0;
+        }
+        String[] keywords = answer.split("[，,;；、\\s]+");
+        if (keywords.length > 1) {
+            int matchCount = 0;
+            for (String keyword : keywords) {
+                String kw = keyword.trim();
+                if (!kw.isEmpty() && Pattern.compile(Pattern.quote(kw), Pattern.CASE_INSENSITIVE).matcher(reply).find()) {
+                    matchCount++;
+                }
+            }
+            double ratio = (double) matchCount / keywords.length;
+            if (ratio > 0) {
+                return Math.round(ratio * 100.0 * 10.0) / 10.0;
+            }
+        }
+        if (reply.contains(answer) || answer.contains(reply)) {
+            return 100.0;
+        }
+        return null;
     }
 }

@@ -120,9 +120,11 @@ public class StudentAnswerRecordController {
 
     /**
      * 获取试卷的学生答题情况（教师端）
+     * 不传 paperId 时返回所有试卷的待批改列表
      */
-    @GetMapping("/paperStudentList")
-    public Result getPaperStudentList(@RequestParam Integer paperId) {
+    @PostMapping("/paperStudentList")
+    public Result getPaperStudentList(@RequestBody Map<String, Object> params) {
+        Integer paperId = params.get("paperId") != null ? toInt(params.get("paperId")) : null;
         return Result.success(studentAnswerRecordService.getPaperStudentList(paperId));
     }
 

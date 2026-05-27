@@ -160,12 +160,21 @@ public class ExamPaperServiceImpl extends ServiceImpl<ExamPaperDao, ExamPaperEnt
 
     @Override
     public Map<String, Object> getPaperDetail(Integer paperId) {
+        return loadPaperDetail(paperId, false);
+    }
+
+    @Override
+    public Map<String, Object> previewPaper(Integer paperId) {
+        return loadPaperDetail(paperId, false);
+    }
+
+    private Map<String, Object> loadPaperDetail(Integer paperId, boolean checkStatus) {
         Map<String, Object> result = new HashMap<>();
         ExamPaperEntity paper = examPaperDao.selectById(paperId);
         if (paper == null) {
             return result;
         }
-        if (paper.getStatus() == null || paper.getStatus() != 1) {
+        if (checkStatus && (paper.getStatus() == null || paper.getStatus() != 1)) {
             return result;
         }
         // 将试卷字段平铺到返回结果中，方便前端直接访问
@@ -188,22 +197,27 @@ public class ExamPaperServiceImpl extends ServiceImpl<ExamPaperDao, ExamPaperEnt
         params.put("paper_id", paperId);
         List<ExamPaperQuestionEntity> refs = examPaperQuestionDao.selectByMap(params);
 
+        List<HashMap<String, Object>> orderedQuestions = new java.util.ArrayList<>();
+        result.put("questions", orderedQuestions);
+        result.put("questionCount", 0);
+
         if (refs != null && !refs.isEmpty()) {
             // 按 sort_order 排序
             refs.sort(java.util.Comparator.comparingInt(ExamPaperQuestionEntity::getSortOrder));
             List<Integer> questionIds = refs.stream()
                     .map(ExamPaperQuestionEntity::getQuestionId)
                     .collect(java.util.stream.Collectors.toList());
-            
+
+            result.put("questionCount", questionIds.size());
+
             // 按题库顺序获取题目
             List<QuestionEntity> questions = questionDao.selectBatchIds(questionIds);
-            
+
             // 保持与 sort_order 一致
             Map<Integer, QuestionEntity> questionMap = new HashMap<>();
             for (QuestionEntity q : questions) {
                 questionMap.put(q.getId(), q);
             }
-            List<HashMap<String, Object>> orderedQuestions = new java.util.ArrayList<>();
             for (Integer qid : questionIds) {
                 QuestionEntity q = questionMap.get(qid);
                 if (q != null) {
@@ -218,7 +232,6 @@ public class ExamPaperServiceImpl extends ServiceImpl<ExamPaperDao, ExamPaperEnt
                     orderedQuestions.add(qMap);
                 }
             }
-            result.put("questions", orderedQuestions);
         }
 
         return result;

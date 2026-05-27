@@ -136,15 +136,19 @@ export default {
       try {
         const [hwRes, examRes] = await Promise.all([
           this.$post('/study/userdohomework/list', { userId, page: 1, pageSize: 50 }),
-          Promise.resolve({ data: { resultData: { data: [] } } })
+          getStudentPapers({ studentId: userId, page: 1, pageSize: 50 })
         ])
         const hwData = hwRes.data && hwRes.data.resultData
         const hwList = (hwData && hwData.data) ? hwData.data : []
         const examData = examRes.data && examRes.data.resultData
-        const examList = (examData && examData.data) ? examData.data : []
+        const examRaw = (examData && examData.data) ? examData.data : []
+        const submittedExams = examRaw.filter(e =>
+          e.recordStatus === 'submitted' || e.recordStatus === 1 ||
+          e.status === 'submitted' || e.status === 2 || e.status === 3
+        )
         this.completedList = [
           ...hwList.map(i => ({ ...i, _type: 'homework' })),
-          ...examList.map(i => ({ ...i, _type: 'exam' }))
+          ...submittedExams.map(i => ({ ...i, _type: 'exam' }))
         ]
       } catch (e) { this.completedList = [] }
       this.completedLoading = false

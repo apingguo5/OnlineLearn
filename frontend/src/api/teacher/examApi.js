@@ -135,6 +135,15 @@ export function getPaperDetail(paperId) {
 }
 
 /**
+ * 预览试卷（含题目列表，不限制状态，教师专用）
+ * @param {Number} paperId
+ * POST /study/exam/paper/preview
+ */
+export function previewPaper(paperId) {
+  return post('/study/exam/paper/preview', { id: paperId })
+}
+
+/**
  * 获取课程下的所有试卷
  * @param {Number} courseId
  * POST /study/exam/paper/listByCourse
@@ -243,6 +252,7 @@ export default {
   deletePaper,
   publishPaper,
   getPaperDetail,
+  previewPaper,
   getPapersByCourseId,
   getStudentPapers,
   startExam,

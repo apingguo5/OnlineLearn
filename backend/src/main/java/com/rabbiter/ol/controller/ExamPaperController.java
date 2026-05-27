@@ -80,6 +80,14 @@ public class ExamPaperController {
     }
 
     /**
+     * 预览试卷（含题目列表，不限制状态，教师专用）
+     */
+    @PostMapping("/preview")
+    public Result preview(@RequestBody ExamPaperVo examPaperVo) {
+        return Result.success(examPaperService.previewPaper(examPaperVo.getId()));
+    }
+
+    /**
      * 获取学生可见的试卷列表
      */
     @PostMapping("/studentPapers")

@@ -60,20 +60,44 @@
     </select>
 
     <select id="getPaperStudentList" resultType="java.util.HashMap">
-        SELECT sar.*, su.user_name as studentName, su.real_name as realName,
-               q.question_type as questionType, q.stem, q.options, q.answer as correctAnswer, q.score as questionScore, q.analysis
+        SELECT
+            sar.student_id as studentId,
+            u.user_name as studentName,
+            ep.title as paperTitle,
+            c.class_name as className,
+            MAX(sar.submit_time) as submitTime,
+            CASE
+                WHEN COUNT(CASE WHEN q.question_type IN (1,2,3,4) THEN 1 END) > 0
+                THEN SUM(CASE WHEN q.question_type IN (1,2,3,4) AND sar.review_status = 1 THEN sar.score ELSE 0 END)
+                ELSE NULL
+            END as autoScore,
+            CASE
+                WHEN COUNT(CASE WHEN sar.review_status = 0 THEN 1 END) > 0 THEN 'pending'
+                ELSE 'completed'
+            END as reviewStatus,
+            sar.paper_id as paperId
         FROM student_answer_record sar
-        LEFT JOIN sys_user su ON sar.student_id = su.user_id
+        LEFT JOIN user u ON sar.student_id = u.id
+        LEFT JOIN exam_paper ep ON sar.paper_id = ep.id
+        LEFT JOIN class c ON ep.class_id = c.id
         LEFT JOIN question q ON sar.question_id = q.id
-        WHERE sar.paper_id = #{paperId}
-        ORDER BY sar.student_id, sar.id
+        <where>
+            <if test="paperId != null">
+                sar.paper_id = #{paperId}
+            </if>
+            <if test="paperId == null">
+                sar.status = 1
+            </if>
+        </where>
+        GROUP BY sar.student_id, sar.paper_id, u.user_name, ep.title, c.class_name
+        ORDER BY sar.student_id
     </select>
 
     <select id="getStudentDetail" resultType="java.util.HashMap">
-        SELECT sar.*, su.user_name as studentName, su.real_name as realName,
+        SELECT sar.*, u.user_name as studentName, u.user_name as realName,
                q.question_type as questionType, q.stem, q.options, q.answer as correctAnswer, q.score as questionScore, q.analysis
         FROM student_answer_record sar
-        LEFT JOIN sys_user su ON sar.student_id = su.user_id
+        LEFT JOIN user u ON sar.student_id = u.id
         LEFT JOIN question q ON sar.question_id = q.id
         WHERE sar.paper_id = #{paperId}
           AND sar.student_id = #{studentId}

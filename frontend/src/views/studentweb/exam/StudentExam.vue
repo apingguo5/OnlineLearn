@@ -179,6 +179,7 @@ export default {
   },
   created() {
     const paperId = this.$route.query.paperId ? parseInt(this.$route.query.paperId) : null
+    console.log('[StudentExam] created, paperId from query:', paperId, 'full query:', this.$route.query)
     if (paperId) {
       this.enterExamDirectly(paperId)
     } else {
@@ -200,14 +201,17 @@ export default {
     typeLabel(t) { return { single: '单选', multiple: '多选', judge: '判断', fill: '填空', essay: '主观' }[t] || t },
     typeTag(t) { return { single: 'primary', multiple: 'success', judge: 'warning', fill: 'info', essay: '' }[t] || '' },
     isPublished(row) {
-      return row.status == 1
+      if (row.status === 'published') return true
+      if (row.status === 1) return true
+      return false
     },
     isSubmitted(row) {
-      if (row.recordStatus != null) return row.recordStatus == 'submitted'
-      return row.status == 2 || row.status == 3
+      if (row.recordStatus === 'submitted' || row.recordStatus === 1) return true
+      if (row.status === 'submitted' || row.status === 2 || row.status === 3) return true
+      return false
     },
     isDraft(row) {
-      if (row.recordStatus != null) return row.recordStatus == 'draft' || row.recordStatus == 'in_progress'
+      if (row.recordStatus === 'draft' || row.recordStatus === 'in_progress') return true
       return false
     },
     statusTag(row) {

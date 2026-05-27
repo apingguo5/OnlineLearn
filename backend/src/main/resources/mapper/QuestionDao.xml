@@ -47,7 +47,22 @@
     </select>
 
     <select id="queryData" resultType="java.util.HashMap">
-        SELECT q.*, c.course_name as courseName
+        SELECT
+            q.id as id,
+            q.question_type as questionType,
+            q.stem as stem,
+            q.options as options,
+            q.answer as answer,
+            q.analysis as analysis,
+            q.score as score,
+            q.difficulty as difficulty,
+            q.creator_id as creatorId,
+            q.course_id as courseId,
+            q.chapter_id as chapterId,
+            q.status as status,
+            q.create_time as createTime,
+            q.update_time as updateTime,
+            c.course_name as courseName
         FROM question q
         LEFT JOIN course c ON q.course_id = c.id
         <where>

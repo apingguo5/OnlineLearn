@@ -29,6 +29,11 @@ public interface ExamPaperService extends IService<ExamPaperEntity> {
     Map<String, Object> getPaperDetail(Integer paperId);
 
     /**
+     * 预览试卷详情（含题目，不限制状态，教师专用）
+     */
+    Map<String, Object> previewPaper(Integer paperId);
+
+    /**
      * 获取课程下所有试卷
      */
     java.util.List<com.rabbiter.ol.entity.ExamPaperEntity> getPapersByCourseId(Integer courseId);

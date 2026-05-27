@@ -26,5 +26,13 @@ public interface UserDoHomeworkService extends IService<UserDoHomeworkEntity> {
     List<HashMap> queryByHomeworkId(Integer homeworkId);
 
     Boolean updateGrade(Integer recordId, String mode, String score, String remark);
+
+    /**
+     * 自动批改作业：将学生作答与参考答案进行匹配
+     * @param studentReply 学生作答内容
+     * @param referenceAnswer 参考答案
+     * @return 自动批改得分（0-100），无法自动批改时返回 null
+     */
+    Double autoGradeHomework(String studentReply, String referenceAnswer);
 }
 
