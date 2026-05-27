@@ -275,79 +275,149 @@ export default {
     resetExam() { this.examQuestions=[]; this.examGradingStudentName=''; this.egIdx=0 },
 
     // ===== 作业批改 =====
-    async loadHomeworkList() { try{this.hwLoading=true;const r=await getPublishedTasks({type:'homework'});const d=r.data&&r.data.resultData;this.homeworkList=Array.isArray(d)?d:(d&&d.data?d.data:[])}catch(e){this.homeworkList=[]}this.hwLoading=false },
+    async loadHomeworkList() {
+      try {
+        this.hwLoading = true
+        const r = await getPublishedTasks({ page: 1, pageSize: 999 })
+        const d = r.data && r.data.resultData
+        this.homeworkList = Array.isArray(d) ? d : (d && d.data ? d.data : [])
+      } catch (e) { this.homeworkList = [] }
+      this.hwLoading = false
+    },
     async selectHomework(row) {
-      this.selectedHomeworkId=row.id; this.selectedHomeworkTitle=row.title; this.subLoading=true
-      try{const r=await this.$post('/study/userdohomework/listSubmissions',{homeworkId:row.id});const d=r.data&&r.data.resultData;this.submissionList=Array.isArray(d)?d:(d&&d.data?d.data:[])}catch(e){this.submissionList=[]}
-      this.subLoading=false
+      this.selectedHomeworkId = row.id
+      this.selectedHomeworkTitle = row.title
+      this.subLoading = true
+      try {
+        const r = await this.$post('/study/userdohomework/byHomework', { homeworkId: row.id })
+        const d = r.data && r.data.resultData
+        this.submissionList = (Array.isArray(d) ? d : (d && d.data ? d.data : [])).map(s => ({
+          ...s,
+          id: s.recordId || s.id,
+          submitTime: s.completionTime || s.submitTime
+        }))
+      } catch (e) { this.submissionList = [] }
+      this.subLoading = false
     },
     viewSubmission(row) {
-      this.viewStudentName=row.studentName; this.viewHomeworkTitle=this.selectedHomeworkTitle||row.homeworkName
-      this.viewSubmitTime=row.submitTime; this.viewReply=row.content||''; this.viewReference=row.reference||''
-      this.viewVisible=true
+      this.viewStudentName = row.studentName
+      this.viewHomeworkTitle = this.selectedHomeworkTitle || row.homeworkName || row.homeworkTitle
+      this.viewSubmitTime = row.submitTime || row.completionTime || ''
+      this.viewReply = row.content || row.reply || ''
+      this.viewReference = row.reference || row.answer || ''
+      this.viewVisible = true
+    },
+    autoGradeQuestion(correctAnswer, studentAnswer, questionType, score) {
+      if (studentAnswer === undefined || studentAnswer === null || studentAnswer === '') return { correct: undefined, autoScore: 0 }
+      const ca = (correctAnswer || '').toString().trim().toUpperCase()
+      const sa = (studentAnswer || '').toString().trim().toUpperCase()
+      if (!sa) return { correct: undefined, autoScore: 0 }
+
+      if (questionType === 'single') {
+        if (ca && sa === ca) return { correct: true, autoScore: score }
+        return { correct: false, autoScore: 0 }
+      }
+      if (questionType === 'multiple') {
+        const caArr = ca.split(',').map(s => s.trim()).sort().join('')
+        const saArr = sa.split(',').map(s => s.trim()).sort().join('')
+        if (caArr && saArr === caArr) return { correct: true, autoScore: score }
+        if (caArr && saArr !== caArr) return { correct: false, autoScore: 0 }
+        return { correct: undefined, autoScore: 0 }
+      }
+      if (questionType === 'judge') {
+        const caBool = ca === 'TRUE' || ca === '正确'
+        const saBool = sa === 'TRUE' || sa === '正确'
+        if (caBool === saBool) return { correct: true, autoScore: score }
+        return { correct: false, autoScore: 0 }
+      }
+      return { correct: undefined, autoScore: 0 }
     },
     async openHomeworkGrading(row) {
-      const hw=this.homeworkList.find(h=>h.id===row.homeworkId)
-      let paperId=null
-      if(hw&&hw.content){try{const cd=JSON.parse(hw.content);if(cd&&cd.paperRef) paperId=cd.paperRef}catch(e){}}
-      let answers=null
-      try{answers=JSON.parse(row.content)}catch(e){}
-      if(paperId && Array.isArray(answers)){
-        // 试卷类作业，加载题目逐题批改
-        try{
-          const pr=await getPaperDetail(paperId)
-          const paper=(pr.data&&pr.data.resultData)?pr.data.resultData:{}
-          const amap={};(answers||[]).forEach(a=>{amap[a.questionId]=a.answer})
-          this.hwPaperQuestions=(paper.questions||[]).map(q=>{
-            const qt=this.mapType(q.questionType)
-            const sa=amap[q.id]
-            return{
-              questionType:qt, stem:q.stem||'', options:q.options||'',
-              correctAnswer:q.answer||'', studentAnswer:sa||'',
-              score:q.score||5, manualScore:0, remark:'', _correct:undefined
+      const hw = this.homeworkList.find(h => h.id === row.homeworkId)
+      let paperId = null
+      if (hw && hw.content) {
+        try { const cd = JSON.parse(hw.content); if (cd && cd.paperRef) paperId = cd.paperRef } catch (e) {}
+      }
+      let answers = null
+      try { answers = JSON.parse(row.content || row.reply || '') } catch (e) {}
+      if (paperId && Array.isArray(answers)) {
+        try {
+          const pr = await getPaperDetail(paperId)
+          const paper = (pr.data && pr.data.resultData) ? pr.data.resultData : {}
+          const amap = {}; (answers || []).forEach(a => { amap[a.questionId] = a.answer })
+          this.hwPaperQuestions = (paper.questions || []).map(q => {
+            const qt = this.mapType(q.questionType)
+            const sa = amap[q.id]
+            const ans = (sa && Array.isArray(sa)) ? sa.join(',') : (sa || '')
+            const auto = this.autoGradeQuestion(q.answer, ans, qt, q.score || 5)
+            return {
+              questionId: q.id, questionType: qt, stem: q.stem || '', options: q.options || '',
+              correctAnswer: q.answer || '', studentAnswer: ans,
+              score: q.score || 5, manualScore: auto.correct !== undefined ? auto.autoScore : 0,
+              remark: '', _correct: auto.correct
             }
           })
-          this.hwPaperRecordId=row.id; this.hwPaperStudentName=row.studentName; this.hwPaperHomeworkId=row.homeworkId; this.hwPaperIdx=0
-          this.hwPaperDialogVisible=true
-        } catch(e){this.$message.error('加载试卷题目失败');return}
+          this.hwPaperRecordId = row.id || row.recordId
+          this.hwPaperStudentName = row.studentName
+          this.hwPaperHomeworkId = row.homeworkId
+          this.hwPaperIdx = 0
+          this.hwPaperDialogVisible = true
+        } catch (e) { this.$message.error('加载试卷题目失败'); return }
       } else {
-        // 简单文本作业
-        this.hwGradingRecordId=row.id; this.hwGradingStudentName=row.studentName
-        this.hwGradingTitle=row.homeworkName||this.selectedHomeworkTitle; this.hwGradingSubmitTime=row.submitTime
-        this.hwGradingReply=row.content||''; this.hwGradingReference=row.reference||''
-        this.hwGradeScore=0; this.hwGradeRemark=''; this.hwSimpleDialogVisible=true
+        this.hwGradingRecordId = row.id || row.recordId
+        this.hwGradingStudentName = row.studentName
+        this.hwGradingTitle = row.homeworkName || row.homeworkTitle || this.selectedHomeworkTitle
+        this.hwGradingSubmitTime = row.submitTime || row.completionTime || ''
+        this.hwGradingReply = row.content || row.reply || ''
+        this.hwGradingReference = row.reference || row.answer || ''
+        this.hwGradeScore = row.score || 0
+        this.hwGradeRemark = row.remark || ''
+        this.hwSimpleDialogVisible = true
       }
     },
     resetHwPaper() { this.hwPaperQuestions=[]; this.hwPaperIdx=0 },
     resetHwSimple() { this.hwGradingRecordId=null; this.hwGradingReply=''; this.hwGradingReference='' },
     async approveHwPaper() {
-      this.gradingSubmitting=true
-      const list=this.hwPaperQuestions.map(q=>({questionId:q.questionId,score:q.manualScore,remark:q.remark||''}))
-      try{await this.$post('/study/userdohomework/approve',{recordId:this.hwPaperRecordId,homeworkId:this.hwPaperHomeworkId,scores:list,status:'approved'})
-        this.$message.success('批改通过'); this.hwPaperDialogVisible=false; this.selectHomework({id:this.selectedHomeworkId,title:this.selectedHomeworkTitle})
-      } catch(e){this.$message.error('操作失败')}
-      this.gradingSubmitting=false
+      this.gradingSubmitting = true
+      try {
+        const totalScore = this.hwPaperQuestions.reduce((s, q) => s + (parseFloat(q.manualScore) || 0), 0)
+        const totalMax = this.hwPaperQuestions.reduce((s, q) => s + (parseFloat(q.score) || 0), 0)
+        await this.$post('/study/userdohomework/grade', { recordId: this.hwPaperRecordId, mode: '1', score: totalScore.toFixed(1), remark: '' })
+        this.$message.success('批改通过 (' + totalScore.toFixed(1) + '/' + totalMax + ')')
+        this.hwPaperDialogVisible = false
+        this.selectHomework({ id: this.selectedHomeworkId, title: this.selectedHomeworkTitle })
+      } catch (e) { this.$message.error('操作失败') }
+      this.gradingSubmitting = false
     },
     async rejectHwPaper() {
-      this.gradingSubmitting=true
-      try{await this.$post('/study/userdohomework/reject',{recordId:this.hwPaperRecordId,homeworkId:this.hwPaperHomeworkId})
-        this.$message.success('已打回'); this.hwPaperDialogVisible=false; this.selectHomework({id:this.selectedHomeworkId,title:this.selectedHomeworkTitle})
-      } catch(e){this.$message.error('操作失败')}
-      this.gradingSubmitting=false
+      this.gradingSubmitting = true
+      try {
+        await this.$post('/study/userdohomework/grade', { recordId: this.hwPaperRecordId, mode: '2', score: '0', remark: '' })
+        this.$message.success('已打回')
+        this.hwPaperDialogVisible = false
+        this.selectHomework({ id: this.selectedHomeworkId, title: this.selectedHomeworkTitle })
+      } catch (e) { this.$message.error('操作失败') }
+      this.gradingSubmitting = false
     },
     async approveSimpleHw() {
-      this.gradingSubmitting=true
-      try{await this.$post('/study/userdohomework/approve',{recordId:this.hwGradingRecordId,score:this.hwGradeScore,remark:this.hwGradeRemark,status:'approved'})
-        this.$message.success('批改通过'); this.hwSimpleDialogVisible=false; this.selectHomework({id:this.selectedHomeworkId,title:this.selectedHomeworkTitle})
-      } catch(e){this.$message.error('操作失败')}
-      this.gradingSubmitting=false
+      this.gradingSubmitting = true
+      try {
+        await this.$post('/study/userdohomework/grade', { recordId: this.hwGradingRecordId, mode: '1', score: String(this.hwGradeScore), remark: this.hwGradeRemark })
+        this.$message.success('批改通过')
+        this.hwSimpleDialogVisible = false
+        this.selectHomework({ id: this.selectedHomeworkId, title: this.selectedHomeworkTitle })
+      } catch (e) { this.$message.error('操作失败') }
+      this.gradingSubmitting = false
     },
     async rejectSimpleHw() {
-      this.gradingSubmitting=true
-      try{await this.$post('/study/userdohomework/reject',{recordId:this.hwGradingRecordId})
-        this.$message.success('已打回'); this.hwSimpleDialogVisible=false; this.selectHomework({id:this.selectedHomeworkId,title:this.selectedHomeworkTitle})
-      } catch(e){this.$message.error('操作失败')}
-      this.gradingSubmitting=false
+      this.gradingSubmitting = true
+      try {
+        await this.$post('/study/userdohomework/grade', { recordId: this.hwGradingRecordId, mode: '2', score: '0', remark: '' })
+        this.$message.success('已打回')
+        this.hwSimpleDialogVisible = false
+        this.selectHomework({ id: this.selectedHomeworkId, title: this.selectedHomeworkTitle })
+      } catch (e) { this.$message.error('操作失败') }
+      this.gradingSubmitting = false
     }
   }
 }
