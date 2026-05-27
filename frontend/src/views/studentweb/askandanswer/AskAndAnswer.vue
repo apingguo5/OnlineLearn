@@ -37,7 +37,7 @@
             <div class="notice-toolbar">
                 <div class="toolbar-left">
                     <el-select
-                        v-model="noticeFilterClass"
+                        v-model="noticeFilterClassId"
                         placeholder="全部班级"
                         size="small"
                         clearable
@@ -46,9 +46,9 @@
                     >
                         <el-option
                             v-for="cls in enrolledClasses"
-                            :key="cls.className + '-' + cls.classId"
-                            :label="cls.className"
-                            :value="cls.className"
+                            :key="cls.courseName + '-' + cls.classId"
+                            :label="cls.courseName + ' - ' + cls.className"
+                            :value="cls.classId"
                         />
                     </el-select>
                 </div>
@@ -83,7 +83,7 @@
                                 <i v-if="n.isPinned == 1" class="el-icon-top" style="color:#F56C6C;margin-right:4px;"></i>
                                 {{ n.title }}
                             </span>
-                            <el-tag size="mini" effect="plain" type="info">{{ n.className }}</el-tag>
+                            <el-tag size="mini" effect="plain" type="info">{{ n.courseName ? n.courseName + ' - ' : '' }}{{ n.className }}</el-tag>
                         </div>
                         <p class="notice-card-content">{{ n.content }}</p>
                         <div class="notice-card-foot">
@@ -245,7 +245,7 @@ export default {
             enrolledClasses: [],
             // 通知
             noticeList: [],
-            noticeFilterClass: null,
+            noticeFilterClassId: null,
             // 提问
             qaPage: { page: 1, pageSize: 10 },
             NotHomeWork: [],
@@ -287,9 +287,8 @@ export default {
         async loadNotices() {
             try {
                 const params = { userId: this.userId, page: 1, pageSize: 100 }
-                if (this.noticeFilterClass) {
-                    const found = this.enrolledClasses.find(c => c.className === this.noticeFilterClass)
-                    if (found) params.classId = found.classId
+                if (this.noticeFilterClassId) {
+                    params.classId = this.noticeFilterClassId
                 }
                 const res = await getStudentNotices(params)
                 if (res.data.code === 200) {

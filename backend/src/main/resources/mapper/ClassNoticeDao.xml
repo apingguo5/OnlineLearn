@@ -63,10 +63,12 @@
         SELECT
         u.user_name AS senderName,
         c.class_name AS className,
+        co.course_name AS courseName,
         <include refid="baseColumns"></include>
         FROM class_notice cn
         LEFT JOIN `user` u ON u.id = cn.sender_id
         LEFT JOIN class c ON c.id = cn.class_id
+        LEFT JOIN course co ON co.id = c.course_id
         INNER JOIN user_class uc ON uc.class_id = cn.class_id AND uc.user_id = #{userId}
         <where>
             <if test="classId != null">
