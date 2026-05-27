@@ -139,12 +139,12 @@
                     <el-input type="textarea" v-model="paperForm.description" :rows="2" placeholder="考试说明（可选）" />
                 </el-form-item>
                 <el-form-item label="所属课程" required>
-                    <el-select v-model="paperForm.courseId" placeholder="请选择课程" style="width:100%" @change="onCourseChange">
+                    <el-select v-model="paperForm.courseId" placeholder="请选择课程" style="width:100%" clearable @change="onCourseChange" @clear="onCourseClear">
                         <el-option v-for="c in courseList" :key="c.id" :label="c.courseName" :value="c.id" />
                     </el-select>
                 </el-form-item>
                 <el-form-item label="所属章节">
-                    <el-select v-model="paperForm.chapterId" placeholder="可选" style="width:100%" clearable>
+                    <el-select v-model="paperForm.chapterId" placeholder="请先选择课程" style="width:100%" clearable :disabled="!paperForm.courseId">
                         <el-option v-for="ch in chapterList" :key="ch.id" :label="ch.chapterName" :value="ch.id" />
                     </el-select>
                 </el-form-item>
@@ -858,7 +858,20 @@ export default {
             } catch (e) { this.paperList = []; this.paperTotal = 0 }
             this.paperLoading = false
         },
-        onCourseChange(val) { this.loadChapters(val); this.loadAvailableQuestions() },
+        onCourseChange(val) {
+            this.paperForm.chapterId = null
+            if (val) {
+                this.loadChapters(val)
+                this.loadAvailableQuestions()
+            } else {
+                this.chapterList = []
+            }
+        },
+        onCourseClear() {
+            this.paperForm.chapterId = null
+            this.chapterList = []
+            this.availableQuestions = []
+        },
         async loadAvailableQuestions() {
             const cid = this.paperForm.courseId
             if (!cid || cid === '' || cid === 0) { this.$message.warning('请先选择课程'); return }
@@ -882,7 +895,7 @@ export default {
         resetPaperForm() {
             this.paperForm = { title: '', description: '', courseId: '', chapterId: '', duration: 60, totalScore: 100, questionIds: [] }
             this.isEditPaper = false; this.editPaperId = null
-            this.availableQuestions = []; this.selectedQuestionIds = []
+            this.availableQuestions = []; this.selectedQuestionIds = []; this.chapterList = []
         },
         async previewPaper(row) {
             try {
