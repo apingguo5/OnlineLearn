@@ -165,6 +165,9 @@ public class ExamPaperServiceImpl extends ServiceImpl<ExamPaperDao, ExamPaperEnt
         if (paper == null) {
             return result;
         }
+        if (paper.getStatus() == null || paper.getStatus() != 1) {
+            return result;
+        }
         // 将试卷字段平铺到返回结果中，方便前端直接访问
         result.put("id", paper.getId());
         result.put("title", paper.getTitle());

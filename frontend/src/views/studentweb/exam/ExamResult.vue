@@ -153,9 +153,10 @@ export default {
       try {
         // 加载试卷详情（含题目）
         const detailRes = await getPaperDetail(paperId)
-        if (detailRes.code === 0) {
-          this.paper = detailRes.data.paper || {}
-          this.questions = (detailRes.data.questions || []).map(q => ({
+        const detailData = (detailRes.data && detailRes.data.resultData) || {}
+        if (detailRes.data && detailRes.data.code === 200) {
+          this.paper = detailData.paper || { title: detailData.title, description: detailData.description, totalScore: detailData.totalScore, duration: detailData.duration }
+          this.questions = (detailData.questions || []).map(q => ({
             ...q,
             earnedScore: 0,
             reviewStatus: 0,
@@ -163,12 +164,12 @@ export default {
           }))
         }
 
-        // 加载学生的答题记录
-        const studentId = parseInt(localStorage.getItem('userId') || '0')
+        const studentId = parseInt(this.$cookies.get('userId') || localStorage.getItem('userId') || '0')
         const answerRes = await getStudentAnswerDetail({ paperId, studentId })
-        if (answerRes.code === 0 && answerRes.data) {
+        const answerData = (answerRes.data && answerRes.data.resultData) || {}
+        if (answerRes.data && answerRes.data.code === 200 && answerData) {
           const answerMap = {}
-          ;(answerRes.data.records || []).forEach(record => {
+          ;(answerData.records || []).forEach(record => {
             answerMap[record.questionId] = record
           })
 

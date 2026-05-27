@@ -117,7 +117,7 @@ export default {
       try {
         const [hwRes, examRes] = await Promise.all([
           this.$post('/study/homework/findNotDoHomework', { userId, classId, page: 1, pageSize: 50 }),
-          getStudentPapers({ classId, page: 1, pageSize: 50 })
+          getStudentPapers({ classId, studentId: userId, page: 1, pageSize: 50 })
         ])
         const hwData = hwRes.data && hwRes.data.resultData
         const hwList = (hwData && hwData.data) ? hwData.data : []
@@ -151,7 +151,14 @@ export default {
     },
     startItem(row) {
       if (row._type === 'exam') {
-        this.$router.push({ name: 'StudentExam', query: { paperId: row.id } })
+        let paperId = row.id
+        try {
+          const data = typeof row.content === 'string' ? JSON.parse(row.content) : row.content
+          if (data && data.paperRef) {
+            paperId = data.paperRef
+          }
+        } catch (e) {}
+        this.$router.push({ name: 'StudentExam', query: { paperId } })
       } else {
         this.$router.push({ 
           path: '/studenthomeworkanswer', 
@@ -179,7 +186,14 @@ export default {
     },
     viewDetail(row) {
       if (row._type === 'exam') {
-        this.$router.push({ name: 'ExamResult', query: { paperId: row.paperId || row.id, studentId: Cookies.get('userId') } })
+        let paperId = row.paperId || row.id
+        try {
+          const data = typeof row.content === 'string' ? JSON.parse(row.content) : row.content
+          if (data && data.paperRef) {
+            paperId = data.paperRef
+          }
+        } catch (e) {}
+        this.$router.push({ name: 'ExamResult', query: { paperId, studentId: Cookies.get('userId') } })
       } else {
         this.$message.info('作业批改后可查看详情')
       }

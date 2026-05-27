@@ -17,19 +17,10 @@ rem ==============================================
 
 set "ROOT_DIR=%~dp0"
 
-rem ----- 加载环境配置（从 .env / .env.local 读取） -----
-if exist "%ROOT_DIR%env\env-config.bat" (
-    call "%ROOT_DIR%env\env-config.bat"
-) else (
-    echo [WARN] 未找到环境配置文件，尝试使用系统默认 PATH
-    echo [WARN] 请先运行 env\init-env.bat 初始化环境配置
-    echo.
-)
-
-rem ----- 设置 JDK 路径 -----
-if defined JAVA_HOME (
-    set "PATH=%JAVA_HOME%\bin;%PATH%"
-)
+rem ----- 设置 JDK 路径（硬编码本地 JDK 位置） -----
+set "JAVA_HOME=D:\Environment\java\java_8\jdk1.8.0_201"
+set "PATH=%JAVA_HOME%\bin;%PATH%"
+echo [INFO] JAVA_HOME=%JAVA_HOME%
 
 rem ----- 设置 Maven 路径 -----
 if defined MAVEN_HOME (

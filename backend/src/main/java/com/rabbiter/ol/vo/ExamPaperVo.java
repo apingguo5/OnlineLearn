@@ -27,6 +27,8 @@ public class ExamPaperVo {
     private Integer pageSize;
     private Integer offset;
 
+    private Integer studentId;
+
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
 
@@ -84,4 +86,7 @@ public class ExamPaperVo {
 
     public Integer getOffset() { return offset; }
     public void setOffset(Integer offset) { this.offset = offset; }
+
+    public Integer getStudentId() { return studentId; }
+    public void setStudentId(Integer studentId) { this.studentId = studentId; }
 }

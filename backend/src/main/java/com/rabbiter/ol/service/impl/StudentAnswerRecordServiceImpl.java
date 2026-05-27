@@ -4,6 +4,7 @@ import com.rabbiter.ol.dao.ExamPaperDao;
 import com.rabbiter.ol.dao.ExamPaperQuestionDao;
 import com.rabbiter.ol.dao.QuestionDao;
 import com.rabbiter.ol.dao.StudentAnswerRecordDao;
+import com.rabbiter.ol.entity.ExamPaperEntity;
 import com.rabbiter.ol.entity.ExamPaperQuestionEntity;
 import com.rabbiter.ol.entity.QuestionEntity;
 import com.rabbiter.ol.entity.StudentAnswerRecordEntity;
@@ -162,15 +163,17 @@ public class StudentAnswerRecordServiceImpl extends ServiceImpl<StudentAnswerRec
     @Override
     @Transactional
     public void startExam(Integer paperId, Integer studentId) {
-        // 先清除该学生该试卷之前的草稿记录
+        ExamPaperEntity paper = examPaperDao.selectById(paperId);
+        if (paper == null || paper.getStatus() == null || paper.getStatus() != 1) {
+            throw new RuntimeException("试卷不存在或未发布");
+        }
+        // 幂等：若已存在答题记录，则不重复初始化（保留草稿/已提交记录）
         Map<String, Object> params = new HashMap<>();
         params.put("paper_id", paperId);
         params.put("student_id", studentId);
         List<StudentAnswerRecordEntity> existing = studentAnswerRecordDao.selectByMap(params);
-        if (existing != null) {
-            for (StudentAnswerRecordEntity e : existing) {
-                studentAnswerRecordDao.deleteById(e.getId());
-            }
+        if (existing != null && !existing.isEmpty()) {
+            return;
         }
         // 获取试卷的所有题目，创建空的答题记录
         Map<String, Object> questionParams = new HashMap<>();

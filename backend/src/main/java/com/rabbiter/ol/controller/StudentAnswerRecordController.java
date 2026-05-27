@@ -23,16 +23,33 @@ public class StudentAnswerRecordController {
         return Result.success(page);
     }
 
+    private Integer toInt(Object value) {
+        if (value == null) return null;
+        if (value instanceof Integer) return (Integer) value;
+        if (value instanceof Number) return ((Number) value).intValue();
+        return Integer.valueOf(value.toString());
+    }
+
     /**
      * 开始考试，初始化答题记录
      * 请求体: { paperId: 1, studentId: 1 }
      */
     @PostMapping("/start")
     public Result startExam(@RequestBody Map<String, Object> params) {
-        Integer paperId = (Integer) params.get("paperId");
-        Integer studentId = (Integer) params.get("studentId");
-        studentAnswerRecordService.startExam(paperId, studentId);
-        return Result.successCode();
+        Integer paperId = toInt(params.get("paperId"));
+        Integer studentId = toInt(params.get("studentId"));
+        if (paperId == null) {
+            return Result.failure("缺少参数 paperId");
+        }
+        if (studentId == null) {
+            return Result.failure("缺少参数 studentId");
+        }
+        try {
+            studentAnswerRecordService.startExam(paperId, studentId);
+            return Result.successCode();
+        } catch (Exception e) {
+            return Result.failure(e.getMessage());
+        }
     }
 
     /**
@@ -42,15 +59,15 @@ public class StudentAnswerRecordController {
     @SuppressWarnings("unchecked")
     @PostMapping("/submit")
     public Result submit(@RequestBody Map<String, Object> params) {
-        Integer paperId = (Integer) params.get("paperId");
-        Integer studentId = (Integer) params.get("studentId");
+        Integer paperId = toInt(params.get("paperId"));
+        Integer studentId = toInt(params.get("studentId"));
         List<Map<String, Object>> answers = (List<Map<String, Object>>) params.get("answers");
 
         List<StudentAnswerRecordVo> answerList = answers.stream().map(a -> {
             StudentAnswerRecordVo vo = new StudentAnswerRecordVo();
             vo.setPaperId(paperId);
             vo.setStudentId(studentId);
-            vo.setQuestionId((Integer) a.get("questionId"));
+            vo.setQuestionId(toInt(a.get("questionId")));
             vo.setAnswer((String) a.get("answer"));
             return vo;
         }).collect(java.util.stream.Collectors.toList());
@@ -66,13 +83,13 @@ public class StudentAnswerRecordController {
     @SuppressWarnings("unchecked")
     @PostMapping("/saveDraft")
     public Result saveDraft(@RequestBody Map<String, Object> params) {
-        Integer paperId = (Integer) params.get("paperId");
-        Integer studentId = (Integer) params.get("studentId");
+        Integer paperId = toInt(params.get("paperId"));
+        Integer studentId = toInt(params.get("studentId"));
         List<Map<String, Object>> answers = (List<Map<String, Object>>) params.get("answers");
 
         List<StudentAnswerRecordVo> answerList = answers.stream().map(a -> {
             StudentAnswerRecordVo vo = new StudentAnswerRecordVo();
-            vo.setQuestionId((Integer) a.get("questionId"));
+            vo.setQuestionId(toInt(a.get("questionId")));
             vo.setAnswer((String) a.get("answer"));
             return vo;
         }).collect(java.util.stream.Collectors.toList());
@@ -84,8 +101,10 @@ public class StudentAnswerRecordController {
     /**
      * 获取学生答题详情（含题目和批改信息）
      */
-    @GetMapping("/studentDetail")
-    public Result getStudentDetail(@RequestParam Integer paperId, @RequestParam Integer studentId) {
+    @PostMapping("/studentDetail")
+    public Result getStudentDetail(@RequestBody Map<String, Object> params) {
+        Integer paperId = toInt(params.get("paperId"));
+        Integer studentId = toInt(params.get("studentId"));
         return Result.success(studentAnswerRecordService.getStudentDetail(paperId, studentId));
     }
 
@@ -94,8 +113,8 @@ public class StudentAnswerRecordController {
      */
     @PostMapping("/studentAnswers")
     public Result getStudentAnswers(@RequestBody Map<String, Object> params) {
-        Integer paperId = (Integer) params.get("paperId");
-        Integer studentId = (Integer) params.get("studentId");
+        Integer paperId = toInt(params.get("paperId"));
+        Integer studentId = toInt(params.get("studentId"));
         return Result.success(studentAnswerRecordService.getStudentAnswers(paperId, studentId));
     }
 

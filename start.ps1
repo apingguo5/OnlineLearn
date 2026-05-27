@@ -2,7 +2,7 @@
 .SYNOPSIS
     OnlineLearn 启动脚本 (PowerShell)
 .DESCRIPTION
-    统一启动脚本，加载 env/ 环境配置后启动后端/前端服务
+    统一启动脚本，设置环境变量后启动后端/前端服务
 .PARAMETER All
     同时启动后端和前端 (默认)
 .PARAMETER Backend
@@ -28,28 +28,14 @@ param(
 $RootDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $BackendDir = Join-Path $RootDir "backend"
 $FrontendDir = Join-Path $RootDir "frontend"
-$EnvDir = Join-Path $RootDir "env"
 
-# ----- 加载环境配置（从 .env / .env.local 读取） -----
-$configLoader = Join-Path $EnvDir "env-config.ps1"
+# ----- JDK 路径（硬编码本地 JDK 位置） -----
+$script:JAVA_HOME = "D:\Environment\java\java_8\jdk1.8.0_201"
+$env:JAVA_HOME = $script:JAVA_HOME
+$script:MAVEN_HOME  = if (Test-Path env:MAVEN_HOME)  { $env:MAVEN_HOME }  else { $null }
+$script:NODE_HOME   = if (Test-Path env:NODE_HOME)   { $env:NODE_HOME }   else { $null }
 
-if (Test-Path $configLoader) {
-    Write-Host "[INFO] Loading config from .env / .env.local" -ForegroundColor Gray
-    . $configLoader
-} else {
-    Write-Host "[WARN] No config file found, using system PATH" -ForegroundColor Yellow
-    Write-Host "[WARN] Please run env\init-env.ps1 first" -ForegroundColor Yellow
-}
-
-# ----- 从当前作用域读取配置变量（由 dot-source 加载）-----
-$script:JAVA_HOME   = if (Test-Path variable:JAVA_HOME)   { $JAVA_HOME }   else { $null }
-$script:MAVEN_HOME  = if (Test-Path variable:MAVEN_HOME)  { $MAVEN_HOME }  else { $null }
-$script:NODE_HOME   = if (Test-Path variable:NODE_HOME)   { $NODE_HOME }   else { $null }
-
-# 如果没有通过 env-config 定义，尝试读取系统环境变量
-if (-not $script:JAVA_HOME -and (Test-Path env:JAVA_HOME))  { $script:JAVA_HOME  = $env:JAVA_HOME }
-if (-not $script:MAVEN_HOME -and (Test-Path env:MAVEN_HOME)){ $script:MAVEN_HOME = $env:MAVEN_HOME }
-if (-not $script:NODE_HOME -and (Test-Path env:NODE_HOME))  { $script:NODE_HOME  = $env:NODE_HOME }
+Write-Host "[INFO] JAVA_HOME=$($script:JAVA_HOME)" -ForegroundColor Green
 
 $script:BACKEND_PORT      = if (Test-Path variable:BACKEND_PORT)      { $BACKEND_PORT }      else { "9251" }
 $script:FRONTEND_PORT     = if (Test-Path variable:FRONTEND_PORT)     { $FRONTEND_PORT }     else { "9252" }
@@ -92,19 +78,13 @@ function Start-Backend {
         Pop-Location
     }
 
-    # 构建 cmd 命令：在新窗口中设置环境变量后运行 mvn
-    $cmdPrologue = ""
-    if ($script:JAVA_HOME) {
-        $cmdPrologue += "set JAVA_HOME=$($script:JAVA_HOME) && "
-        $cmdPrologue += "set PATH=$($script:JAVA_HOME)\bin;%PATH% && "
-    }
-    if ($script:MAVEN_HOME) {
-        $cmdPrologue += "set MAVEN_HOME=$($script:MAVEN_HOME) && "
-        $cmdPrologue += "set PATH=$($script:MAVEN_HOME)\bin;%PATH% && "
-    }
-
-    $cmdArgs = "/K $cmdPrologue cd /d `"$BackendDir`" && mvn spring-boot:run"
-    Start-Process cmd -ArgumentList $cmdArgs
+    # 使用 PowerShell 子进程启动，自动继承父进程的 $env:JAVA_HOME
+    $psArgs = @(
+        "-NoExit"
+        "-Command"
+        "cd '$BackendDir'; Write-Host '[Backend] JAVA_HOME=$env:JAVA_HOME' -ForegroundColor Green; mvn spring-boot:run"
+    )
+    Start-Process powershell -ArgumentList $psArgs -WindowStyle Normal
 
     Write-Host "[Backend] Service starting at http://localhost:$($script:BACKEND_PORT)" -ForegroundColor Green
     Write-Host ""
@@ -143,23 +123,23 @@ function Start-Frontend {
         Pop-Location
     }
 
-    # 构建 cmd 命令：在新窗口中设置环境变量后运行 npm
-    $cmdPrologue = ""
-    if ($script:NODE_HOME) {
-        $cmdPrologue += "set PATH=$($script:NODE_HOME);%PATH% && "
-    }
-
     # detect node version for OpenSSL compat
     $nodeVer = & node --version
     $nodeMajor = [int]($nodeVer -replace 'v', '' -split '\.')[0]
     $useOpenSSL = $nodeMajor -ge 17
 
-    if ($useOpenSSL) {
-        $cmdArgs = "/K $cmdPrologue cd /d `"$FrontendDir`" && set NODE_OPTIONS=--openssl-legacy-provider && npm run serve"
+    # 使用 PowerShell 子进程启动，继承父进程的环境变量
+    $npmCmd = if ($useOpenSSL) {
+        "`$env:NODE_OPTIONS='--openssl-legacy-provider'; npm run serve"
     } else {
-        $cmdArgs = "/K $cmdPrologue cd /d `"$FrontendDir`" && npm run serve"
+        "npm run serve"
     }
-    Start-Process cmd -ArgumentList $cmdArgs
+    $psArgs = @(
+        "-NoExit"
+        "-Command"
+        "cd '$FrontendDir'; $npmCmd"
+    )
+    Start-Process powershell -ArgumentList $psArgs -WindowStyle Normal
 
     Write-Host "[Frontend] Service starting at http://localhost:$($script:FRONTEND_PORT)" -ForegroundColor Green
     Write-Host ""
@@ -180,9 +160,8 @@ if ($Backend) {
     Write-Host "==============================================" -ForegroundColor Cyan
     Write-Host " Backend: http://localhost:$($script:BACKEND_PORT)" -ForegroundColor Cyan
     Write-Host " Frontend: http://localhost:$($script:FRONTEND_PORT)" -ForegroundColor Cyan
-    Write-Host " Services are running in separate windows." -ForegroundColor Cyan
     Write-Host "==============================================" -ForegroundColor Cyan
 }
 
 Write-Host ""
-Write-Host "Hint: Services are running in cmd windows." -ForegroundColor Gray
+Write-Host "Hint: Services are running in PowerShell windows." -ForegroundColor Gray

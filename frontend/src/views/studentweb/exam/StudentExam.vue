@@ -19,9 +19,9 @@
           </el-table-column>
           <el-table-column label="操作" width="120" align="center">
             <template slot-scope="scope">
-              <el-button v-if="scope.row.status === 'published'" type="primary" size="mini" @click="startExam(scope.row)">开始答题</el-button>
-              <el-button v-else-if="scope.row.recordStatus === 'submitted'" type="success" size="mini" @click="viewResult(scope.row)">查看成绩</el-button>
-              <el-button v-else-if="scope.row.recordStatus === 'draft'" type="warning" size="mini" @click="continueExam(scope.row)">继续答题</el-button>
+              <el-button v-if="isPublished(scope.row)" type="primary" size="mini" @click="startExam(scope.row)">开始答题</el-button>
+              <el-button v-else-if="isSubmitted(scope.row)" type="success" size="mini" @click="viewResult(scope.row)">查看成绩</el-button>
+              <el-button v-else-if="isDraft(scope.row)" type="warning" size="mini" @click="continueExam(scope.row)">继续答题</el-button>
               <span v-else style="color:#909399;font-size:12px">--</span>
             </template>
           </el-table-column>
@@ -147,7 +147,7 @@
 </template>
 
 <script>
-import { getStudentPapers, getPaperDetail, startExam, saveAnswerDraft, submitAnswer } from '@/api/teacher/examApi'
+import { getStudentPapers, getPaperDetail, startExam, saveAnswerDraft, submitAnswer, getStudentAnswers } from '@/api/teacher/examApi'
 
 export default {
   name: 'StudentExam',
@@ -177,27 +177,62 @@ export default {
       return this.remainingTime <= 300
     }
   },
-  created() { this.loadPapers() },
+  created() {
+    const paperId = this.$route.query.paperId ? parseInt(this.$route.query.paperId) : null
+    if (paperId) {
+      this.enterExamDirectly(paperId)
+    } else {
+      this.loadPapers()
+    }
+  },
   beforeDestroy() { this.clearTimer() },
   methods: {
+    numToType(n) {
+      const map = { 1: 'single', 2: 'multiple', 3: 'judge', 4: 'fill', 5: 'essay' }
+      return map[n] || n
+    },
+    normalizeQuestionType(q) {
+      if (q && typeof q.questionType === 'number') {
+        return this.numToType(q.questionType)
+      }
+      return q && q.questionType
+    },
     typeLabel(t) { return { single: '单选', multiple: '多选', judge: '判断', fill: '填空', essay: '主观' }[t] || t },
     typeTag(t) { return { single: 'primary', multiple: 'success', judge: 'warning', fill: 'info', essay: '' }[t] || '' },
+    isPublished(row) {
+      return row.status == 1
+    },
+    isSubmitted(row) {
+      if (row.recordStatus != null) return row.recordStatus == 'submitted'
+      return row.status == 2 || row.status == 3
+    },
+    isDraft(row) {
+      if (row.recordStatus != null) return row.recordStatus == 'draft' || row.recordStatus == 'in_progress'
+      return false
+    },
     statusTag(row) {
-      if (row.recordStatus === 'submitted') return 'success'
-      if (row.recordStatus === 'draft') return 'warning'
+      if (this.isSubmitted(row)) return 'success'
+      if (this.isDraft(row)) return 'warning'
       return 'primary'
     },
     statusLabel(row) {
-      if (row.recordStatus === 'submitted') return '已提交'
-      if (row.recordStatus === 'draft') return '未完成'
+      if (this.isSubmitted(row)) return '已提交'
+      if (this.isDraft(row)) return '未完成'
       return '待答题'
     },
     parsedOptions(q) {
       if (!q.options) return []
-      if (typeof q.options === 'string') {
-        try { return JSON.parse(q.options) } catch (e) { return q.options.split(',') }
+      let raw = q.options
+      if (typeof raw === 'string') {
+        try { raw = JSON.parse(raw) } catch (e) { raw = raw.split(',') }
       }
-      return Array.isArray(q.options) ? q.options : []
+      if (!Array.isArray(raw)) return []
+      return raw.map(opt => {
+        if (opt === null || opt === undefined) return ''
+        if (typeof opt === 'string') return opt
+        if (typeof opt === 'object') return opt.text || opt.label || opt.value || ''
+        return String(opt)
+      })
     },
     isAnswered(q) {
       if (!q.studentAnswer) return false
@@ -207,17 +242,18 @@ export default {
     async loadPapers() {
       this.loading = true
       try {
-        const res = await getStudentPapers({ page: this.page, limit: this.limit })
-        this.paperList = (res.data && res.data.data) ? res.data.data : []
-        this.total = (res.data && res.data.total) ? res.data.total : 0
+        const res = await getStudentPapers({ page: this.page, limit: this.limit, studentId: parseInt(this.$cookies.get('userId')) })
+        const payload = (res.data && res.data.resultData) || {}
+        this.paperList = Array.isArray(payload.data) ? payload.data : []
+        this.total = payload.total || 0
       } catch (e) { this.paperList = [] }
       this.loading = false
     },
     async startExam(row) {
       this.loading = true
       try {
-        const res = await startExam({ paperId: row.id, studentId: this.$cookies.get('userId') })
-        if (res.code !== 0) { this.$message.error(res.msg || '开始考试失败'); return }
+        const res = await startExam({ paperId: row.id, studentId: parseInt(this.$cookies.get('userId')) })
+        if (res.data && res.data.code !== 200) { this.$message.error((res.data && res.data.resultData) || '开始考试失败'); this.loading = false; return }
         this.editPaperId = row.id
         await this.loadExamQuestions(row.id)
         this.remainingTime = (row.duration || 60) * 60
@@ -233,16 +269,97 @@ export default {
         this.startTimer()
       } catch (e) { this.$message.error('加载答题记录失败') }
     },
+    async enterExamDirectly(paperId) {
+      this.loading = true
+      try {
+        const studentId = parseInt(this.$cookies.get('userId'))
+        // 先获取试卷详情
+        const detailRes = await getPaperDetail(paperId)
+        const paper = (detailRes.data && detailRes.data.resultData) || {}
+        if (!paper || !paper.id) {
+          this.$message.error('试卷不存在或已下架')
+          this.$router.replace({ query: {} })
+          this.loadPapers()
+          this.loading = false
+          return
+        }
+        // 查询已有答题记录，判断状态
+        let existingAnswers = []
+        let isSubmitted = false
+        try {
+          const ansRes = await getStudentAnswers({ paperId, studentId })
+          existingAnswers = (ansRes.data && ansRes.data.resultData) || []
+          if (Array.isArray(existingAnswers) && existingAnswers.length > 0) {
+            isSubmitted = existingAnswers.every(r => r.status === 1)
+          }
+        } catch (e) { existingAnswers = [] }
+
+        if (isSubmitted) {
+          this.$message.warning('该试卷已提交，正在跳转到成绩页')
+          this.$router.replace({ name: 'ExamResult', query: { paperId } })
+          return
+        }
+        // 不存在答题记录则调用 start 初始化（后端已幂等）
+        const startRes = await startExam({ paperId, studentId })
+        if (startRes.data && startRes.data.code !== 200) {
+          this.$message.error((startRes.data && startRes.data.resultData) || '开始考试失败')
+          this.$router.replace({ query: {} })
+          this.loadPapers()
+          this.loading = false
+          return
+        }
+        this.editPaperId = paperId
+        // 将已暂存答案合并到题目中
+        this.currentPaper = paper
+        this.totalScore = paper.totalScore || 0
+        const answerMap = {}
+        ;(existingAnswers || []).forEach(r => { answerMap[r.questionId] = r.answer })
+        this.questions = (paper.questions || []).map(q => {
+          const qType = this.normalizeQuestionType(q)
+          const saved = answerMap[q.id]
+          let studentAnswer
+          if (saved !== undefined && saved !== null && saved !== '') {
+            if (qType === 'multiple') {
+              studentAnswer = String(saved).split(',').filter(s => s !== '')
+            } else {
+              studentAnswer = saved
+            }
+          } else {
+            studentAnswer = qType === 'multiple' ? [] : ''
+          }
+          return { ...q, questionType: qType, studentAnswer, flagged: false }
+        })
+        this.currentQuestionIdx = 0
+        this.remainingTime = (paper.duration || 60) * 60
+        this.startTimer()
+      } catch (e) {
+        this.$message.error('进入考试失败')
+        this.$router.replace({ query: {} })
+        this.loadPapers()
+      }
+      this.loading = false
+    },
     async loadExamQuestions(paperId, loadRecord) {
       try {
         const res = await getPaperDetail(paperId)
-        this.currentPaper = res.data || {}
+        this.currentPaper = (res.data && res.data.resultData) || {}
         this.totalScore = this.currentPaper.totalScore || 0
-        this.questions = (this.currentPaper.questions || []).map(q => ({
-          ...q,
-          studentAnswer: loadRecord ? (q.studentAnswer || (q.questionType === 'multiple' ? [] : '')) : (q.questionType === 'multiple' ? [] : ''),
-          flagged: false
-        }))
+        this.questions = (this.currentPaper.questions || []).map(q => {
+          const qType = this.normalizeQuestionType(q)
+          let studentAnswer
+          if (loadRecord && q.studentAnswer !== undefined && q.studentAnswer !== null && q.studentAnswer !== '') {
+            if (qType === 'multiple') {
+              studentAnswer = Array.isArray(q.studentAnswer)
+                ? q.studentAnswer
+                : String(q.studentAnswer).split(',').filter(s => s !== '')
+            } else {
+              studentAnswer = q.studentAnswer
+            }
+          } else {
+            studentAnswer = qType === 'multiple' ? [] : ''
+          }
+          return { ...q, questionType: qType, studentAnswer, flagged: false }
+        })
         this.currentQuestionIdx = 0
       } catch (e) { this.$message.error('加载试卷失败') }
     },
@@ -268,7 +385,7 @@ export default {
           questionId: q.id,
           answer: Array.isArray(q.studentAnswer) ? q.studentAnswer.join(',') : (q.studentAnswer || '')
         }))
-        await saveAnswerDraft({ paperId: this.editPaperId, studentId: this.$cookies.get('userId'), answers })
+        await saveAnswerDraft({ paperId: this.editPaperId, studentId: parseInt(this.$cookies.get('userId')), answers })
         this.$message.success('已暂存')
       } catch (e) { this.$message.error('暂存失败') }
     },
@@ -292,11 +409,17 @@ export default {
           questionId: q.id,
           answer: Array.isArray(q.studentAnswer) ? q.studentAnswer.join(',') : (q.studentAnswer || '')
         }))
-        await submitAnswer({ paperId: this.editPaperId, studentId: this.$cookies.get('userId'), answers })
+        await submitAnswer({ paperId: this.editPaperId, studentId: parseInt(this.$cookies.get('userId')), answers })
         this.$message.success('交卷成功！')
+        const submittedPaperId = this.editPaperId
         this.currentPaper = null
         this.questions = []
-        this.loadPapers()
+        // 若是通过 paperId 直接进入考试，交卷后跳转到成绩页
+        if (this.$route.query.paperId) {
+          this.$router.replace({ name: 'ExamResult', query: { paperId: submittedPaperId } })
+        } else {
+          this.loadPapers()
+        }
       } catch (e) { this.$message.error('交卷失败'); this.startTimer() }
       this.submitting = false
     },
@@ -308,26 +431,26 @@ export default {
 </script>
 
 <style scoped>
-.student-exam { padding: 24px; background: #f5f7fa; min-height: 100vh; }
+.student-exam { padding: 16px; background: #f5f7fa; min-height: 100%; box-sizing: border-box; }
 .page-header { margin-bottom: 20px; }
 .page-header h2 { margin: 0; font-size: 22px; color: #303133; }
 .page-header h2 i { margin-right: 8px; color: #409EFF; }
 .main-card { border-radius: 8px; }
 
 /* Exam taking */
-.exam-take { display: flex; flex-direction: column; height: calc(100vh - 48px); }
+.exam-take { display: flex; flex-direction: column; min-height: calc(90vh - 80px); }
 .exam-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px 24px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   margin-bottom: 16px; position: sticky; top: 0; z-index: 10;
 }
-.exam-title { font-size: 18px; font-weight: 600; color: #303133; }
-.exam-timer { font-size: 20px; font-weight: 700; color: #409EFF; }
+.exam-title { font-size: 18px; font-weight: 600; color: #303133; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 16px; }
+.exam-timer { font-size: 20px; font-weight: 700; color: #409EFF; margin-right: 16px; white-space: nowrap; }
 .exam-timer.timer-warning { color: #F56C6C; animation: pulse 1s infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
-.exam-actions { display: flex; gap: 8px; }
-.exam-body { display: flex; gap: 16px; flex: 1; overflow: hidden; }
-.exam-sidebar { width: 120px; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.exam-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.exam-body { display: flex; gap: 16px; flex: 1; align-items: flex-start; min-height: 0; }
+.exam-sidebar { width: 160px; flex-shrink: 0; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); position: sticky; top: 80px; align-self: flex-start; }
 .sidebar-info p { margin: 0 0 8px; font-size: 14px; color: #606266; }
 .question-nav { display: flex; flex-wrap: wrap; gap: 6px; }
 .q-nav-item {
@@ -344,7 +467,7 @@ export default {
 .dot-answered { background: #409EFF; }
 .dot-unanswered { background: #f0f2f5; border: 1px solid #dcdfe6; }
 
-.exam-content { flex: 1; background: white; border-radius: 8px; padding: 24px; overflow-y: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.exam-content { flex: 1; min-width: 0; background: white; border-radius: 8px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
 .question-wrapper { }
 .q-type-bar { margin-bottom: 12px; }
 .q-score { font-size: 14px; color: #909399; margin-left: 8px; }
