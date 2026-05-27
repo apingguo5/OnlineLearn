@@ -28,6 +28,8 @@ public class StudentGradeEntity implements Serializable {
 
     private BigDecimal examScore;
 
+    private BigDecimal discussionScore;
+
     private BigDecimal totalScore;
 
     private Date createTime;
@@ -80,6 +82,14 @@ public class StudentGradeEntity implements Serializable {
 
     public void setExamScore(BigDecimal examScore) {
         this.examScore = examScore;
+    }
+
+    public BigDecimal getDiscussionScore() {
+        return discussionScore;
+    }
+
+    public void setDiscussionScore(BigDecimal discussionScore) {
+        this.discussionScore = discussionScore;
     }
 
     public BigDecimal getTotalScore() {

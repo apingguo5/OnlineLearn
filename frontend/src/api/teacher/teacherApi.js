@@ -496,6 +496,43 @@ export function getStudentNotices(params) {
   return post(`/study/classNotice/studentList`, params)
 }
 
+// ========== 成绩与报表 ==========
+
+/**
+ * 获取班级成绩列表
+ * @param {Object} params - { classId }
+ * POST /study/grade/classGrades
+ */
+export function getClassGrades(params) {
+  return post(`/study/grade/classGrades`, params)
+}
+
+/**
+ * 保存权重设置
+ * @param {Object} params - { classId, weights: [{label, percent}] }
+ * POST /study/grade/saveWeights
+ */
+export function saveWeightConfig(params) {
+  return post(`/study/grade/saveWeights`, params)
+}
+
+/**
+ * 加载权重设置
+ * @param {Object} params - { classId }
+ * POST /study/grade/loadWeights
+ */
+export function loadWeights(params) {
+  return post(`/study/grade/loadWeights`, params)
+}
+
+/**
+ * 导出成绩报表
+ * @param {Object} params - { classId }
+ */
+export function exportGradeReport(params) {
+  return post(`/study/grade/classGrades`, params)
+}
+
 // 默认导出（向后兼容）
 export default {
   getMyCourses,
@@ -553,5 +590,10 @@ export default {
   answerQaQuestion,
   deleteQaQuestion,
   // 学生端通知
-  getStudentNotices
+  getStudentNotices,
+  // 成绩与报表
+  getClassGrades,
+  saveWeightConfig,
+  loadWeights,
+  exportGradeReport
 }

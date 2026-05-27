@@ -9,13 +9,29 @@
         <result column="video_score" property="videoScore" />
         <result column="homework_score" property="homeworkScore" />
         <result column="exam_score" property="examScore" />
+        <result column="discussion_score" property="discussionScore" />
         <result column="total_score" property="totalScore" />
         <result column="create_time" property="createTime" />
         <result column="update_time" property="updateTime" />
     </resultMap>
 
-    <sql id="baseColumns">
-        id, class_id, user_id, video_score, homework_score, exam_score, total_score, create_time, update_time
-    </sql>
-
+    <select id="queryClassGrades" resultType="java.util.HashMap">
+        SELECT
+            sg.id,
+            #{classId} AS classId,
+            uc.user_id AS userId,
+            u.user_name AS studentName,
+            u.account AS studentNo,
+            COALESCE(sg.video_score, 0) AS videoScore,
+            COALESCE(sg.homework_score, 0) AS homeworkScore,
+            COALESCE(sg.exam_score, 0) AS examScore,
+            COALESCE(sg.discussion_score, 0) AS discussionScore,
+            COALESCE(sg.total_score, 0) AS totalScore
+        FROM user_class uc
+        INNER JOIN `user` u ON u.id = uc.user_id
+        INNER JOIN user_role ur ON ur.user_id = u.id AND ur.role_id = 3
+        LEFT JOIN student_grade sg ON sg.user_id = uc.user_id AND sg.class_id = uc.class_id
+        WHERE uc.class_id = #{classId}
+        ORDER BY COALESCE(sg.total_score, 0) DESC
+    </select>
 </mapper>
