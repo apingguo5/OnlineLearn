@@ -533,6 +533,26 @@ export function exportGradeReport(params) {
   return post(`/study/grade/classGrades`, params)
 }
 
+// ========== AI助学 ==========
+
+/**
+ * 分析班级学生成绩
+ * @param {Object} params - { classId }
+ * POST /study/ai/analyzeClass
+ */
+export function analyzeClass(params) {
+  return post(`/study/ai/analyzeClass`, params)
+}
+
+/**
+ * 获取AI学习建议
+ * @param {Object} params - { classId }
+ * POST /study/ai/aiRecommend
+ */
+export function getAiRecommend(params) {
+  return post(`/study/ai/aiRecommend`, params)
+}
+
 // 默认导出（向后兼容）
 export default {
   getMyCourses,
@@ -595,5 +615,8 @@ export default {
   getClassGrades,
   saveWeightConfig,
   loadWeights,
-  exportGradeReport
+  exportGradeReport,
+  // AI助学
+  analyzeClass,
+  getAiRecommend
 }

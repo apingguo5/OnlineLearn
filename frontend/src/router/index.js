@@ -53,6 +53,7 @@ import TeacherClassManagement from '../views/teacher/TeacherClassManagement.vue'
 import TeacherAssessment from '../views/teacher/TeacherAssessment.vue'
 import TeacherGradebook from '../views/teacher/TeacherGradebook.vue'
 import TeacherCommunication from '../views/teacher/TeacherCommunication.vue'
+import TeacherAiAssistant from '../views/teacher/TeacherAiAssistant.vue'
 
 import TeacherGrading from '../views/teacher/TeacherGrading.vue'
 import TeacherQuestionBank from '../views/teacher/TeacherQuestionBank.vue'
@@ -531,6 +532,14 @@ const routes = [
                 path: '/teachercommunication',
                 name: 'TeacherCommunication',
                 component: TeacherCommunication,
+                meta: {
+                    requireAuth: true,
+                },
+            },
+            {
+                path: '/teacheraiassist',
+                name: 'TeacherAiAssistant',
+                component: TeacherAiAssistant,
                 meta: {
                     requireAuth: true,
                 },

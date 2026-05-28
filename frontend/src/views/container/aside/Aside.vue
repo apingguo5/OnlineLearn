@@ -69,6 +69,11 @@
                     <span slot="title">互动与答疑</span>
                 </el-menu-item>
 
+                <el-menu-item index="/teacheraiassist">
+                    <i class="el-icon-magic-stick" style="font-size: 20px;"></i>
+                    <span slot="title">AI助学</span>
+                </el-menu-item>
+
                 <el-menu-item index="/teacherpersonalinfo">
                     <i class="el-icon-user" style="font-size: 20px;"></i>
                     <span slot="title">个人信息</span>
