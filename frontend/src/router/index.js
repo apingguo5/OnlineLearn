@@ -21,10 +21,6 @@ import home from '../views/studentweb/contain/home.vue'
 import StudentCourses from '../views/studentweb/courses/StudentCourses.vue'
 import AdminStudentManagement from '../views/admin/studentmanagement/StudentManagement.vue'
 import TeacherManagement from '../views/admin/teacherm/TeacherManagement.vue'
-import AdminHomeWork from '../views/admin/adminhomework/AdminHomeWork.vue'
-import TestManagement from '../views/admin/testmanagement/TestManagement.vue'
-import KnowledgePoints from '../views/admin/knowledgepoints/KnowledgePoints.vue'
-import AdminPersonalInfo from '../views/admin/personalInfo/PersonalInfo.vue'
 import TeacherPersonalInfo from '../views/admin/personalInfo/PersonalInfo.vue'
 import TeacherApplicant from '../views/teacherapplicant/TeacherApplicant.vue'
 import DetailOnlineWeb from '../views/studentweb/onlinelearn/DetailOnlineWeb.vue'
@@ -42,8 +38,6 @@ import Video from '../views/video/Video.vue'
 import DoHomeWork from '../views/classmanagement/DoHomeWork.vue'
 import NotHomeWork from '../views/classmanagement/NotHomeWork.vue'
 import pDetail from '../views/studentweb/practice/practiceDetail/pDetail.vue'
-import ClassManagementAdmin from '../views/admin/classmanagement/ClassManagement.vue'
-import Subject from '../views/admin/subject/Subject.vue'
 import WatchTime from '../views/studentweb/watchtime/WatchTime.vue'
 import TeacherAskAndAnswer from '../views/container/askandanswer/TeacherAskAndAnswer.vue'
 import TeacherDashboard from '../views/teacher/TeacherDashboard.vue'
@@ -188,57 +182,9 @@ const routes = [
                 },
             },
             {
-                path: '/subject',
-                name: 'Subject',
-                component: Subject,
-                meta: {
-                    requireAuth: true,
-                },
-            },
-            {
-                path: '/classmanagementadmin',
-                name: 'ClassManagementAdmin',
-                component: ClassManagementAdmin,
-                meta: {
-                    requireAuth: true,
-                },
-            },
-            {
                 path: '/teachermanagement',
                 name: 'TeacherManagement',
                 component: TeacherManagement,
-                meta: {
-                    requireAuth: true,
-                },
-            },
-            {
-                path: '/adminhomework',
-                name: 'AdminHomeWork',
-                component: AdminHomeWork,
-                meta: {
-                    requireAuth: true,
-                },
-            },
-            {
-                path: '/testmanagement',
-                name: 'TestManagement',
-                component: TestManagement,
-                meta: {
-                    requireAuth: true,
-                },
-            },
-            {
-                path: '/knowledgepoints',
-                name: 'KnowledgePoints',
-                component: KnowledgePoints,
-                meta: {
-                    requireAuth: true,
-                },
-            },
-            {
-                path: '/adminpersonalinfo',
-                name: 'AdminPersonalInfo',
-                component: AdminPersonalInfo,
                 meta: {
                     requireAuth: true,
                 },
